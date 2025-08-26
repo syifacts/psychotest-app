@@ -1,0 +1,82 @@
+.container {
+  max-width: 800px;
+  margin: 60px auto;
+  padding: 30px;
+  font-family: "Poppins", sans-serif;
+  line-height: 1.8;
+  color: #333;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a237e;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.description {
+  font-size: 1rem;
+  margin-bottom: 15px;
+  text-align: justify;
+}
+
+.list {
+  margin: 15px 0 25px 20px;
+  padding-left: 15px;
+}
+
+.list li {
+  margin-bottom: 8px;
+}
+
+.infoBox {
+  margin-top: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f7f9fc, #e3f2fd);
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  text-align: center;
+}
+
+.infoBox p {
+  margin: 8px 0;
+  font-size: 1.1rem;
+}
+
+.btn {
+  margin-top: 20px;
+  padding: 12px 25px;
+  font-size: 1rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #0070f3, #0057c2);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  background: linear-gradient(135deg, #0057c2, #003f8c);
+  transform: scale(1.05);
+}
+.backWrapper {
+  margin-top: 20px;
+}
+
+.backBtn {
+  padding: 10px 20px;
+  background-color: #e5e7eb; /* abu soft */
+  color: #111;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.3s ease;
+}
+
+.backBtn:hover {
+  background-color: #d1d5db;
+}
