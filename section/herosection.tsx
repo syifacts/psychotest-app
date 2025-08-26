@@ -1,12 +1,10 @@
-"use client";
-
 import React from "react";
 import Image from "next/image";
 import AnimatedOnScroll from "../components/ui/animatedonscroll";
 
 export default function HeroSection() {
   return (
-    <section className="relative w-full px-4 sm:px-6 pt-10 pb-12">
+    <section className="relative w-full px-4 sm:px-6 pt-10 pb-5">
       <div className="w-full">
         <AnimatedOnScroll delay={0.2} duration={0.8}>
           <div
@@ -17,7 +15,7 @@ export default function HeroSection() {
             {/* Teks kiri */}
             <div className="flex-1 flex flex-col justify-center text-center lg:text-left lg:ml-20 gap-4">
               <AnimatedOnScroll delay={0.3} duration={0.8}>
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
+                <h1 className="font-poppins text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
                   Temukan Potensi Dirimu!
                 </h1>
               </AnimatedOnScroll>

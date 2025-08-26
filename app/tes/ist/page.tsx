@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import styles from "./Ist.module.css";
 import Link from "next/link";
