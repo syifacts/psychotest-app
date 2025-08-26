@@ -60,6 +60,7 @@ export default function BenefitSection() {
                       height={800}
                       className="object-contain w-full rounded-2xl"
                       priority
+                      unoptimized
                     />
                   </div>
                     <div className="absolute top-0 left-0 w-32 h-32 bg-blue-200/40 rounded-full animate-ping"></div>
