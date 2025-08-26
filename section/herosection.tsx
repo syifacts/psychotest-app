@@ -10,7 +10,7 @@ export default function HeroSection() {
           <div
             className="relative z-10 bg-white rounded-xl p-6 md:p-10 lg:p-12 
                        flex flex-col lg:flex-row items-center lg:items-stretch gap-8
-                       shadow-xl shadow-black/10 border-b-4 border-gray-300"
+                       shadow-xl  border-b-4 border-gray-300"
           >
             {/* Teks kiri */}
             <div className="flex-1 flex flex-col justify-center text-center lg:text-left lg:ml-20 gap-4">
