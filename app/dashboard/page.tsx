@@ -22,8 +22,6 @@ const BerandaPage = () => {
 
   return (
     <div className={styles.container}>
-      {/* Header */}
-
       {/* Konten */}
       <main className={styles.main}>
         <h2>Daftar Tes Psikologi</h2>

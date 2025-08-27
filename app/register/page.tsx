@@ -1,4 +1,3 @@
-// app/register/page.tsx
 'use client';
 
 import { useState, FormEvent } from 'react';
@@ -13,19 +12,65 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.log({ name, email, password });
+
+    const termsCheckbox = document.getElementById('terms-and-privacy') as HTMLInputElement;
+    if (!termsCheckbox.checked) {
+      setError("Anda harus menyetujui Syarat dan Kebijakan Privasi");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: name,
+          email,
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Terjadi kesalahan saat registrasi");
+        setIsLoading(false);
+        return;
+      }
+
+      // Jika sukses, tampilkan popup notifikasi
+      setSuccess("Registrasi berhasil! Silakan login.");
+      setIsLoading(false);
+
+      // Bersihkan form
+      setName('');
+      setEmail('');
+      setPassword('');
+      termsCheckbox.checked = false;
+
+      // Redirect otomatis setelah 2 detik
+      setTimeout(() => router.push("/login"), 2000);
+
+    } catch (err) {
+      console.error(err);
+      setError("Terjadi kesalahan saat menghubungi server");
+      setIsLoading(false);
+    }
   };
 
   return (
     <main className="flex flex-col min-h-screen bg-gray-50">
       <Navbar />
       <div className="grid flex-grow lg:grid-cols-2">
-        
         {/* Kolom Kiri: Form Registrasi */}
         <div className="flex flex-col justify-center items-center lg:items-end lg:pr-12 px-4 py-12 sm:px-6">
           <div className="w-full max-w-sm lg:max-w-md">
@@ -37,71 +82,134 @@ export default function RegisterPage() {
             </div>
 
             <div className="mt-8">
-              {/* Form */}
               <div className="mt-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* ... (semua input form di sini) ... */}
+                  {/* Nama */}
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nama Lengkap</label>
                     <div className="mt-1">
-                      <input id="name" name="name" type="text" required value={name} onChange={(e) => setName(e.target.value)} className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"/>
+                      <input
+                        id="name"
+                        name="name"
+                        type="text"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                      />
                     </div>
                   </div>
+
+                  {/* Email */}
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700">Alamat Email</label>
                     <div className="mt-1">
-                      <input id="email" name="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"/>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                      />
                     </div>
                   </div>
+
+                  {/* Password */}
                   <div className="space-y-1">
                     <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
                     <div className="mt-1">
-                      <input id="password" name="password" type="password" autoComplete="current-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"/>
+                      <input
+                        id="password"
+                        name="password"
+                        type="password"
+                        autoComplete="current-password"
+                        required
+                        minLength={8}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                      />
                     </div>
                   </div>
-                   <div className="flex items-center">
-                    <input id="terms-and-privacy" name="terms-and-privacy" type="checkbox" className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"/>
+
+                  {/* Info box */}
+                  <div className="flex items-start mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-800 text-sm rounded-md">
+                    <svg
+                      className="w-5 h-5 flex-shrink-0 mr-2 mt-0.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path fillRule="evenodd" d="M18 10c0 4.418-3.582 8-8 8s-8-3.582-8-8 3.582-8 8-8 8 3.582 8 8zm-9-4a1 1 0 112 0v2a1 1 0 11-2 0V6zm1 4a1 1 0 00-.993.883L10 11v2a1 1 0 001.993.117L12 13v-2a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    Masukkan data Anda untuk mengikuti tes psikologi. Semua informasi yang Anda berikan akan dijaga kerahasiaannya.
+                  </div>
+
+                  {/* Checkbox */}
+                  <div className="flex items-center">
+                    <input
+                      id="terms-and-privacy"
+                      name="terms-and-privacy"
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
                     <label htmlFor="terms-and-privacy" className="ml-2 block text-sm text-gray-900">
                       Saya setuju dengan Syarat dan Kebijakan Privasi
                     </label>
                   </div>
+
+                  {/* Error */}
+                  {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+
+                  {/* Submit */}
                   <div>
-                    <button type="submit" className="flex w-full justify-center rounded-md border border-transparent bg-[#0070f3] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-blue-400" disabled={isLoading}>
+                    <button
+                      type="submit"
+                      className="flex w-full justify-center rounded-md border border-transparent bg-[#0070f3] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-blue-400"
+                      disabled={isLoading}
+                    >
                       {isLoading ? 'Mendaftarkan...' : 'Daftar'}
                     </button>
                   </div>
                 </form>
+
                 <p className="mt-6 text-center text-sm text-gray-600">
                   Sudah punya akun?{' '}
-                  <Link href="/login" className="font-medium text-blue-600 bold underline hover:text-blue-500">
+                  <Link href="/login" className="font-medium text-blue-600 underline hover:text-blue-500">
                     Masuk di sini
-                  </Link> 
+                  </Link>
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Kolom Kanan: Panel Biru Dekoratif */}
+        {/* Kolom Kanan: Panel Dekoratif */}
         <div className="relative hidden lg:flex flex-col items-center lg:items-start justify-center lg:pl-12 p-12 text-white">
-            <div className="relative w-full h-auto mb-8 max-w-2xl"> 
-              <Image
-                src="/psikotes.png"
-                alt="Ilustrasi Psikotes"
-                layout="responsive"
-                width={500}
-                height={500}
-                objectFit="contain"
-              />
-            </div>
-            {/* <div className="rounded-lg bg-white/10 p-8 backdrop-blur-sm text-center max-w-md">
-               <h2 className="text-4xl font-bold">Temukan Potensi Diri Anda.</h2>
-               <p className="mt-4 text-lg text-blue-100">
-                 Akses psikotes online untuk memahami aneka potensi tersembunyi. Cocok untuk persiapan karier, pendidikan, atau pengembangan diri.
-               </p>
-            </div> */}
+          <div className="relative w-full h-auto mb-8 max-w-2xl">
+            <Image
+              src="/psikotes.png"
+              alt="Ilustrasi Psikotes"
+              layout="responsive"
+              width={500}
+              height={500}
+              objectFit="contain"
+            />
+          </div>
         </div>
       </div>
+
+      {/* Popup sukses */}
+      {success && (
+        <div className="fixed top-5 right-5 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md z-50">
+          {success}
+        </div>
+      )}
+
+      <Footer />
     </main>
   );
 }

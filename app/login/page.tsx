@@ -1,4 +1,3 @@
-// app/login/page.tsx
 'use client';
 
 import { useState, FormEvent } from 'react';
@@ -12,6 +11,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
@@ -21,25 +21,30 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Gagal melakukan login.');
+        setError(data.error || 'Gagal melakukan login.');
+        setIsLoading(false);
+        return;
       }
 
-      router.push('/dashboard');
+      // Set popup sukses
+      setSuccess('Login berhasil! Mengarahkan ke dashboard...');
+      setIsLoading(false);
 
-    } catch (error: any) {
-      setError(error.message);
-    } finally {
+      // Redirect otomatis setelah 2 detik
+      setTimeout(() => router.push('/dashboard'), 2000);
+
+    } catch (err) {
+      console.error(err);
+      setError('Terjadi kesalahan saat menghubungi server');
       setIsLoading(false);
     }
   };
@@ -49,7 +54,6 @@ export default function LoginPage() {
       <Navbar />
 
       <div className="flex flex-grow items-center justify-center p-4 sm:p-6 py-24">
-        
         <div className="relative flex flex-col lg:flex-row w-full max-w-5xl bg-white rounded-xl shadow-2xl overflow-hidden min-h-[600px]">
           {/* Kolom Kiri: Form Login */}
           <div className="flex-1 flex flex-col justify-center p-8 sm:p-12 lg:p-16">
@@ -67,7 +71,7 @@ export default function LoginPage() {
                     <p className="text-sm text-red-700">{error}</p>
                   </div>
                 )}
-                
+
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                     Alamat Email
@@ -112,7 +116,11 @@ export default function LoginPage() {
                 </div>
 
                 <div>
-                  <button type="submit" className="flex w-full justify-center rounded-md border border-transparent bg-[#0070f3] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-blue-400" disabled={isLoading}>
+                  <button
+                    type="submit"
+                    className="flex w-full justify-center rounded-md border border-transparent bg-[#0070f3] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-blue-400"
+                    disabled={isLoading}
+                  >
                     {isLoading ? 'Memproses...' : 'Login'}
                   </button>
                 </div>
@@ -139,6 +147,13 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+
+      {/* Popup sukses */}
+      {success && (
+        <div className="fixed top-5 right-5 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md z-50">
+          {success}
+        </div>
+      )}
     </main>
   );
 }

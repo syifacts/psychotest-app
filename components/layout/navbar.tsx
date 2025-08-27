@@ -3,8 +3,19 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; // <-- import useRouter
 
 const Navbar = () => {
+  const router = useRouter(); // hook untuk navigasi
+
+  const handleLogin = () => {
+    router.push("/login"); // redirect ke halaman /login
+  };
+
+  const handleSignup = () => {
+    router.push("/register"); // redirect ke halaman /signup jika mau
+  };
+
   return (
     <>
       <header className="header">
@@ -26,15 +37,14 @@ const Navbar = () => {
             <Link href="/dashboard" legacyBehavior>
               <a>Layanan Tes</a>
             </Link>
+            <Link href="/account" legacyBehavior>
+              <a>Akun</a>
+            </Link>
           </nav>
 
           <div className="auth">
-            <Link href="/login">
-              <button className="login">Login</button>
-            </Link>
-            <Link href="/register">
-              <button className="signup">Sign Up</button>
-            </Link>
+            <button className="login" onClick={handleLogin}>Login</button>
+            <button className="signup" onClick={handleSignup}>Sign Up</button>
           </div>
         </div>
       </header>
