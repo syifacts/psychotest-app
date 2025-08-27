@@ -7,10 +7,21 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { fullName, email, password } = body;
 
+    // Validasi sederhana
+    if (!fullName || !email || !password) {
+      return NextResponse.json(
+        { error: "Semua field harus diisi" },
+        { status: 400 }
+      );
+    }
+
     // cek email sudah ada atau belum
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return NextResponse.json({ error: "Email sudah terdaftar" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Email sudah terdaftar" },
+        { status: 400 }
+      );
     }
 
     // hash password
@@ -22,12 +33,22 @@ export async function POST(req: Request) {
         fullName,
         email,
         password: hashedPassword,
-        role: "USER", // default USER
+        // role default USER otomatis sesuai schema
       },
     });
 
-    return NextResponse.json({ message: "Registrasi berhasil", user: newUser }, { status: 201 });
+    // jangan kirim password di response
+    const { password: _, ...userWithoutPassword } = newUser;
+
+    return NextResponse.json(
+      { message: "Registrasi berhasil", user: userWithoutPassword },
+      { status: 201 }
+    );
   } catch (err) {
-    return NextResponse.json({ error: "Terjadi kesalahan" }, { status: 500 });
+    console.error(err);
+    return NextResponse.json(
+      { error: "Terjadi kesalahan" },
+      { status: 500 }
+    );
   }
 }

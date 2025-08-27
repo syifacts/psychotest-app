@@ -13,7 +13,7 @@ const Navbar = () => {
   };
 
   const handleSignup = () => {
-    router.push("/signup"); // redirect ke halaman /signup jika mau
+    router.push("/register"); // redirect ke halaman /signup jika mau
   };
 
   return (
@@ -36,6 +36,9 @@ const Navbar = () => {
             </Link>
             <Link href="/dashboard" legacyBehavior>
               <a>Layanan Tes</a>
+            </Link>
+            <Link href="/account" legacyBehavior>
+              <a>Akun</a>
             </Link>
           </nav>
 
