@@ -6,10 +6,91 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../app/generated/prisma"
+  // output   = "../app/generated/prisma"
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider  = "mysql"
+  url       = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+// ------------------
+// Enum Role
+// ------------------
+enum Role {
+  SUPERADMIN
+  USER
+  DOKTER
+}
+
+// ------------------
+// User (Peserta / Dokter / Superadmin)
+// ------------------
+model User {
+  id        Int       @id @default(autoincrement())
+  fullName  String
+  email     String    @unique
+  password  String
+  role      Role      @default(USER)   // default role: USER
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  results   Result[]
+  answers   Answer[]
+}
+
+// ------------------
+// Jenis Tes
+// ------------------
+model TestType {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique   // Nama tes (contoh: IST, Pauli, Wartegg)
+  desc      String?
+  createdAt DateTime   @default(now())
+
+  questions Question[]
+  results   Result[]
+}
+
+// ------------------
+// Soal
+// ------------------
+model Question {
+  id         Int       @id @default(autoincrement())
+  testTypeId Int
+  content    String    // isi soal
+  options    Json?     // pilihan jawaban (bisa array A,B,C,D atau angka)
+  answer     String?   // kunci jawaban (kalau ada)
+
+  TestType   TestType  @relation(fields: [testTypeId], references: [id])
+  answers    Answer[]
+}
+
+// ------------------
+// Hasil Tes
+// ------------------
+model Result {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  testTypeId Int
+  score      Int
+  createdAt  DateTime @default(now())
+
+  User       User     @relation(fields: [userId], references: [id])
+  TestType   TestType @relation(fields: [testTypeId], references: [id])
+}
+
+// ------------------
+// Jawaban Peserta
+// ------------------
+model Answer {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  questionId Int
+  choice     String   // jawaban user
+  isCorrect  Boolean?
+
+  User       User     @relation(fields: [userId], references: [id])
+  Question   Question @relation(fields: [questionId], references: [id])
 }
