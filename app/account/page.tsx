@@ -2,42 +2,74 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { jwtDecode } from 'jwt-decode';
 
-
-
-interface User {
-  fullName: string;
+interface TokenPayload {
+  id: number;
   email: string;
+  fullName: string; 
+  iat: number;
+  exp: number;
 }
 
 export default function AccountPage() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<TokenPayload | null>(null);
   const router = useRouter();
 
-  // Ambil data user dari localStorage
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    } else {
-      // Jika tidak ada, redirect ke login
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      // Token tidak ada, redirect ke login
+      setUser(null);
+      router.push('/login');
+      return;
+    }
+
+    try {
+      const decoded = jwtDecode<TokenPayload>(token);
+      const currentTime = Math.floor(Date.now() / 1000);
+
+      // Token expired
+      if (decoded.exp < currentTime) {
+        localStorage.removeItem('token');
+        setUser(null);
+        router.push('/login');
+        return;
+      }
+
+      // Set user dari token
+      setUser(decoded);
+    } catch (err) {
+      console.error('Token decode error:', err);
+      localStorage.removeItem('token');
+      setUser(null);
       router.push('/login');
     }
   }, [router]);
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    router.push('/login');
-  };
+  // Hapus JWT dari localStorage
+  localStorage.removeItem('token');
+
+  // Reset state user
+  setUser(null);
+
+  // Redirect ke login
+  router.push('/login');
+};
+
 
   if (!user) {
-    return null; // Bisa diganti spinner loading
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p>Loading...</p>
+      </div>
+    );
   }
 
   return (
     <main className="flex flex-col min-h-screen bg-gray-50">
-
-
       <div className="flex flex-col items-center justify-center flex-grow py-24 px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-md">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Akun Saya</h2>
@@ -64,7 +96,6 @@ export default function AccountPage() {
           </div>
         </div>
       </div>
-
     </main>
   );
 }

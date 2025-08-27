@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-const { PrismaClient } = require("@prisma/client");
+const { prisma } = require("../lib/prisma");
+const bcrypt = require("bcrypt");
 
-const prisma = new PrismaClient();
-
+// ==== DATA TEST TYPES ====
 const testTypes = [
   { name: "IST", desc: "Intelligence Structure Test" },
   { name: "EPPS", desc: "Edwards Personal Preference Schedule" },
@@ -35,20 +34,39 @@ const testTypes = [
   { name: "Enneagram", desc: "Enneagram Personality Typing Test" },
 ];
 
-async function main() {
-  await prisma.testType.createMany({
-    data: testTypes,
-    skipDuplicates: true, // kalau sudah ada, dilewati
-  });
-
+// ==== SEED TEST TYPES ====
+async function seedTestTypes() {
+  await prisma.testType.createMany({ data: testTypes, skipDuplicates: true });
   console.log("✅ TestType inserted");
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
+// ==== SEED SUPERADMIN USER ====
+async function seedUser() {
+  const hashedPassword = await bcrypt.hash("admin123", 10);
+  await prisma.user.upsert({
+    where: { email: "admin@klinikym.com" },
+    update: { 
+      password: hashedPassword, 
+      fullName: "Super Admin", 
+      role: "SUPERADMIN"       
+    },
+    create: {
+      fullName: "Super Admin",
+      email: "admin@klinikym.com",
+      password: hashedPassword,
+      role: "SUPERADMIN",
+    },
   });
+  console.log("✅ Superadmin berhasil dibuat");
+}
+
+
+// ==== MAIN FUNCTION ====
+async function main() {
+  await seedTestTypes();
+  await seedUser();
+}
+
+main()
+  .catch(console.error)
+  .finally(async () => await prisma.$disconnect());
