@@ -1,5 +1,5 @@
-const { prisma } = require("../lib/prisma");
-const bcrypt = require("bcrypt");
+import { prisma } from "../lib/prisma";  // Ganti require
+import bcrypt from "bcrypt";
 
 // ==== DATA TEST TYPES ====
 const testTypes = [
@@ -34,10 +34,36 @@ const testTypes = [
   { name: "Enneagram", desc: "Enneagram Personality Typing Test" },
 ];
 
+// ==== SUBTEST IST ====
+const ISTSubTests = ["SE", "WA", "AN", "GE", "RA", "ZR", "FA", "WU", "ME"];
+
 // ==== SEED TEST TYPES ====
 async function seedTestTypes() {
   await prisma.testType.createMany({ data: testTypes, skipDuplicates: true });
   console.log("✅ TestType inserted");
+}
+
+// ==== SEED SUBTEST ====
+async function seedISTSubTests() {
+  // Ambil TestType IST
+  const istTest = await prisma.testType.findUnique({
+    where: { name: "IST" }
+  });
+  if (!istTest) return console.error("❌ TestType IST belum ada");
+
+  for (const subName of ISTSubTests) {
+    await prisma.subTest.upsert({
+      where: { testTypeId_name: { testTypeId: istTest.id, name: subName } },
+      update: {},
+      create: {
+        testTypeId: istTest.id,
+        name: subName,
+        desc: `Subtest ${subName} IST`
+      }
+    });
+  }
+
+  console.log("✅ Semua subtest IST berhasil di-seed!");
 }
 
 // ==== SEED SUPERADMIN USER ====
@@ -60,10 +86,10 @@ async function seedUser() {
   console.log("✅ Superadmin berhasil dibuat");
 }
 
-
 // ==== MAIN FUNCTION ====
 async function main() {
   await seedTestTypes();
+  await seedISTSubTests();  // <-- seed subtest IST dulu
   await seedUser();
 }
 

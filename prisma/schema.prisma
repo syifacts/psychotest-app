@@ -33,12 +33,14 @@ model User {
   email     String    @unique
   password  String
   role      Role      @default(USER)   // default role: USER
+  birthDate DateTime?                  // tanggal lahir, opsional
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   results   Result[]
   answers   Answer[]
 }
+
 
 // ------------------
 // Jenis Tes
@@ -49,8 +51,26 @@ model TestType {
   desc      String?
   createdAt DateTime   @default(now())
 
-  questions Question[]
+  subTests  SubTest[]
   results   Result[]
+}
+
+// ------------------
+// SubTest (untuk IST misal ME, SE, dst)
+// Bisa dibuat default untuk test tanpa subtest
+// ------------------
+model SubTest {
+  id         Int       @id @default(autoincrement())
+  testTypeId Int
+  name       String    // ME, SE, dst atau "default"
+  desc       String?
+  createdAt  DateTime  @default(now())
+
+  questions  Question[]
+
+  TestType   TestType  @relation(fields: [testTypeId], references: [id])
+
+  @@unique([testTypeId, name]) // nama subtest unik per TestType
 }
 
 // ------------------
@@ -58,13 +78,15 @@ model TestType {
 // ------------------
 model Question {
   id         Int       @id @default(autoincrement())
-  testTypeId Int
+  subTestId  Int
   content    String    // isi soal
-  options    Json?     // pilihan jawaban (bisa array A,B,C,D atau angka)
+  options    Json?     // pilihan jawaban (array)
   answer     String?   // kunci jawaban (kalau ada)
 
-  TestType   TestType  @relation(fields: [testTypeId], references: [id])
+  SubTest    SubTest   @relation(fields: [subTestId], references: [id])
   answers    Answer[]
+
+  @@unique([subTestId, content]) // mencegah duplikasi soal per subtest
 }
 
 // ------------------
