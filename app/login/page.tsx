@@ -16,38 +16,47 @@ export default function LoginPage() {
   const router = useRouter();
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsLoading(true);
-    setError(null);
+  event.preventDefault();
+  setIsLoading(true);
+  setError(null);
 
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (!response.ok) {
-        setError(data.error || 'Gagal melakukan login.');
-        setIsLoading(false);
-        return;
-      }
-
-      // Set popup sukses
-      setSuccess('Login berhasil! Mengarahkan ke dashboard...');
+    if (!response.ok) {
+      setError(data.error || 'Gagal melakukan login.');
       setIsLoading(false);
-
-      // Redirect otomatis setelah 2 detik
-      setTimeout(() => router.push('/dashboard'), 2000);
-
-    } catch (err) {
-      console.error(err);
-      setError('Terjadi kesalahan saat menghubungi server');
-      setIsLoading(false);
+      return;
     }
-  };
+
+    // Simpan token JWT di localStorage
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+    }
+
+    // Simpan data user di localStorage agar bisa ditampilkan di halaman akun
+    if (data.user) {
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
+
+    setSuccess('Login berhasil! Mengarahkan ke dashboard...');
+    setIsLoading(false);
+
+    // Redirect otomatis ke dashboard
+    setTimeout(() => router.push('/dashboard'), 2000);
+
+  } catch (err) {
+    console.error(err);
+    setError('Terjadi kesalahan saat menghubungi server');
+    setIsLoading(false);
+  }
+};
 
   return (
     <main className="flex flex-col min-h-screen bg-gray-100">

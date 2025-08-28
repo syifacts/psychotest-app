@@ -1,20 +1,32 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // <-- import useRouter
+import { useRouter, usePathname } from "next/navigation";
 
 const Navbar = () => {
-  const router = useRouter(); // hook untuk navigasi
+  const router = useRouter();
+  const pathname = usePathname(); // dapatkan route saat ini
+
+  // Simulasi state login
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    setIsLoggedIn(!!token);
+  }, []);
 
   const handleLogin = () => {
-    router.push("/login"); // redirect ke halaman /login
+    router.push("/login");
   };
 
   const handleSignup = () => {
-    router.push("/register"); // redirect ke halaman /signup jika mau
+    router.push("/register");
   };
+
+  // cek apakah halaman saat ini adalah login, register, atau account
+  const hideSearch = ["/login", "/register", "/account"].includes(pathname);
 
   return (
     <>
@@ -24,31 +36,35 @@ const Navbar = () => {
             <Image src="/logoklinik.png" alt="Logo Klinik" width={80} height={40} />
             <h1>Klinik Yuliarpan Medika</h1>
           </div>
-          <div className="search">
-            <input type="text" placeholder="Cari tes..." />
-          </div>
+          {!hideSearch && (
+            <div className="search">
+              <input type="text" placeholder="Cari tes..." />
+            </div>
+          )}
         </div>
 
         <div className="right">
-          <nav className="nav-links">
-            <Link href="/" legacyBehavior>
-              <a>Beranda</a>
-            </Link>
-            <Link href="/dashboard" legacyBehavior>
-              <a>Layanan Tes</a>
-            </Link>
-            <Link href="/account" legacyBehavior>
-              <a>Akun</a>
-            </Link>
-          </nav>
+  <nav className="nav-links">
+    <Link href="/" legacyBehavior>
+      <a>Beranda</a>
+    </Link>
+    <Link href="/dashboard" legacyBehavior>
+      <a>Layanan Tes</a>
+    </Link>
+    {isLoggedIn ? (
+      <Link href="/account" legacyBehavior>
+        <a>Akun</a>
+      </Link>
+    ) : (
+      <div className="auth">
+        <button className="login" onClick={handleLogin}>Login</button>
+        <button className="signup" onClick={handleSignup}>Sign Up</button>
+      </div>
+    )}
+  </nav>
+</div>
 
-          <div className="auth">
-            <button className="login" onClick={handleLogin}>Login</button>
-            <button className="signup" onClick={handleSignup}>Sign Up</button>
-          </div>
-        </div>
       </header>
-
       <style jsx>{`
         .header {
           display: flex;
@@ -74,6 +90,7 @@ const Navbar = () => {
           display: flex;
           align-items: center;
           gap: 200px;
+          margin-right:70px
         }
 
         .logo {
