@@ -26,16 +26,22 @@ export async function POST(req: Request) {
 
     const { password: _, ...userWithoutPassword } = user;
 
-    // Generate JWT
+    // 🔹 Tambahkan role ke JWT
     const token = jwt.sign(
-  { id: user.id, fullName: user.fullName, email: user.email }, 
-  JWT_SECRET, 
-  { expiresIn: "1h" }
-);
+      {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role, // <= penting
+      },
+      JWT_SECRET,
+      { expiresIn: "1h" }
+    );
 
-
-
-    return NextResponse.json({ message: "Login berhasil", user: userWithoutPassword, token }, { status: 200 });
+    return NextResponse.json(
+      { message: "Login berhasil", user: userWithoutPassword, token },
+      { status: 200 }
+    );
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Terjadi kesalahan saat login" }, { status: 500 });

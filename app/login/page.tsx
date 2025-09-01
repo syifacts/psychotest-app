@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -14,6 +14,21 @@ export default function LoginPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  // 🔹 Cek login saat mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    if (token && user) {
+      // Redirect langsung ke dashboard jika sudah login
+      const parsedUser = JSON.parse(user);
+      if (parsedUser.role === 'SUPERADMIN') {
+        router.replace('/admin');
+      } else {
+        router.replace('/');
+      }
+    }
+  }, [router]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -35,22 +50,19 @@ export default function LoginPage() {
         return;
       }
 
-      // Simpan token JWT di localStorage
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-      }
-
-      // Simpan data user di localStorage agar bisa ditampilkan di halaman akun
-      if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-      }
+      if (data.token) localStorage.setItem('token', data.token);
+      if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
 
       setSuccess('Login berhasil! Mengarahkan ke dashboard...');
       setIsLoading(false);
 
-      // Redirect otomatis ke dashboard
-      setTimeout(() => router.push('/dashboard'), 2000);
-
+      setTimeout(() => {
+        if (data.user.role === 'SUPERADMIN') {
+          router.push('/admin');
+        } else {
+          router.push('/');
+        }
+      }, 1500);
     } catch (err) {
       console.error(err);
       setError('Terjadi kesalahan saat menghubungi server');
@@ -61,7 +73,6 @@ export default function LoginPage() {
   return (
     <main className="flex flex-col min-h-screen bg-gray-100">
       <Navbar />
-
       {success && (
         <div className="w-full flex justify-center mt-4 absolute top-32 z-20">
           <div className="flex items-center bg-green-100 text-green-800 text-sm font-medium px-4 py-3 rounded-lg shadow-md" role="alert">
@@ -72,10 +83,9 @@ export default function LoginPage() {
           </div>
         </div>
       )}
-
       <div className="flex flex-grow items-center justify-center p-4 sm:p-6 py-24">
         <div className="relative flex flex-col lg:flex-row w-full max-w-5xl bg-white rounded-xl shadow-2xl overflow-hidden min-h-[600px]">
-          {/* Kolom Kiri: Form Login */}
+          {/* Form Login */}
           <div className="flex-1 flex flex-col justify-center p-8 sm:p-12 lg:p-16">
             <div className="w-full max-w-md mx-auto">
               <h2 className="text-3xl font-bold tracking-tight text-gray-900 text-center">
@@ -155,7 +165,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Kolom Kanan: Ilustrasi */}
+          {/* Ilustrasi */}
           <div className="flex-1 hidden lg:flex items-center justify-center p-8 sm:p-18 lg:p-16 relative">
             <Image
               src="/psikoteslogin.png"
