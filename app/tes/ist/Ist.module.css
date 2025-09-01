@@ -243,3 +243,11 @@
   max-width: 150px;
   height: auto;
 }
+/* Pastikan radio button terlihat */
+.optionsList input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb; /* warna biru saat dipilih */
+  margin-right: 8px;
+  cursor: pointer;
+}

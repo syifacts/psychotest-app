@@ -4,6 +4,9 @@ import React, { useState, useEffect } from "react";
 import styles from "./Ist.module.css";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ReportPDF from "../../../components/report/ReportIST";
+import { PDFDownloadLink } from "@react-pdf/renderer";
+
 
 interface Question {
   id: number;
@@ -804,6 +807,29 @@ await fetch("/api/tes/answers", {
       </div>
     );
   }
+  <PDFDownloadLink
+  document={
+    <ReportPDF
+      nomor="1"
+      nama="Arman"
+      tglLahir="03 Agustus 2003"
+      tglTes="16 Oktober 2025"
+      usia={22}
+      tujuan="Rekrutmen"
+      subtests={[
+        { name: "SE", rw: 9, sw: 92, category: "Rendah" },
+        { name: "WA", rw: 18, sw: 128, category: "Sangat Tinggi" },
+      ]}
+      totalRw={27}
+      totalSw={110}
+      iq={82}
+      dominasi="Eksak"
+    />
+  }
+  fileName="Laporan_Hasil_IST.pdf"
+>
+  {({ loading }) => (loading ? "Memuat PDF..." : "Download Laporan PDF")}
+</PDFDownloadLink>
 
   return null;
 };

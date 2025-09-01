@@ -65,29 +65,35 @@ export default function AccountPage() {
     }
   }, [router]);
 
-  useEffect(() => {
-    // Pastikan user sudah ada datanya sebelum mengambil riwayat
-    if (user) {
-      const fetchTestHistory = async () => {
-        setIsLoadingHistory(true); // Mulai loading
-        try {
-          const res = await fetch(`/api/tes/history/${user.id}`); // Ganti jika perlu
-          if (!res.ok) {
-            throw new Error('Gagal mengambil riwayat tes');
-          }
-          const data = await res.json();
-          setTestHistory(data);
-        } catch (error) {
-          console.error(error);
-          setTestHistory([]); // Kosongkan riwayat jika terjadi error
-        } finally {
-          setIsLoadingHistory(false); // Selesai loading
-        }
-      };
+ useEffect(() => {
+  if (user) {
+    const fetchTestHistory = async () => {
+      setIsLoadingHistory(true);
+      try {
+        const res = await fetch(`/api/user/${user.id}/attempts`);
+        if (!res.ok) throw new Error("Gagal mengambil riwayat tes");
 
-      fetchTestHistory();
-    }
-  }, [user]); // <-- Dependency: useEffect ini berjalan saat 'user' berubah
+        const data = await res.json();
+        // Map data supaya sesuai dengan struktur yang kamu gunakan di tabel
+        const mappedHistory = data.attempts.map((item: any) => ({
+          id: item.id,
+          testType: { name: item.TestType?.name || "Unknown Test" },
+          completedAt: item.finishedAt || item.startedAt,
+          isCompleted: item.isCompleted,
+        }));
+        setTestHistory(mappedHistory);
+      } catch (err) {
+        console.error(err);
+        setTestHistory([]);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+
+    fetchTestHistory();
+  }
+}, [user]);
+
 
   const handleLogout = () => {
     localStorage.removeItem('token');
