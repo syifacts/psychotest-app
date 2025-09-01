@@ -50,15 +50,8 @@ export default function LoginPage() {
         return;
       }
 
-      // Simpan token JWT di localStorage
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-      }
-
-      // Simpan data user di localStorage agar bisa ditampilkan di halaman akun
-      if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-      }
+      if (data.token) localStorage.setItem('token', data.token);
+      if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
 
       setSuccess('Login berhasil! Mengarahkan ke halaman utama...');
       setIsLoading(false);
@@ -83,7 +76,6 @@ setTimeout(() => {
   return (
     <main className="flex flex-col min-h-screen bg-gray-100">
       <Navbar />
-
       {success && (
         <div className="w-full flex justify-center mt-4 absolute top-32 z-20">
           <div className="flex items-center bg-green-100 text-green-800 text-sm font-medium px-4 py-3 rounded-lg shadow-md" role="alert">
@@ -94,7 +86,6 @@ setTimeout(() => {
           </div>
         </div>
       )}
-
       <div className="flex flex-grow items-center justify-center p-4 sm:p-6 py-24">
         <div className="relative flex flex-col lg:flex-row w-full max-w-5xl bg-white rounded-xl shadow-2xl overflow-hidden min-h-[600px]">
           {/* Form Login */}

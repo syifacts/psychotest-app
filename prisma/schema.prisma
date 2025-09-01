@@ -106,6 +106,8 @@ model Question {
   SubTest   SubTest?   @relation(fields: [subTestId], references: [id])
    TestType     TestType   @relation(fields: [testTypeId], references: [id])
   answers   Answer[]
+  payments  Payment[]
+  subtestResults SubtestResult[]
 }
 
 // ------------------
@@ -129,6 +131,7 @@ model TestAttempt {
   results         Result[]
   personalityResults PersonalityResult[]
 }
+
 
 
 // ------------------
