@@ -91,8 +91,8 @@ export const ISTQuestions = [
   },
   {
     content: "Jika kita mengetahui jumlah presentase nomor-nomor lotere yang tidak menang, maka kita dapat menghitung... ",
-    options: ["a) jumlah nomor yang menang", "b) jumlah pengikut", "c) pajak lotere", "d) kemungkinan menang","e) tinggi keuntungan"],
-    answer: "c) pajak lotere"
+    options: ["a) jumlah nomor yang menang", "b) pajak lotere", "c) kemungkinan menang", "d) jumlah pengikut ","e) tinggi keuntungan"],
+    answer: "c) kemungkinan menang"
   },
   {
     content: "Seorang anak yang berumur 10 tahun tingginya rata-rata ...cm",

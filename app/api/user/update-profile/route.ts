@@ -9,7 +9,10 @@ export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Token tidak ditemukan" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Token tidak ditemukan" },
+        { status: 401 }
+      );
     }
 
     const token = authHeader.split(" ")[1];
@@ -18,8 +21,12 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { fullName, birthDate } = body;
 
+    // Validasi wajib diisi
     if (!fullName || !birthDate) {
-      return NextResponse.json({ error: "Nama lengkap dan tanggal lahir wajib diisi" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Nama lengkap dan tanggal lahir wajib diisi" },
+        { status: 400 }
+      );
     }
 
     const updatedUser = await prisma.user.update({
@@ -28,16 +35,29 @@ export async function POST(req: Request) {
         fullName,
         birthDate: new Date(birthDate),
       },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        birthDate: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
-    const { password, ...userWithoutPassword } = updatedUser;
-
     return NextResponse.json(
-      { message: "Profil berhasil diperbarui", user: userWithoutPassword },
+      {
+        message: "Profil berhasil diperbarui",
+        user: updatedUser,
+      },
       { status: 200 }
     );
   } catch (error) {
     console.error("Update profile error:", error);
-    return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Terjadi kesalahan server" },
+      { status: 500 }
+    );
   }
 }

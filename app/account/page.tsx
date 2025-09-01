@@ -4,6 +4,16 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { jwtDecode } from 'jwt-decode';
 
+interface User {
+  id: number;
+  email: string;
+  fullName: string;
+  role?: string;
+  birthDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 interface TokenPayload {
   id: number;
   email: string;
@@ -13,15 +23,20 @@ interface TokenPayload {
 }
 
 export default function AccountPage() {
-  const [user, setUser] = useState<TokenPayload | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    // Cek localStorage dulu
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+      return;
+    }
 
+    // Jika localStorage kosong, ambil dari token
+    const token = localStorage.getItem('token');
     if (!token) {
-      // Token tidak ada, redirect ke login
-      setUser(null);
       router.push('/login');
       return;
     }
@@ -30,35 +45,27 @@ export default function AccountPage() {
       const decoded = jwtDecode<TokenPayload>(token);
       const currentTime = Math.floor(Date.now() / 1000);
 
-      // Token expired
       if (decoded.exp < currentTime) {
         localStorage.removeItem('token');
-        setUser(null);
         router.push('/login');
         return;
       }
 
       // Set user dari token
-      setUser(decoded);
+      setUser({ id: decoded.id, email: decoded.email, fullName: decoded.fullName });
     } catch (err) {
       console.error('Token decode error:', err);
       localStorage.removeItem('token');
-      setUser(null);
       router.push('/login');
     }
   }, [router]);
 
   const handleLogout = () => {
-  // Hapus JWT dari localStorage
-  localStorage.removeItem('token');
-
-  // Reset state user
-  setUser(null);
-
-  // Redirect ke login
-  router.push('/login');
-};
-
+    localStorage.removeItem('token');
+    localStorage.removeItem('user'); // hapus data user juga
+    setUser(null);
+    router.push('/login');
+  };
 
   if (!user) {
     return (
@@ -84,6 +91,13 @@ export default function AccountPage() {
               <label className="block text-sm font-medium text-gray-700">Email</label>
               <p className="mt-1 text-gray-900">{user.email}</p>
             </div>
+
+            {user.birthDate && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Tanggal Lahir</label>
+                <p className="mt-1 text-gray-900">{new Date(user.birthDate).toLocaleDateString()}</p>
+              </div>
+            )}
           </div>
 
           <div className="mt-8">

@@ -24,6 +24,13 @@ enum Role {
   DOKTER
 }
 
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+
 // ------------------
 // User (Peserta / Dokter / Superadmin)
 // ------------------
@@ -36,9 +43,12 @@ model User {
   birthDate DateTime?                  // tanggal lahir, opsional
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  progresses    UserProgress[] 
 
   results   Result[]
   answers   Answer[]
+  payments  Payment[]
+  subtestResults SubtestResult[]
 }
 
 
@@ -50,9 +60,30 @@ model TestType {
   name      String     @unique   // Nama tes (contoh: IST, Pauli, Wartegg)
   desc      String?
   createdAt DateTime   @default(now())
-
+  duration  Int
+  price     Int? 
   subTests  SubTest[]
   results   Result[]
+  payments  Payment[]
+  
+  // progress  UserProgress[]  <- hapus karena UserProgress sekarang tidak ada testTypeId
+  subtestResults SubtestResult[]
+}
+
+// ------------------
+// Pembayaran Tes
+// ------------------
+model Payment {
+  id          Int           @id @default(autoincrement())
+  userId      Int
+  testTypeId  Int
+  amount      Int           // jumlah yang dibayar
+  status      PaymentStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  User        User          @relation(fields: [userId], references: [id])
+  TestType    TestType      @relation(fields: [testTypeId], references: [id])
 }
 
 // ------------------
@@ -62,16 +93,18 @@ model TestType {
 model SubTest {
   id         Int       @id @default(autoincrement())
   testTypeId Int
-  name       String    // ME, SE, dst atau "default"
+  name       String
   desc       String?
   createdAt  DateTime  @default(now())
+  duration   Int?
 
   questions  Question[]
-
   TestType   TestType  @relation(fields: [testTypeId], references: [id])
+  SubtestResults SubtestResult[]
 
-  @@unique([testTypeId, name]) // nama subtest unik per TestType
+  @@unique([testTypeId, name])
 }
+
 
 // ------------------
 // Soal
@@ -79,29 +112,49 @@ model SubTest {
 model Question {
   id         Int       @id @default(autoincrement())
   subTestId  Int
-  content    String    // isi soal
-  options    Json?     // pilihan jawaban (array)
-  answer     String?   // kunci jawaban (kalau ada)
+  code       String    @unique   // identitas unik tiap soal (misal "SE-1", "ME-10", dll)
+  content    String?             // isi soal, boleh kosong
+  options    Json?               // pilihan jawaban (array)
+  answer     String?             // kunci jawaban (boleh kosong)
 
   SubTest    SubTest   @relation(fields: [subTestId], references: [id])
   answers    Answer[]
-
-  @@unique([subTestId, content]) // mencegah duplikasi soal per subtest
 }
 
 // ------------------
 // Hasil Tes
 // ------------------
 model Result {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  testTypeId  Int
+  totalScore  Int?
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  User        User     @relation(fields: [userId], references: [id])
+  TestType    TestType @relation(fields: [testTypeId], references: [id])
+
+  @@unique([userId, testTypeId])
+}
+
+
+model SubtestResult {
   id         Int      @id @default(autoincrement())
   userId     Int
-  testTypeId Int
+  subTestId  Int
   score      Int
+  testTypeId Int
   createdAt  DateTime @default(now())
+  isCompleted Boolean  @default(false)
 
-  User       User     @relation(fields: [userId], references: [id])
-  TestType   TestType @relation(fields: [testTypeId], references: [id])
+  User     User     @relation(fields: [userId], references: [id])
+  TestType TestType @relation(fields: [testTypeId], references: [id])
+  SubTest  SubTest  @relation(fields: [subTestId], references: [id])
+
+  @@unique([userId, subTestId, testTypeId])
 }
+
 
 // ------------------
 // Jawaban Peserta
@@ -115,4 +168,29 @@ model Answer {
 
   User       User     @relation(fields: [userId], references: [id])
   Question   Question @relation(fields: [questionId], references: [id])
+
+  @@unique([userId, questionId]) // ← tambah ini
+}
+
+model NormaIst {
+  id      Int    @id @default(autoincrement())
+  subtest String @db.VarChar(10)
+  age     Int
+  rw      Int
+  sw      Int
+  
+  @@unique([subtest, age, rw]) // composite key
+  @@map("Norma_Ist") // mapping ke nama tabel di database
+}
+model UserProgress {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  subtest     String   // contoh: "SE"
+  currentIdx  Int      @default(0)
+  startTime   DateTime
+  isCompleted Boolean  @default(false)
+
+  @@unique([userId, subtest]) // unik per user + subtest
+
+  User User @relation(fields: [userId], references: [id])
 }

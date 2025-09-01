@@ -1,65 +1,88 @@
-import { prisma } from "../lib/prisma";  // Ganti require
+import { prisma } from "../lib/prisma";  
 import bcrypt from "bcrypt";
 
 // ==== DATA TEST TYPES ====
 const testTypes = [
-  { name: "IST", desc: "Intelligence Structure Test" },
-  { name: "EPPS", desc: "Edwards Personal Preference Schedule" },
-  { name: "MPPI", desc: "Minnesota Multiphasic Personality Inventory" },
-  { name: "Kraepelin", desc: "Psychomotor performance and attention test" },
-  { name: "16pf", desc: "16 Personality Factor Questionnaire" },
-  { name: "Army Alpha", desc: "Army Alpha Cognitive Ability Test" },
-  { name: "Big Five", desc: "Big Five Personality Test" },
-  { name: "Holland", desc: "Holland Career Interest Test" },
-  { name: "DISC", desc: "DISC Personality Assessment" },
-  { name: "MBTI", desc: "Myers–Briggs Type Indicator" },
-  { name: "MSAI", desc: "Multiple Self-Assessment Inventory" },
-  { name: "MSDT", desc: "Multi-Stage Diagnostic Test" },
-  { name: "Papikostick", desc: "Papikostick Handwriting Personality Test" },
-  { name: "RMIB", desc: "Edwards Personal Preference Schedule" },
-  { name: "TIU5", desc: "TIU Cognitive Ability Test Level 5" },
-  { name: "TIU6", desc: "TIU Cognitive Ability Test Level 6" },
-  { name: "Wartegg", desc: "Wartegg Drawing Personality Test" },
-  { name: "Adversity Quotient", desc: "Adversity Quotient Test (Resilience Assessment)" },
-  { name: "Kuder", desc: "Kuder Career Interest Survey" },
-  { name: "SPM", desc: "Standard Progressive Matrices (Raven's IQ Test)" },
-  { name: "WPT", desc: "Wonderlic Personnel Test (Cognitive Ability)" },
-  { name: "CFIT 2 FORM A", desc: "Culture Fair Intelligence Test 2 - Form A" },
-  { name: "CFIT 2 FORM B", desc: "Culture Fair Intelligence Test 2 - Form B" },
-  { name: "CFIT 3 FORM A", desc: "Culture Fair Intelligence Test 3 - Form A" },
-  { name: "CFIT 3 FORM B", desc: "Culture Fair Intelligence Test 3 - Form B" },
-  { name: "Pauli", desc: "Pauli Personality Test" },
-  { name: "FRT", desc: "Figural Reasoning Test" },
-  { name: "Aptitude Test", desc: "General Aptitude Test" },
-  { name: "Enneagram", desc: "Enneagram Personality Typing Test" },
+  { name: "IST", desc: "Intelligence Structure Test", duration: 60, price: 150000},
+  { name: "EPPS", desc: "Edwards Personal Preference Schedule", duration: 60, price: 150000 },
+  { name: "MPPI", desc: "Minnesota Multiphasic Personality Inventory", duration: 60, price: 100000 },
+  { name: "Kraepelin", desc: "Psychomotor performance and attention test", duration: 60, price: 150000 },
+  { name: "16pf", desc: "16 Personality Factor Questionnaire", duration: 60, price: 150000 },
+  { name: "Army Alpha", desc: "Army Alpha Cognitive Ability Test", duration: 60, price: 150000 },
+  { name: "Big Five", desc: "Big Five Personality Test", duration: 60, price: 150000 },
+  { name: "Holland", desc: "Holland Career Interest Test", duration: 60, price: 150000 },
+  { name: "DISC", desc: "DISC Personality Assessment", duration: 60, price: 150000 },
+  { name: "MBTI", desc: "Myers–Briggs Type Indicator", duration: 60, price: 150000 },
+  { name: "MSAI", desc: "Multiple Self-Assessment Inventory", duration: 60, price: 150000 },
+  { name: "MSDT", desc: "Multi-Stage Diagnostic Test", duration: 60, price: 150000 },
+  { name: "Papikostick", desc: "Papikostick Handwriting Personality Test", duration: 60, price: 150000 },
+  { name: "RMIB", desc: "Edwards Personal Preference Schedule", duration: 60, price: 150000 },
+  { name: "TIU5", desc: "TIU Cognitive Ability Test Level 5", duration: 60, price: 150000 },
+  { name: "TIU6", desc: "TIU Cognitive Ability Test Level 6", duration: 60, price: 150000 },
+  { name: "Wartegg", desc: "Wartegg Drawing Personality Test", duration: 60, price: 150000 },
+  { name: "Adversity Quotient", desc: "Adversity Quotient Test (Resilience Assessment)", duration: 60, price: 150000 },
+  { name: "Kuder", desc: "Kuder Career Interest Survey", duration: 60, price: 150000 },
+  { name: "SPM", desc: "Standard Progressive Matrices (Raven's IQ Test)", duration: 60, price: 150000 },
+  { name: "WPT", desc: "Wonderlic Personnel Test (Cognitive Ability)", duration: 60, price: 150000 },
+  { name: "CFIT 2 FORM A", desc: "Culture Fair Intelligence Test 2 - Form A", duration: 60, price: 150000},
+  { name: "CFIT 2 FORM B", desc: "Culture Fair Intelligence Test 2 - Form B", duration: 60, price: 150000 },
+  { name: "CFIT 3 FORM A", desc: "Culture Fair Intelligence Test 3 - Form A", duration: 60, price: 150000 },
+  { name: "CFIT 3 FORM B", desc: "Culture Fair Intelligence Test 3 - Form B", duration: 60, price: 150000 },
+  { name: "Pauli", desc: "Pauli Personality Test", duration: 60, price: 100000 },
+  { name: "FRT", desc: "Figural Reasoning Test", duration: 60, price: 150000 },
+  { name: "Aptitude Test", desc: "General Aptitude Test", duration: 60, price: 150000 },
+  { name: "Enneagram", desc: "Enneagram Personality Typing Test", duration: 60, price: 150000 },
 ];
 
 // ==== SUBTEST IST ====
-const ISTSubTests = ["SE", "WA", "AN", "GE", "RA", "ZR", "FA", "WU", "ME"];
+const ISTSubTests = [
+  { name: "SE", duration: 6 },
+  { name: "WA", duration: 6 },
+  { name: "AN", duration: 7 },
+  { name: "GE", duration: 8 },
+  { name: "RA", duration: 10 },
+  { name: "ZR", duration: 10 },
+  { name: "FA", duration: 7 },
+  { name: "WU", duration: 9 },
+  { name: "ME", duration: 3 },
+];
 
-// ==== SEED TEST TYPES ====
+// ==== SEED TEST TYPES (pakai upsert) ====
 async function seedTestTypes() {
-  await prisma.testType.createMany({ data: testTypes, skipDuplicates: true });
-  console.log("✅ TestType inserted");
+  for (const test of testTypes) {
+    await prisma.testType.upsert({
+      where: { name: test.name },
+      update: {
+        desc: test.desc,
+        duration: test.duration,
+        price: test.price,
+      },
+      create: test,
+    });
+  }
+  console.log("✅ TestType inserted/updated");
 }
 
 // ==== SEED SUBTEST ====
 async function seedISTSubTests() {
-  // Ambil TestType IST
   const istTest = await prisma.testType.findUnique({
     where: { name: "IST" }
   });
   if (!istTest) return console.error("❌ TestType IST belum ada");
 
-  for (const subName of ISTSubTests) {
+  for (const sub of ISTSubTests) {
     await prisma.subTest.upsert({
-      where: { testTypeId_name: { testTypeId: istTest.id, name: subName } },
-      update: {},
+      where: { testTypeId_name: { testTypeId: istTest.id, name: sub.name } },
+      update: {
+        duration: sub.duration,
+        desc: `Subtest ${sub.name} IST`,
+      },
       create: {
         testTypeId: istTest.id,
-        name: subName,
-        desc: `Subtest ${subName} IST`
-      }
+        name: sub.name,
+        desc: `Subtest ${sub.name} IST`,
+        duration: sub.duration,
+      },
     });
   }
 
@@ -89,7 +112,7 @@ async function seedUser() {
 // ==== MAIN FUNCTION ====
 async function main() {
   await seedTestTypes();
-  await seedISTSubTests();  // <-- seed subtest IST dulu
+  await seedISTSubTests();
   await seedUser();
 }
 
