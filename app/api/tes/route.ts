@@ -6,6 +6,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type"); // ex: IST
     const sub = searchParams.get("sub");   // ex: SE
+    const userId = Number(searchParams.get("userId")); // optional, untuk ambil jawaban user
 
     if (!type || !sub) {
       return NextResponse.json({ error: "type dan sub wajib diisi" }, { status: 400 });
@@ -25,14 +26,31 @@ export async function GET(req: NextRequest) {
     const questions = await prisma.question.findMany({
       where: { subTestId: subTest.id },
       select: { 
-        id: true, 
-        content: true,   // sebelumnya text -> sekarang content
-        options: true,   // sebelumnya choices -> sekarang options
-        answer: true
+        id: true,
+        content: true,
+        options: true,
+        type: true,
+        answer: true,
+        answerScores: true,
       },
+      orderBy: { id: "asc" },
     });
 
-    return NextResponse.json({ questions });
+    // Jika userId tersedia, ambil jawaban user
+    let userAnswers: Record<number, string | string[]> = {};
+    if (userId) {
+      const savedAnswers = await prisma.answer.findMany({
+        where: { userId, questionId: { in: questions.map(q => q.id) } },
+        select: { questionId: true, choice: true },
+      });
+
+      savedAnswers.forEach(a => {
+        const choiceStr = String(a.choice);
+        userAnswers[a.questionId] = choiceStr.includes(",") ? choiceStr.split(",") : choiceStr;
+      });
+    }
+
+    return NextResponse.json({ questions, userAnswers });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Gagal ambil soal" }, { status: 500 });

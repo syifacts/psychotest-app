@@ -7,9 +7,12 @@ import { useRouter } from "next/navigation";
 
 interface Question {
   id: number;
-  content: string;
-  options: string[];
+  content: string;        // teks soal atau URL gambar
+  options: string[];      // teks atau URL gambar
+  type: "single" | "mc" | "essay" | "image"; // atau "single" untuk imageQuestion juga
+  answerScores?: { keyword: string; score: number }[]; // untuk essay
 }
+
 
 interface SubtestInfo {
   name: string;
@@ -24,7 +27,9 @@ type AnswerPayload = {
 
 const TesISTPage = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
+  // Ubah tipe state answers:
+const [answers, setAnswers] = useState<Record<number, string | string[]>>({});
+
   const [loading, setLoading] = useState(false);
 
   const [showIntro, setShowIntro] = useState(true); // tahap 1
@@ -195,32 +200,41 @@ const handleStartSubtest = async () => {
 
   const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
 
-  // 1️⃣ Panggil API start → simpan startTime di DB
-  const res = await fetch("/api/tes/start", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      userId: savedUser.id,
-      subtest: currentSubtest.name,
-    }),
-  });
+  // ⏱️ Optimistic: langsung set timer full duration
+  setTimeLeft(currentSubtest.durationMinutes * 60);
 
-  const progress = await res.json();
-
-  // 2️⃣ Hitung sisa waktu dari DB (startTime + duration - sekarang)
-  const startTime = new Date(progress.startTime).getTime();
-  const endTime = startTime + currentSubtest.durationMinutes * 60 * 1000;
-  const now = Date.now();
-  const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
-
-  setTimeLeft(remaining);
-
-  // 3️⃣ Load soal
+  // 🔥 Langsung load soal dulu, biar user bisa lihat tanpa delay
   await loadQuestions(currentSubtest.name);
 
+  // Tampilkan halaman soal
   setShowSubtestDetail(false);
   setShowQuestions(true);
+
+  try {
+    // Simpan startTime ke DB
+    const res = await fetch("/api/tes/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: savedUser.id,
+        subtest: currentSubtest.name,
+      }),
+    });
+
+    const progress = await res.json();
+
+    // Sync ulang dengan DB (jaga2 kalau server kasih offset)
+    const startTime = new Date(progress.startTime).getTime();
+    const endTime = startTime + currentSubtest.durationMinutes * 60 * 1000;
+    const now = Date.now();
+    const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
+
+    setTimeLeft(remaining);
+  } catch (err) {
+    console.error("Gagal start subtest:", err);
+  }
 };
+
 
   // -------------------------
   // Simpan data diri
@@ -285,19 +299,66 @@ const handleStartSubtest = async () => {
   // -------------------------
 // Select jawaban (klik lagi → undo)
 // -------------------------
-const handleSelectAnswer = async (qid: number, choice: string) => {
+const handleSelectAnswer = async (
+  qid: number,
+  choice: string,
+  type: "single" | "mc" | "essay" | "image"
+) => {
   setAnswers((prev) => {
-    const newAnswers = { ...prev };
-    // Jika jawaban sama dengan sebelumnya → hapus (undo)
-    if (prev[qid] === choice) {
-      delete newAnswers[qid];
+    const newAnswers: Record<number, string | string[]> = { ...prev };
+
+    if (type === "mc") {
+  const prevChoices: string[] = Array.isArray(prev[qid]) ? prev[qid] : [];
+
+  if (prevChoices.includes(choice)) {
+    const filtered = prevChoices.filter((c) => c !== choice);
+
+    if (filtered.length > 0) {
+      newAnswers[qid] = filtered;
     } else {
-      newAnswers[qid] = choice;
+      // ✅ Hapus key kalau kosong
+      delete newAnswers[qid];
     }
+  } else {
+    newAnswers[qid] = [...prevChoices, choice];
+  }
+} else {
+  // single / essay / image
+  if (prev[qid] === choice) {
+    delete newAnswers[qid];
+  } else {
+    newAnswers[qid] = choice;
+  }
+}
+
+
+    // Jika soal gambar (single/image), ubah pilihan jadi huruf
+    const question = questions.find((q) => q.id === qid);
+    if (question?.content.match(/\.(jpg|jpeg|png|gif)$/i)) {
+      let letterChoice: string | string[] = newAnswers[qid]!;
+      if (Array.isArray(newAnswers[qid])) {
+        letterChoice = newAnswers[qid]!.map((c) => {
+          const idx = question.options.indexOf(c);
+          return idx !== -1 ? String.fromCharCode(65 + idx) : c;
+        });
+      } else {
+        const idx = question.options.indexOf(newAnswers[qid] as string);
+        letterChoice = idx !== -1 ? String.fromCharCode(65 + idx) : newAnswers[qid];
+      }
+
+      // Kirim ke backend
+      saveAnswerToBackend(qid, letterChoice);
+    } else {
+      saveAnswerToBackend(qid, newAnswers[qid]!);
+    }
+
     return newAnswers;
   });
+};
 
-  // Kirim ke backend tetap optional, bisa hapus juga jika undo
+
+// fungsi simpan jawaban ke backend
+const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
   const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
   if (!savedUser.id) return;
 
@@ -308,13 +369,15 @@ const handleSelectAnswer = async (qid: number, choice: string) => {
       body: JSON.stringify({
         userId: savedUser.id,
         questionId: qid,
-        choice: answers[qid] === choice ? null : choice, // null artinya hapus jawaban
+        choice: Array.isArray(choice) ? choice.join(",") : choice, // simpan MC sebagai CSV
       }),
     });
   } catch (err) {
     console.error(err);
   }
 };
+
+
 
 
   // -------------------------
@@ -326,9 +389,10 @@ const handleSelectAnswer = async (qid: number, choice: string) => {
     if (!savedUser.id || !currentSubtest) return;
 
     const payload: AnswerPayload[] = Object.entries(answers).map(([qid, choice]) => ({
-      questionId: Number(qid),
-      choice,
-    }));
+  questionId: Number(qid),
+  choice: Array.isArray(choice) ? choice.join(",") : choice,
+}));
+
 
     const res = await fetch("/api/tes/submit-subtest", {
       method: "POST",
@@ -505,68 +569,134 @@ const handleSelectAnswer = async (qid: number, choice: string) => {
         </div>
 
         <div className={styles.mainContent}>
-          <div className={styles.questionSection}>
-            <p>
-              <b>{currentIndex + 1}. </b>
-              {currentQuestion.content}
-            </p>
-            <ul className={styles.optionsList}>
-              {currentQuestion.options?.map((opt) => (
-                <li key={opt}>
-                  <label>
-                    <input
-                      type="radio"
-                      name={`question-${currentQuestion.id}`}
-                      value={opt}
-                      checked={answers[currentQuestion.id] === opt}
-                      onChange={() => handleSelectAnswer(currentQuestion.id, opt)}
-                    />
-                    {opt}
-                  </label>
-                </li>
-              ))}
-            </ul>
+  <div className={styles.questionSection}>
+    <p>
+      <b>{currentIndex + 1}. </b>
+    </p>
 
-            <div className={styles.navButtons}>
-              <button
-                className={styles.backBtn}
-                onClick={() => setCurrentIndex((i) => i - 1)}
-                disabled={currentIndex === 0}
-              >
-                ← Back
-              </button>
-              {currentIndex < questions.length - 1 ? (
-                <button
-                  className={styles.btn}
-                  onClick={() => setCurrentIndex((i) => i + 1)}
-                >
-                  Next →
-                </button>
-              ) : (
-                <button className={styles.btn} onClick={handleSubmit}>
-                  Submit Subtest
-                </button>
-              )}
-            </div>
-          </div>
+   {/* Render content soal */}
+{currentQuestion.type === "essay" ? (
+  <>
+    <p>{currentQuestion.content}</p>
+    <textarea
+      value={answers[currentQuestion.id] || ""}
+      onChange={(e) =>
+        setAnswers((prev) => ({
+          ...prev,
+          [currentQuestion.id]: e.target.value,
+        }))
+      }
+      className={styles.textarea}
+      placeholder="Ketik jawaban Anda..."
+    />
+  </>
+) : (
+  <>
+    {/* Render soal gambar jika ada */}
+    {currentQuestion.content &&
+      currentQuestion.content.match(/\.(jpg|jpeg|png|gif)$/i) && (
+        <img
+          src={currentQuestion.content}
+          alt={`Soal ${currentIndex + 1}`}
+          className={styles.questionImage}
+        />
+      )}
 
-          <div className={styles.answerCard}>
-            <h3>Ringkasan Jawaban</h3>
-            <div className={styles.answerGrid}>
-              {questions.map((q, idx) => (
-                <button
-                  key={q.id}
-                  className={`${styles.answerNumber} ${
-                    answers[q.id] ? styles.answered : styles.unanswered
-                  } ${currentIndex === idx ? styles.current : ""}`}
-                  onClick={() => setCurrentIndex(idx)}
-                >
-                  {idx + 1}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+    {/* Render soal teks jika ada dan bukan gambar */}
+    {currentQuestion.content &&
+      !currentQuestion.content.match(/\.(jpg|jpeg|png|gif)$/i) && (
+        <p>{currentQuestion.content}</p>
+      )}
+
+  <ul className={styles.optionsList}>
+  {currentQuestion.options?.map((opt, idx) => {
+    let optionLetter = "";
+    const isImageQuestion =
+      currentQuestion.content?.match(/\.(jpg|jpeg|png|gif)$/i);
+    if (isImageQuestion) {
+      optionLetter = String.fromCharCode(65 + idx) + ". ";
+    }
+
+    const isImageOption = opt.match(/\.(jpg|jpeg|png|gif)$/i);
+
+    // Tentukan input type
+    const inputType = currentQuestion.type === "mc" ? "checkbox" : "radio";
+
+    // Untuk mc, checked: answers[qid] array
+    const isChecked =
+  currentQuestion.type === "mc"
+    ? Array.isArray(answers[currentQuestion.id]) &&
+      (answers[currentQuestion.id] as string[]).includes(opt)
+    : answers[currentQuestion.id] === opt;
+
+
+    return (
+      <li key={idx}>
+        <label className={styles.optionLabel}>
+          <input
+            type={inputType}
+            name={`question-${currentQuestion.id}`}
+            value={opt}
+            checked={isChecked}
+            onChange={() =>
+              handleSelectAnswer(currentQuestion.id, opt, currentQuestion.type)
+            }
+          />
+          <span className={styles.optionContent}>
+            {optionLetter}
+            {isImageOption ? (
+              <img src={opt} alt={`Option ${idx + 1}`} className={styles.optionImage} />
+            ) : (
+              opt
+            )}
+          </span>
+        </label>
+      </li>
+    );
+  })}
+</ul>
+
+
+  </>
+)}
+
+
+    <div className={styles.navButtons}>
+      <button
+        className={styles.backBtn}
+        onClick={() => setCurrentIndex((i) => i - 1)}
+        disabled={currentIndex === 0}
+      >
+        ← Back
+      </button>
+      {currentIndex < questions.length - 1 ? (
+        <button className={styles.btn} onClick={() => setCurrentIndex((i) => i + 1)}>
+          Next →
+        </button>
+      ) : (
+        <button className={styles.btn} onClick={handleSubmit}>
+          Submit Subtest
+        </button>
+      )}
+    </div>
+  </div>
+
+  <div className={styles.answerCard}>
+    <h3>Ringkasan Jawaban</h3>
+    <div className={styles.answerGrid}>
+      {questions.map((q, idx) => (
+        <button
+          key={q.id}
+          className={`${styles.answerNumber} ${answers[q.id] ? styles.answered : styles.unanswered} ${currentIndex === idx ? styles.current : ""}`}
+          onClick={() => setCurrentIndex(idx)}
+        >
+          {idx + 1}
+        </button>
+      ))}
+    </div>
+  </div>
+</div>
+
       </div>
     );
   }

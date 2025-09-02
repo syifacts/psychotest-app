@@ -16,7 +16,12 @@ type AnswerData = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, type, subtest, answers }: { userId: number; type: string; subtest: string; answers: AnswerPayload[] } = await req.json();
+    const { userId, type, subtest, answers }: { 
+      userId: number; 
+      type: string; 
+      subtest: string; 
+      answers: AnswerPayload[] 
+    } = await req.json();
 
     if (!userId || !type || !subtest || !answers?.length) {
       return NextResponse.json(
@@ -39,8 +44,8 @@ export async function POST(req: NextRequest) {
       return { userId, questionId: a.questionId, choice: a.choice, isCorrect };
     });
 
-    // 🔹 Simpan jawaban user
-    await Promise.all(
+    // 🔹 Simpan jawaban user (pakai Promise.allSettled biar tidak gagal semua kalau ada 1 error)
+    await Promise.allSettled(
       answerData.map((ans: AnswerData) =>
         prisma.answer.upsert({
           where: { userId_questionId: { userId: ans.userId, questionId: ans.questionId } },
@@ -106,18 +111,25 @@ export async function POST(req: NextRequest) {
       select: { subTestId: true },
     });
 
-    const nextSubtest = subtests.find(st => !doneSubtests.some(ds => ds.subTestId === st.id));
+    const doneSet = new Set(doneSubtests.map(ds => ds.subTestId));
+    const nextSubtest = subtests.find(st => !doneSet.has(st.id));
 
-    return NextResponse.json({
-      message: "Jawaban & skor subtest berhasil disimpan",
-      score,
-      nextSubtest: nextSubtest?.name ?? null,
-      durationMinutes: nextSubtest?.duration ?? 6,
-       type,
-    });
+    return NextResponse.json(
+      {
+        message: "Jawaban & skor subtest berhasil disimpan",
+        score,
+        nextSubtest: nextSubtest?.name ?? null,
+        durationMinutes: nextSubtest?.duration ?? 6,
+        type,
+      },
+      { status: 200 }
+    );
 
   } catch (err) {
     console.error("❌ Gagal submit subtest:", err);
-    return NextResponse.json({ error: "Gagal submit subtest" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Gagal submit subtest", detail: (err as Error).message },
+      { status: 500 }
+    );
   }
 }

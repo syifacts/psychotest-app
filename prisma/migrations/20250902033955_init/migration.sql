@@ -59,7 +59,9 @@ CREATE TABLE `Question` (
     `code` VARCHAR(191) NOT NULL,
     `content` VARCHAR(191) NULL,
     `options` JSON NULL,
-    `answer` VARCHAR(191) NULL,
+    `type` VARCHAR(191) NOT NULL,
+    `answer` JSON NULL,
+    `answerScores` JSON NULL,
 
     UNIQUE INDEX `Question_code_key`(`code`),
     PRIMARY KEY (`id`)
@@ -110,7 +112,7 @@ CREATE TABLE `Norma_Ist` (
     `subtest` VARCHAR(10) NOT NULL,
     `age` INTEGER NOT NULL,
     `rw` INTEGER NOT NULL,
-    `sw` INTEGER NOT NULL,
+    `sw` DOUBLE NOT NULL,
 
     UNIQUE INDEX `Norma_Ist_subtest_age_rw_key`(`subtest`, `age`, `rw`),
     PRIMARY KEY (`id`)

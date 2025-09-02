@@ -115,7 +115,9 @@ model Question {
   code       String    @unique   // identitas unik tiap soal (misal "SE-1", "ME-10", dll)
   content    String?             // isi soal, boleh kosong
   options    Json?               // pilihan jawaban (array)
-  answer     String?             // kunci jawaban (boleh kosong)
+   type         String    // "single", "mc", "essay", "image"
+  answer     Json?             // kunci jawaban (boleh kosong)
+  answerScores Json? 
 
   SubTest    SubTest   @relation(fields: [subTestId], references: [id])
   answers    Answer[]
@@ -160,16 +162,16 @@ model SubtestResult {
 // Jawaban Peserta
 // ------------------
 model Answer {
-  id         Int      @id @default(autoincrement())
-  userId     Int
-  questionId Int
-  choice     String   // jawaban user
-  isCorrect  Boolean?
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  questionCode  String   // foreign key ke Question.code
+  choice        String   // jawaban user
+  isCorrect     Boolean?
 
-  User       User     @relation(fields: [userId], references: [id])
-  Question   Question @relation(fields: [questionId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
+  Question  Question @relation(fields: [questionCode], references: [code])
 
-  @@unique([userId, questionId]) // ← tambah ini
+  @@unique([userId, questionCode]) // user hanya boleh jawab 1x per soal
 }
 
 model NormaIst {
@@ -177,7 +179,7 @@ model NormaIst {
   subtest String @db.VarChar(10)
   age     Int
   rw      Int
-  sw      Int
+  sw      Float
   
   @@unique([subtest, age, rw]) // composite key
   @@map("Norma_Ist") // mapping ke nama tabel di database
