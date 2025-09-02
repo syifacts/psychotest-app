@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 
 interface Question {
   id: number;
+  code: string; 
   content: string;        // teks soal atau URL gambar
   options: string[];      // teks atau URL gambar
   type: "single" | "mc" | "essay" | "image"; // atau "single" untuk imageQuestion juga
@@ -61,11 +62,21 @@ const [hasAccess, setHasAccess] = useState(false);
     const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
     if (!savedUser.id) return;
 
+    // 1️⃣ Cek apakah user sudah bayar
+    const accessRes = await fetch(`/api/tes/check-access?userId=${savedUser.id}&type=IST`);
+    const accessData = await accessRes.json();
+    setHasAccess(accessData.access);
+
+    // 2️⃣ Kalau belum bayar, jangan lanjut load soal
+    if (!accessData.access) return;
+
+    // 3️⃣ Ambil progress user
     const res = await fetch(`/api/tes/progress?userId=${savedUser.id}&type=IST`);
     const data = await res.json();
 
     if (data.isCompleted) {
-      setAlreadyTaken(true); // ✅ tandai pernah ikut
+      setAlreadyTaken(true);
+      return; // sudah selesai → tidak perlu lanjut
     }
 
     setTypeTestDuration(data.durationMinutes ?? typeTestDuration);
@@ -77,31 +88,26 @@ const [hasAccess, setHasAccess] = useState(false);
         durationMinutes: data.durationMinutes || 6,
       });
 
-      // Jika user sedang mengerjakan subtest
-      if (data.startTime) {
-        setShowIntro(false);
-        setShowSubtestDetail(false);
-        setShowForm(false);
-        setShowQuestions(true);
-
-        // Load soal + restore jawaban
+      // 4️⃣ Hanya load soal kalau user sedang mengerjakan
+      if (data.startTime && !data.isCompleted) {
         await loadQuestions(data.nextSubtest);
-
-        // Hitung sisa waktu dari startTime
         const endTime = new Date(data.startTime);
         endTime.setMinutes(endTime.getMinutes() + (data.durationMinutes || 6));
         const secondsLeft = Math.floor((endTime.getTime() - new Date().getTime()) / 1000);
         setTimeLeft(secondsLeft > 0 ? secondsLeft : 0);
 
-        // Set index soal terakhir yang belum dijawab
         setCurrentIndex(data.nextQuestionIndex || 0);
+
+        setShowIntro(false);
+        setShowForm(false);
+        setShowSubtestDetail(false);
+        setShowQuestions(true);
       }
     }
   } catch (err) {
     console.error("Gagal fetch progress:", err);
   }
 };
-
 
 
   useEffect(() => {
@@ -135,16 +141,43 @@ const loadQuestions = async (subtest: string) => {
   try {
     // Ambil soal
     const res = await fetch(`/api/tes?type=IST&sub=${subtest}`);
-    const data = await res.json();
-    setQuestions(data.questions || []);
+    const data: { questions: Question[] } = await res.json();
+    const loadedQuestions = data.questions || [];
+    setQuestions(loadedQuestions);
 
-    // 🔥 Ambil jawaban user dari backend
+    // Ambil jawaban user dari backend
     const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    if (savedUser.id) {
-      const answerRes = await fetch(`/api/tes/answers?userId=${savedUser.id}&sub=${subtest}`);
-      const savedAnswersData = await answerRes.json();
-      setAnswers(savedAnswersData.answers || {});
+    if (!savedUser.id) return;
+
+    const answerRes = await fetch(
+      `/api/tes/answers?userId=${savedUser.id}&type=IST&sub=${subtest}`
+    );
+    const savedAnswersData: {
+      answers: Record<string, string>;
+      alreadyTaken: boolean;
+    } = await answerRes.json();
+
+    const answersMap: Record<number, string | string[]> = {};
+
+    if (savedAnswersData.answers) {
+      Object.entries(savedAnswersData.answers).forEach(([questionCode, choice]) => {
+        const q = loadedQuestions.find((q) => q.code === questionCode);
+        if (!q) return;
+
+        // Jika MC, convert CSV jadi array
+        const parsedChoice: string | string[] =
+          typeof choice === "string" && choice.includes(",")
+            ? choice.split(",")
+            : choice;
+
+        // ✅ Simpan **option asli** ke state
+        answersMap[q.id] = parsedChoice;
+      });
     }
+
+    setAnswers(answersMap);
+  } catch (err) {
+    console.error("Gagal load questions:", err);
   } finally {
     setLoading(false);
   }
@@ -190,6 +223,14 @@ const loadQuestions = async (subtest: string) => {
      setShowForm(true);
     setShowSubtestDetail(false);
     setShowQuestions(false);
+    // Jika belum ada currentSubtest, set subtest pertama
+  if (!currentSubtest && testInfo?.id) {
+    setCurrentSubtest({
+      name: "SE", // ambil dari DB subtest pertama
+      description: "Deskripsi subtest pertama...",
+      durationMinutes: 6,
+    });
+  }
   };
 
   // -------------------------
@@ -244,6 +285,7 @@ const handleStartSubtest = async () => {
     alert("Nama lengkap dan tanggal lahir wajib diisi!");
     return;
   }
+
   try {
     const token = localStorage.getItem("token");
     const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -265,28 +307,19 @@ const handleStartSubtest = async () => {
       JSON.stringify({ ...savedUser, fullName, birthDate })
     );
 
-    // 🔥 Panggil API start untuk simpan startTime di DB
-    if (currentSubtest) {
-      await fetch("/api/tes/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: savedUser.id,
-          subtest: currentSubtest.name,
-        }),
+    // Pastikan subtest pertama sudah ada
+    if (!currentSubtest && testInfo?.id) {
+      setCurrentSubtest({
+        name: "SE", // ambil subtest pertama dari DB
+        description: "Deskripsi subtest pertama...",
+        durationMinutes: 6,
       });
-
-      // Load soal dari backend
-      await loadQuestions(currentSubtest.name);
-
-      // Timer sekarang dihitung dari startTime di DB, 
-      // bukan langsung set di sini
-      // Jadi cukup setShowForm(false) → nanti fetchProgress hitung ulang
     }
 
+    // Baru tampilkan detail subtest
     setShowForm(false);
     setShowSubtestDetail(true);
-    setShowQuestions(false);
+
   } catch (err) {
     console.error(err);
   }
@@ -308,54 +341,25 @@ const handleSelectAnswer = async (
     const newAnswers: Record<number, string | string[]> = { ...prev };
 
     if (type === "mc") {
-  const prevChoices: string[] = Array.isArray(prev[qid]) ? prev[qid] : [];
-
-  if (prevChoices.includes(choice)) {
-    const filtered = prevChoices.filter((c) => c !== choice);
-
-    if (filtered.length > 0) {
-      newAnswers[qid] = filtered;
-    } else {
-      // ✅ Hapus key kalau kosong
-      delete newAnswers[qid];
-    }
-  } else {
-    newAnswers[qid] = [...prevChoices, choice];
-  }
-} else {
-  // single / essay / image
-  if (prev[qid] === choice) {
-    delete newAnswers[qid];
-  } else {
-    newAnswers[qid] = choice;
-  }
-}
-
-
-    // Jika soal gambar (single/image), ubah pilihan jadi huruf
-    const question = questions.find((q) => q.id === qid);
-    if (question?.content.match(/\.(jpg|jpeg|png|gif)$/i)) {
-      let letterChoice: string | string[] = newAnswers[qid]!;
-      if (Array.isArray(newAnswers[qid])) {
-        letterChoice = newAnswers[qid]!.map((c) => {
-          const idx = question.options.indexOf(c);
-          return idx !== -1 ? String.fromCharCode(65 + idx) : c;
-        });
+      const prevChoices: string[] = Array.isArray(prev[qid]) ? prev[qid] : [];
+      if (prevChoices.includes(choice)) {
+        const filtered = prevChoices.filter((c) => c !== choice);
+        if (filtered.length > 0) newAnswers[qid] = filtered;
+        else delete newAnswers[qid];
       } else {
-        const idx = question.options.indexOf(newAnswers[qid] as string);
-        letterChoice = idx !== -1 ? String.fromCharCode(65 + idx) : newAnswers[qid];
+        newAnswers[qid] = [...prevChoices, choice];
       }
-
-      // Kirim ke backend
-      saveAnswerToBackend(qid, letterChoice);
     } else {
-      saveAnswerToBackend(qid, newAnswers[qid]!);
+      if (prev[qid] === choice) delete newAnswers[qid];
+      else newAnswers[qid] = choice;
     }
+
+    // Simpan ke backend **selalu option asli**
+    saveAnswerToBackend(qid, newAnswers[qid]!);
 
     return newAnswers;
   });
 };
-
 
 // fungsi simpan jawaban ke backend
 const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
@@ -373,11 +377,9 @@ const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
       }),
     });
   } catch (err) {
-    console.error(err);
+    console.error("Gagal simpan jawaban:", err);
   }
 };
-
-
 
 
   // -------------------------
@@ -439,7 +441,7 @@ const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
       body: JSON.stringify({ userId: savedUser.id, type: "IST" }),
     });
     const totalData = await totalRes.json();
-    alert(`Tes IST selesai! Total skor: ${totalData.totalScore}`);
+    alert(`Tes IST selesai! Hasil akan ada di Report`);
   } catch (err) {
     console.error("Gagal submit total skor:", err);
   }
@@ -488,25 +490,39 @@ const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
     className={styles.btn}
     onClick={async () => {
       const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      if (!savedUser.id || !testInfo?.id) return;
+
       const res = await fetch("/api/payment/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: savedUser.id, testTypeId: testInfo?.id }),
+        body: JSON.stringify({ userId: savedUser.id, testTypeId: testInfo.id }),
       });
       const data = await res.json();
       if (data.success) {
         alert("Pembayaran berhasil diverifikasi!");
+
         setHasAccess(true);
+        setShowForm(true); // → tampilkan form data diri
+        setShowIntro(false);
+      } else {
+        alert("Pembayaran gagal, coba lagi.");
       }
     }}
   >
     Bayar untuk Ikut Tes
   </button>
 ) : (
-  <button className={styles.btn} onClick={handleFollowTest}>
+  <button
+    className={styles.btn}
+    onClick={() => {
+      setShowForm(true); // langsung ke form
+      setShowIntro(false);
+    }}
+  >
     Ikuti Tes
   </button>
 )}
+
 
         </div>
         <div className={styles.backWrapper}>

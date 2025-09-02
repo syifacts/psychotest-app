@@ -126,29 +126,15 @@ model Question {
 // ------------------
 // Hasil Tes
 // ------------------
-model Result {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  testTypeId  Int
-  totalScore  Int?
-  isCompleted Boolean  @default(false)
-  createdAt   DateTime @default(now())
-
-  User        User     @relation(fields: [userId], references: [id])
-  TestType    TestType @relation(fields: [testTypeId], references: [id])
-
-  @@unique([userId, testTypeId])
-}
-
-
 model SubtestResult {
-  id         Int      @id @default(autoincrement())
-  userId     Int
-  subTestId  Int
-  score      Int
-  testTypeId Int
-  createdAt  DateTime @default(now())
-  isCompleted Boolean  @default(false)
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  subTestId   Int
+  rw          Int       // jumlah benar
+  sw          Int       // nilai norma (standardwerte)
+  testTypeId  Int
+  createdAt   DateTime  @default(now())
+  isCompleted Boolean   @default(false)
 
   User     User     @relation(fields: [userId], references: [id])
   TestType TestType @relation(fields: [testTypeId], references: [id])
@@ -157,6 +143,20 @@ model SubtestResult {
   @@unique([userId, subTestId, testTypeId])
 }
 
+model Result {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  testTypeId  Int
+  totalRw     Int?     // total semua RW dari subtest
+  totalSw     Int?     // total semua SW dari subtest
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  User        User     @relation(fields: [userId], references: [id])
+  TestType    TestType @relation(fields: [testTypeId], references: [id])
+
+  @@unique([userId, testTypeId])
+}
 
 // ------------------
 // Jawaban Peserta

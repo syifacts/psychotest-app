@@ -14,22 +14,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Test type tidak ditemukan" }, { status: 400 });
     }
 
-    // 🔹 Ambil semua skor subtest user untuk tipe tes ini
+    // Ambil semua subtest untuk testType ini
+    const subtests = await prisma.subTest.findMany({
+      where: { testTypeId: testType.id },
+      select: { id: true },
+    });
+    const subtestIds = subtests.map(st => st.id);
+
+    // Ambil semua subtestResult user untuk subtests ini
     const subtestResults = await prisma.subtestResult.findMany({
-      where: { userId, SubTest: { testTypeId: testType.id } },
+      where: { userId, subTestId: { in: subtestIds } },
     });
 
-    // 🔹 Hitung total skor
-    const totalScore = subtestResults.reduce((sum, r) => sum + r.score, 0);
+    // Hitung total RW & SW
+    const totalRw = subtestResults.reduce((sum, r) => sum + r.rw, 0);
+    const totalSw = subtestResults.reduce((sum, r) => sum + r.sw, 0);
 
-    // 🔹 Simpan/Update Result tipe tes
+    // Simpan/Update Result tipe tes
     await prisma.result.upsert({
       where: { userId_testTypeId: { userId, testTypeId: testType.id } },
-      update: { totalScore, isCompleted: true },
-      create: { userId, testTypeId: testType.id, totalScore, isCompleted: true },
+      update: { totalRw, totalSw, isCompleted: true },
+      create: { userId, testTypeId: testType.id, totalRw, totalSw, isCompleted: true },
     });
 
-    return NextResponse.json({ message: "Tes selesai, hasil akhir disimpan", totalScore });
+    return NextResponse.json({
+      message: "Tes selesai, hasil akhir disimpan",
+      totalRw,
+      totalSw,
+    });
   } catch (err) {
     console.error("❌ Gagal finish test:", err);
     return NextResponse.json({ error: "Gagal selesai tes" }, { status: 500 });

@@ -1,10 +1,10 @@
-// app/dashboard/page.tsx
 'use client';
 
 import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '@/components/layout/navbar';
 import Footer from '@/components/layout/footer';
+import AnimatedOnScroll from '@/components/ui/animatedonscroll';
 
 const psychologicalTests = [
   {
@@ -117,37 +117,37 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {psychologicalTests.map((test, index) => (
-            <Link 
-              href={`/tes/${test.slug}`} 
-              key={index} 
-              className="group flex flex-col bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-lg transition-shadow duration-300 overflow-hidden"
-            >
-              <div className="relative w-full aspect-video">
-                <Image
-                  src={test.image}
-                  alt={`Thumbnail ${test.name}`}
-                  layout="fill"
-                  objectFit="cover"
-                  className="group-hover:scale-105 transition-transform duration-300"
-                />
-              </div>
-
-              <div className="flex flex-col p-4 flex-grow">
-                <h3 className="text-md font-bold text-gray-900 leading-tight group-hover:text-blue-600 transition-colors">
-                  {test.name}
-                </h3>
-    
-                <p className="text-xs text-gray-500 mt-1">
-                  {test.description}
-                </p>
-                
-                <div className="mt-auto pt-4">
-                  <p className="text-lg font-bold text-gray-900">
-                    {formatPrice(test.price)}
-                  </p>
+            <AnimatedOnScroll key={index} delay={0.1 * index} duration={0.8}>
+              <Link 
+                href={`/tes/${test.slug}`} 
+                className="group flex flex-col bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-lg transition-shadow duration-300 overflow-hidden"
+              >
+                <div className="relative w-full aspect-video">
+                  <Image
+                    src={test.image}
+                    alt={`Thumbnail ${test.name}`}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
-              </div>
-            </Link>
+
+                <div className="flex flex-col p-4 flex-grow">
+                  <h3 className="text-md font-bold text-gray-900 leading-tight group-hover:text-blue-600 transition-colors">
+                    {test.name}
+                  </h3>
+
+                  <p className="text-xs text-gray-500 mt-1">
+                    {test.description}
+                  </p>
+                  
+                  <div className="mt-auto pt-4">
+                    <p className="text-lg font-bold text-gray-900">
+                      {formatPrice(test.price)}
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            </AnimatedOnScroll>
           ))}
         </div>
       </div>

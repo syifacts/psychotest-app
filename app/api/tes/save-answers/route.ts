@@ -8,34 +8,50 @@ export async function POST(req: NextRequest) {
     const { userId, questionId, choice } = body;
 
     if (!userId || !questionId || !choice) {
-      return NextResponse.json({ error: "userId, questionId, dan choice wajib diisi" }, { status: 400 });
+      return NextResponse.json(
+        { error: "userId, questionId, dan choice wajib diisi" },
+        { status: 400 }
+      );
     }
 
-    // Cek apakah sudah ada jawaban untuk user + question ini
-    const existing = await prisma.answer.findFirst({
-      where: { userId, questionId }
+    // Cari Question berdasarkan questionId
+    const question = await prisma.question.findUnique({
+      where: { id: questionId },
     });
 
-    if (existing) {
-      // update kalau sudah ada
-      await prisma.answer.update({
-        where: { id: existing.id },
-        data: { choice }
-      });
-    } else {
-      // insert kalau belum ada
-      await prisma.answer.create({
-        data: {
-          userId,
-          questionId,
-          choice
-        }
-      });
+    if (!question) {
+      return NextResponse.json(
+        { error: "Question tidak ditemukan" },
+        { status: 404 }
+      );
     }
+
+    const questionCode = question.code;
+
+    // Gunakan upsert untuk otomatis create atau update
+    await prisma.answer.upsert({
+      where: {
+        userId_questionCode: {
+          userId,
+          questionCode,
+        },
+      },
+      update: {
+        choice,
+      },
+      create: {
+        userId,
+        questionCode,
+        choice,
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: "Gagal simpan jawaban" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Gagal simpan jawaban" },
+      { status: 500 }
+    );
   }
 }

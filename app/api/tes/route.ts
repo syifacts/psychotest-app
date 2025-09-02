@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type"); // ex: IST
     const sub = searchParams.get("sub");   // ex: SE
-    const userId = Number(searchParams.get("userId")); // optional, untuk ambil jawaban user
+    const userId = Number(searchParams.get("userId")); // optional
 
     if (!type || !sub) {
       return NextResponse.json({ error: "type dan sub wajib diisi" }, { status: 400 });
@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
       where: { subTestId: subTest.id },
       select: { 
         id: true,
+        code: true,          // perlu untuk lookup jawaban user
         content: true,
         options: true,
         type: true,
@@ -37,16 +38,19 @@ export async function GET(req: NextRequest) {
     });
 
     // Jika userId tersedia, ambil jawaban user
-    let userAnswers: Record<number, string | string[]> = {};
+    let userAnswers: Record<string, string | string[]> = {};
     if (userId) {
       const savedAnswers = await prisma.answer.findMany({
-        where: { userId, questionId: { in: questions.map(q => q.id) } },
-        select: { questionId: true, choice: true },
+        where: { 
+          userId,
+          questionCode: { in: questions.map(q => q.code) }
+        },
+        select: { questionCode: true, choice: true },
       });
 
       savedAnswers.forEach(a => {
         const choiceStr = String(a.choice);
-        userAnswers[a.questionId] = choiceStr.includes(",") ? choiceStr.split(",") : choiceStr;
+        userAnswers[a.questionCode] = choiceStr.includes(",") ? choiceStr.split(",") : choiceStr;
       });
     }
 
