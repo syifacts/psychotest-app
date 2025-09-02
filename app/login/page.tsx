@@ -50,19 +50,22 @@ export default function LoginPage() {
         return;
       }
 
-      if (data.token) localStorage.setItem('token', data.token);
-      if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+      // Simpan token JWT di localStorage
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+      }
+
+      // Simpan data user di localStorage agar bisa ditampilkan di halaman akun
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
 
       setSuccess('Login berhasil! Mengarahkan ke dashboard...');
       setIsLoading(false);
 
-      setTimeout(() => {
-        if (data.user.role === 'SUPERADMIN') {
-          router.push('/admin');
-        } else {
-          router.push('/');
-        }
-      }, 1500);
+      // Redirect otomatis ke dashboard
+      setTimeout(() => router.push('/dashboard'), 2000);
+
     } catch (err) {
       console.error(err);
       setError('Terjadi kesalahan saat menghubungi server');
@@ -73,6 +76,18 @@ export default function LoginPage() {
   return (
     <main className="flex flex-col min-h-screen bg-gray-100">
       <Navbar />
+
+      {success && (
+        <div className="w-full flex justify-center mt-4 absolute top-32 z-20">
+          <div className="flex items-center bg-green-100 text-green-800 text-sm font-medium px-4 py-3 rounded-lg shadow-md" role="alert">
+            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <p>{success}</p>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-grow items-center justify-center p-4 sm:p-6 py-24">
         <div className="relative flex flex-col lg:flex-row w-full max-w-5xl bg-white rounded-xl shadow-2xl overflow-hidden min-h-[600px]">
           {/* Form Login */}
@@ -167,12 +182,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-
-      {success && (
-        <div className="fixed top-5 right-5 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md z-50">
-          {success}
-        </div>
-      )}
     </main>
   );
 }

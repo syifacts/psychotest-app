@@ -47,17 +47,14 @@ export default function RegisterPage() {
         return;
       }
 
-      // Jika sukses, tampilkan popup notifikasi
       setSuccess("Registrasi berhasil! Silakan login.");
       setIsLoading(false);
 
-      // Bersihkan form
       setName('');
       setEmail('');
       setPassword('');
       termsCheckbox.checked = false;
 
-      // Redirect otomatis setelah 2 detik
       setTimeout(() => router.push("/login"), 2000);
 
     } catch (err) {
@@ -70,6 +67,18 @@ export default function RegisterPage() {
   return (
     <main className="flex flex-col min-h-screen bg-gray-50">
       <Navbar />
+
+      {success && (
+        <div className="w-full flex justify-center mt-4 absolute top-32 z-20">
+          <div className="flex items-center bg-green-100 text-green-800 text-sm font-medium px-4 py-3 rounded-lg shadow-md" role="alert">
+            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <p>{success}</p>
+          </div>
+        </div>
+      )}
+
       <div className="grid flex-grow lg:grid-cols-2">
         {/* Kolom Kiri: Form Registrasi */}
         <div className="flex flex-col justify-center items-center lg:items-end lg:pr-12 px-4 py-12 sm:px-6">
@@ -201,14 +210,7 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
-
-      {/* Popup sukses */}
-      {success && (
-        <div className="fixed top-5 right-5 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md z-50">
-          {success}
-        </div>
-      )}
-
+      
       <Footer />
     </main>
   );
