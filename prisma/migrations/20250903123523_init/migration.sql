@@ -24,6 +24,7 @@ CREATE TABLE `TestType` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `duration` INTEGER NOT NULL,
     `price` INTEGER NULL,
+    `img` VARCHAR(191) NULL,
 
     UNIQUE INDEX `TestType_name_key`(`name`),
     PRIMARY KEY (`id`)
