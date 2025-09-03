@@ -65,6 +65,7 @@ model TestType {
   subTests  SubTest[]
   results   Result[]
   payments  Payment[]
+  img       String?
   
   // progress  UserProgress[]  <- hapus karena UserProgress sekarang tidak ada testTypeId
   subtestResults SubtestResult[]

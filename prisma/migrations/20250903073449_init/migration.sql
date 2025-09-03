@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `TestType` ADD COLUMN `img` VARCHAR(191) NULL;

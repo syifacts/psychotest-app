@@ -337,10 +337,14 @@ const handleSelectAnswer = async (
   choice: string,
   type: "single" | "mc" | "essay" | "image"
 ) => {
+  const q = questions.find((qq) => qq.id === qid);
+  if (!q) return;
+
   setAnswers((prev) => {
     const newAnswers: Record<number, string | string[]> = { ...prev };
 
     if (type === "mc") {
+      // Multiple choice → simpan option asli
       const prevChoices: string[] = Array.isArray(prev[qid]) ? prev[qid] : [];
       if (prevChoices.includes(choice)) {
         const filtered = prevChoices.filter((c) => c !== choice);
@@ -350,18 +354,30 @@ const handleSelectAnswer = async (
         newAnswers[qid] = [...prevChoices, choice];
       }
     } else {
-      if (prev[qid] === choice) delete newAnswers[qid];
-      else newAnswers[qid] = choice;
+      // SINGLE / ESSAY
+      // khusus kalau opsi berupa gambar → ubah jadi huruf (A, B, C, D, ...)
+      let finalChoice = choice;
+      if (
+        type === "single" &&
+        q.options.every((opt) => opt.match(/\.(jpg|jpeg|png|gif)$/i)) // semua opsi gambar
+      ) {
+        const idx = q.options.indexOf(choice);
+        if (idx >= 0) {
+          finalChoice = String.fromCharCode(65 + idx); // A, B, C, dst
+        }
+      }
+
+      if (prev[qid] === finalChoice) delete newAnswers[qid];
+      else newAnswers[qid] = finalChoice;
     }
 
-    // Simpan ke backend **selalu option asli**
+    // simpan ke backend
     saveAnswerToBackend(qid, newAnswers[qid]!);
 
     return newAnswers;
   });
 };
 
-// fungsi simpan jawaban ke backend
 const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
   const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
   if (!savedUser.id) return;
@@ -373,7 +389,7 @@ const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
       body: JSON.stringify({
         userId: savedUser.id,
         questionId: qid,
-        choice: Array.isArray(choice) ? choice.join(",") : choice, // simpan MC sebagai CSV
+        choice: Array.isArray(choice) ? choice.join(",") : choice,
       }),
     });
   } catch (err) {
