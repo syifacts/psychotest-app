@@ -49,9 +49,36 @@ const [typeTestDuration, setTypeTestDuration] = useState(60); // durasi tipe tes
 const [subtestDuration, setSubtestDuration] = useState(6); // durasi subtest
 const [testInfo, setTestInfo] = useState<{ id: number; name: string; duration: number; price: number | null } | null>(null);
 const [hasAccess, setHasAccess] = useState(false);
+const [testDate, setTestDate] = useState<string>("");
+
 
 
   const router = useRouter();
+
+  useEffect(() => {
+  const fetchTestDate = async () => {
+    const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    if (!savedUser.id || !testInfo?.id) return;
+
+    const attemptRes = await fetch(
+      `/api/attempts?userId=${savedUser.id}&testTypeId=${testInfo.id}`
+    );
+    const attempts = await attemptRes.json();
+    const startedAt = attempts[0]?.startedAt;
+    if (startedAt) setTestDate(new Date(startedAt).toISOString().split("T")[0]);
+  };
+  fetchTestDate();
+}, [testInfo]);
+
+
+const calculateAge = (dob: string) => {
+  const birth = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+};
 
   // -------------------------
   // Fetch progress & info subtest pertama
@@ -447,22 +474,27 @@ await fetch("/api/tes/answers", {
     );
     const progress = await progressRes.json();
 
-   if (progress.nextSubtest) {
-  setCurrentSubtest({
-    name: progress.nextSubtest,
-    description: "Deskripsi subtest...",
-    durationMinutes: progress.durationMinutes || 6,
-  });
-  setShowQuestions(false);
-  setShowIntro(false);
-  setShowForm(false);
-  setShowSubtestDetail(true);
-} else {
-  // Semua subtest selesai → langsung alert & redirect
-  alert("🎉 Tes IST selesai! Hasil ada di Dashboard.");
-  router.push("/dashboard");
-}
+    if (progress.nextSubtest) {
+      setCurrentSubtest({
+        name: progress.nextSubtest,
+        description: "Deskripsi subtest...",
+        durationMinutes: progress.durationMinutes || 6,
+      });
+      setShowQuestions(false);
+      setShowIntro(false);
+      setShowForm(false);
+      setShowSubtestDetail(true);
+    } else {
+      // Semua subtest selesai
+      await fetch("/api/tes/submit-finish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: savedUser.id, type: "IST" }),
+      });
 
+      alert("🎉 Tes IST selesai! Hasil ada di Dashboard.");
+      router.push("/dashboard");
+    }
   } catch (err: any) {
     alert(err.message);
   }
@@ -589,36 +621,47 @@ await fetch("/api/tes/answers", {
     );
   }
 
-  if (showForm) {
-    return (
-      <div className={styles.introContainer}>
-        <h2 className={styles.title}>Lengkapi Data Diri</h2>
+ if (showForm) {
+  return (
+    <div className={styles.introContainer}>
+      <h2 className={styles.title}>Data Diri Peserta</h2>
+
+      <div className={styles.formGroup}>
+        <label>Nama Lengkap</label>
+        <input type="text" value={fullName} className={styles.input} readOnly />
+      </div>
+
+      <div className={styles.formGroup}>
+        <label>Tanggal Lahir</label>
+        <input type="date" value={birthDate} className={styles.input} readOnly />
+      </div>
+
+      {birthDate && (
         <div className={styles.formGroup}>
-          <label>Nama Lengkap</label>
+          <label>Usia</label>
           <input
             type="text"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            value={`${calculateAge(birthDate)} tahun`}
             className={styles.input}
-            required
+            readOnly
           />
         </div>
+      )}
+
+      {testDate && (
         <div className={styles.formGroup}>
-          <label>Tanggal Lahir</label>
-          <input
-            type="date"
-            value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
-            className={styles.input}
-            required
-          />
+          <label>Tanggal Tes</label>
+          <input type="text" value={testDate} className={styles.input} readOnly />
         </div>
-        <button className={styles.btn} onClick={handleSaveProfile}>
-          Simpan Data Diri & Mulai Tes
-        </button>
-      </div>
-    );
-  }
+      )}
+
+      <button className={styles.btn} onClick={handleSaveProfile}>
+        Mulai Tes
+      </button>
+    </div>
+  );
+}
+
 
   if (showQuestions && currentQuestion) {
     return (
