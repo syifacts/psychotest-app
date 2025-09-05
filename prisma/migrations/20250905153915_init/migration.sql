@@ -109,6 +109,8 @@ CREATE TABLE `Result` (
     `totalSw` INTEGER NULL,
     `swIq` INTEGER NULL,
     `iq` DOUBLE NULL,
+    `keteranganiq` VARCHAR(191) NULL,
+    `dominasi` VARCHAR(191) NULL,
     `isCompleted` BOOLEAN NOT NULL DEFAULT false,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 

@@ -150,13 +150,52 @@ export async function POST(req: NextRequest) {
         iq = normaIq?.iq ?? 0;
       }
 
-      // Update Result final
-      await prisma.result.update({
-        where: { id: result.id },
-        data: { swIq, iq, isCompleted: true },
-      });
-    }
+      // ===== Tambahan: IQ Category =====
+function iqCategory(iq: number): string {
+  if (iq <= 65) return "Mentally Defective";
+  if (iq <= 79) return "Borderline Defective";
+  if (iq <= 90) return "Low Average";
+  if (iq <= 110) return "Average";
+  if (iq <= 119) return "High Average";
+  if (iq <= 127) return "Superior";
+  if (iq <= 139) return "Very Superior";
+  return "Genius";
+}
 
+// ===== Tambahan: Dimensi =====
+function getDimensi(geSw: number, raSw: number, anSw: number, zrSw: number): string {
+  const gera = geSw + raSw;
+  const anzr = anSw + zrSw;
+  const total = Math.abs(gera - anzr);
+
+  if (total <= 10) return "Seimbang";
+  if (gera > anzr) return "Eksak";
+  return "Non Eksak";
+}
+
+
+  const kategoriIq = iq !== null ? iqCategory(iq) : null;
+
+  // ===== Hitung Dimensi =====
+  // Ambil SW subtest dari subTestResults sesuai urutan ISTSubTests
+  const ISTSubTests = ["SE","WA","AN","GE","RA","ZR","FA","WU","ME"];
+  const swMap: Record<string, number> = {};
+  ISTSubTests.forEach((name, idx) => {
+    swMap[name] = subTestResults[idx]?.sw ?? 0;
+  });
+
+  const geSw = swMap["GE"];
+  const raSw = swMap["RA"];
+  const anSw = swMap["AN"];
+  const zrSw = swMap["ZR"];
+  const dimensi = getDimensi(geSw, raSw, anSw, zrSw);
+
+  // Update Result final dengan IQ Category & Dimensi
+  await prisma.result.update({
+    where: { id: result.id },
+    data: { swIq, iq, keteranganiq: kategoriIq, dominasi: dimensi, isCompleted: true },
+  });
+}
     // Cari next subtest
     const doneSubtests = subTestResults.map(r => r.subTestId);
     const nextSubtest = subTests.find(st => !doneSubtests.includes(st.id));
