@@ -5,12 +5,29 @@ import bcrypt from "bcrypt";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { fullName, email, password } = body;
+    const { fullName, email, password, birthDate, gender, education } = body;
 
     // Validasi sederhana
-    if (!fullName || !email || !password) {
+    if (!fullName || !email || !password || !birthDate || !gender || !education) {
       return NextResponse.json(
         { error: "Semua field harus diisi" },
+        { status: 400 }
+      );
+    }
+
+    // Validasi gender enum
+    if (gender !== "LAKI_LAKI" && gender !== "PEREMPUAN") {
+      return NextResponse.json(
+        { error: "Jenis kelamin tidak valid" },
+        { status: 400 }
+      );
+    }
+
+    // Validasi tanggal lahir
+    const parsedBirthDate = new Date(birthDate);
+    if (isNaN(parsedBirthDate.getTime())) {
+      return NextResponse.json(
+        { error: "Tanggal lahir tidak valid" },
         { status: 400 }
       );
     }
@@ -33,6 +50,9 @@ export async function POST(req: Request) {
         fullName,
         email,
         password: hashedPassword,
+        gender,               // enum LAKI_LAKI / PEREMPUAN
+        birthDate: parsedBirthDate, // simpan sebagai Date
+        education,            // string / enum pendidikan
         // role default USER otomatis sesuai schema
       },
     });

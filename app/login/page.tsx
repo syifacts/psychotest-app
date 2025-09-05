@@ -131,7 +131,7 @@ export default function LoginPage() {
                       Password
                     </label>
                     <div className="text-sm">
-                      <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+                      <a href="#" className="font-medium text-blue-500 hover:underline hover:text-blue-600">
                         Lupa password?
                       </a>
                     </div>
@@ -163,8 +163,8 @@ export default function LoginPage() {
 
               <p className="mt-6 text-center text-sm text-gray-600">
                 Belum punya akun?{' '}
-                <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
-                  Daftar di sini
+                <Link href="/register" className="font-medium text-blue-500 hover:underline hover:text-blue-600">
+                  Daftar
                 </Link>
               </p>
             </div>
@@ -173,7 +173,7 @@ export default function LoginPage() {
           {/* Ilustrasi */}
           <div className="flex-1 hidden lg:flex items-center justify-center p-8 sm:p-18 lg:p-16 relative">
             <Image
-              src="/psikoteslogin.png"
+              src="/login.jpg"
               alt="Ilustrasi Login"
               layout="fill"
               objectFit="cover"
