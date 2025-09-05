@@ -90,7 +90,7 @@ model SubTest {
 }
 
 // ------------------
-// Soal
+// Soal IST
 // ------------------
 model Question {
   id           Int       @id @default(autoincrement())
@@ -106,6 +106,20 @@ model Question {
   SubTest   SubTest?   @relation(fields: [subTestId], references: [id])
    TestType     TestType   @relation(fields: [testTypeId], references: [id])
   answers   Answer[]
+}
+
+// ------------------
+// Soal tes kepribadian/preferensi (MBTI, DISC, EPPS, 16PF, HOLLAND, PAPIKOSTICK)
+// ------------------
+model PreferenceQuestion {
+  id         Int      @id @default(autoincrement())
+  testTypeId Int
+  code       String   @unique
+  dimension  String?  // MBTI: 'EI', DISC: 'D', dll.
+  content    String
+  options    Json     // Objek: { "a": "Teks A", "b": "Teks B" }
+
+  TestType   TestType @relation(fields: [testTypeId], references: [id])
 }
 
 // ------------------
@@ -142,9 +156,9 @@ model Answer {
   choice        String
   isCorrect     Boolean?
 
-  User        User        @relation(fields: [userId], references: [id])
-  Attempt     TestAttempt @relation(fields: [attemptId], references: [id])
-  Question    Question    @relation(fields: [questionCode], references: [code])
+  User         User        @relation(fields: [userId], references: [id])
+  Attempt      TestAttempt @relation(fields: [attemptId], references: [id])
+  Question     Question    @relation(fields: [questionCode], references: [code]) 
 
   @@unique([attemptId, questionCode]) // unik per attempt
 }
@@ -202,6 +216,19 @@ model NormaIq {
   iq  Float
 
   @@map("Norma_Iq")  // nama tabel di MySQL jadi "Norma_Iq"
+}
+
+// ------------------
+// Hasil Tes Personality
+// ------------------
+model PersonalityResult {
+  id         Int    @id @default(autoincrement())
+  attemptId  Int    @unique
+  resultType String // "ENFP", "High D", "Type 5"
+  summary    String @db.Text
+  scores     Json   // { "E": 7, "I": 3, "S": 2, "N": 8 }
+
+  Attempt    TestAttempt @relation(fields: [attemptId], references: [id])
 }
 
 // ------------------

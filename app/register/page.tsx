@@ -102,7 +102,7 @@ export default function RegisterPage() {
       <div className="grid flex-grow lg:grid-cols-2">
         {/* Kolom Kiri: Form Registrasi */}
         <div className="flex flex-col justify-center items-center lg:items-end lg:pr-12 px-4 py-12 sm:px-6">
-          <div className="w-full max-w-sm lg:max-w-md">
+          <div className="w-full max-w-lg lg:max-w-xl">
             <div>
               <h2 className="text-3xl font-bold tracking-tight text-gray-900 text-center">
                 Buat Akun Anda
@@ -111,73 +111,142 @@ export default function RegisterPage() {
                 Daftarkan akun untuk memulai eksplorasi potensi diri.
               </p>
             </div>
+            
 
             <div className="mt-8">
               <div className="mt-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Nama */}
-                  <div>
-                    <label
-                      htmlFor="name"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Nama Lengkap
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        id="name"
-                        name="name"
-                        type="text"
-                        required
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                      />
+                  {error && (
+                    <div className="rounded-md border border-red-400 bg-red-50 p-3 text-center mx-auto max-w-sm">
+                      <p className="text-sm text-red-700">{error}</p>
                     </div>
-                  </div>
+                  )}
+                  {/* Grid Container untuk 2 Kolom */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    {/* Kolom Kiri */}
+                    <div className="space-y-6">
+                      {/* Nama */}
+                      <div>
+                        <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                          Nama Lengkap
+                        </label>
+                        <div className="mt-1">
+                          <input
+                            id="name"
+                            name="name"
+                            type="text"
+                            required
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                          />
+                        </div>
+                      </div>
 
-                  {/* Email */}
-                  <div>
-                    <label
-                      htmlFor="email"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Alamat Email
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        id="email"
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                      />
+                      {/* Email */}
+                      <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                          Alamat Email
+                        </label>
+                        <div className="mt-1">
+                          <input
+                            id="email"
+                            name="email"
+                            type="email"
+                            autoComplete="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Password */}
+                      <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                          Password
+                        </label>
+                        <div className="mt-1">
+                          <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            autoComplete="current-password"
+                            required
+                            minLength={8}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                    
+                    {/* Kolom Kanan */}
+                    <div className="space-y-6 max-w-xs">
+                      {/* Tanggal Lahir */}
+                      <div>
+                        <label htmlFor="birthDate" className="block text-sm font-medium text-gray-700">
+                          Tanggal Lahir
+                        </label>
+                        <div className="mt-1">
+                          <input
+                            id="birthDate"
+                            name="birthDate"
+                            type="date"
+                            required
+                            value={birthDate}
+                            onChange={(e) => setBirthDate(e.target.value)}
+                            className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                          />
+                        </div>
+                      </div>
 
-                  {/* Password */}
-                  <div className="space-y-1">
-                    <label
-                      htmlFor="password"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Password
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        id="password"
-                        name="password"
-                        type="password"
-                        autoComplete="current-password"
-                        required
-                        minLength={8}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                      />
+                      {/* Jenis Kelamin */}
+                      <div>
+                        <label htmlFor="gender" className="block text-sm font-medium text-gray-700">
+                          Jenis Kelamin
+                        </label>
+                        <div className="mt-1">
+                          <select
+                            id="gender"
+                            name="gender"
+                            required
+                            value={gender}
+                            onChange={(e) => setGender(e.target.value)}
+                            className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                          >
+                            <option value="">-- Pilih Jenis Kelamin --</option>
+                            <option value="LAKI_LAKI">Laki-laki</option>
+                            <option value="PEREMPUAN">Perempuan</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Pendidikan */}
+                      <div>
+                        <label htmlFor="education" className="block text-sm font-medium text-gray-700">
+                          Pendidikan Terakhir
+                        </label>
+                        <div className="mt-1">
+                          <select
+                            id="education"
+                            name="education"
+                            required
+                            value={education}
+                            onChange={(e) => setEducation(e.target.value)}
+                            className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                          >
+                            <option value="">-- Pilih Pendidikan --</option>
+                            <option value="SMA/SMK">SMA/SMK</option>
+                            <option value="Diploma">Diploma</option>
+                            <option value="Sarjana">Sarjana (S1)</option>
+                            <option value="Magister">Magister (S2)</option>
+                            <option value="Doktor">Doktor (S3)</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -287,10 +356,10 @@ export default function RegisterPage() {
                     </label>
                   </div>
 
-                  {/* Error */}
+                  {/* Error
                   {error && (
                     <p className="text-red-500 text-sm mt-2">{error}</p>
-                  )}
+                  )} */}
 
                   {/* Submit */}
                   <div>
@@ -308,9 +377,9 @@ export default function RegisterPage() {
                   Sudah punya akun?{' '}
                   <Link
                     href="/login"
-                    className="font-medium text-blue-600 underline hover:text-blue-500"
+                    className="font-medium text-blue-500 hover:underline hover:text-blue-600"
                   >
-                    Masuk di sini
+                    Masuk
                   </Link>
                 </p>
               </div>
