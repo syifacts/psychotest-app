@@ -25,18 +25,30 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // 2️⃣ Ambil semua subtest tipe tes ini (dengan duration)
+    // 2️⃣ Ambil attempt aktif user
+    const attempt = await prisma.testAttempt.findFirst({
+      where: { userId, testTypeId: testType.id, isCompleted: false },
+      orderBy: { startedAt: "desc" },
+    });
+    if (!attempt) {
+      return NextResponse.json(
+        { error: "Belum ada attempt aktif" },
+        { status: 404 }
+      );
+    }
+
+    // 3️⃣ Ambil semua subtest
     const allSubtests = await prisma.subTest.findMany({
       where: { testTypeId: testType.id },
       orderBy: { id: "asc" },
     });
 
-    // 3️⃣ Ambil semua result user untuk tipe tes ini
+    // 4️⃣ Ambil hasil subtest user
     const userResults = await prisma.subtestResult.findMany({
-      where: { userId, testTypeId: testType.id },
+      where: { attemptId: attempt.id },
     });
 
-    // 4️⃣ Tentukan subtest berikutnya
+    // 5️⃣ Tentukan subtest berikutnya
     let nextSubtest: { id: number; name: string } | null = null;
     for (const sub of allSubtests) {
       if (!userResults.some((r) => r.subTestId === sub.id)) {
@@ -47,12 +59,13 @@ export async function GET(req: NextRequest) {
 
     let isCompleted = nextSubtest === null;
 
-    // 5️⃣ Ambil atau buat UserProgress
+    // 6️⃣ Ambil progress user
     let userProgress = null;
     let durationMinutes = 0;
 
     if (nextSubtest) {
-      durationMinutes = allSubtests.find((s) => s.id === nextSubtest.id)?.duration || 30;
+      durationMinutes =
+        allSubtests.find((s) => s.id === nextSubtest.id)?.duration || 30;
 
       userProgress = await prisma.userProgress.upsert({
         where: { userId_subtest: { userId, subtest: nextSubtest.name } },
@@ -64,7 +77,7 @@ export async function GET(req: NextRequest) {
         },
       });
 
-      // cek waktu habis
+      // cek apakah waktunya sudah habis
       const endTime = new Date(userProgress.startTime);
       endTime.setMinutes(endTime.getMinutes() + durationMinutes);
 
@@ -77,18 +90,20 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 6️⃣ Tentukan soal berikutnya
+    // 7️⃣ Tentukan soal berikutnya
     let nextQuestionCode: string | null = null;
+    let nextQuestionIndex: number | null = null;
+
     if (!isCompleted && nextSubtest) {
       const questions = await prisma.question.findMany({
         where: { subTestId: nextSubtest.id },
         orderBy: { id: "asc" },
-        select: { code: true },
+        select: { id: true, code: true },
       });
 
       const answered = await prisma.answer.findMany({
         where: {
-          userId,
+          attemptId: attempt.id,
           questionCode: { in: questions.map((q) => q.code) },
         },
         select: { questionCode: true },
@@ -99,6 +114,7 @@ export async function GET(req: NextRequest) {
 
       if (nextQ) {
         nextQuestionCode = nextQ.code;
+        nextQuestionIndex = questions.findIndex((q) => q.code === nextQ.code);
       } else {
         // semua soal selesai
         if (userProgress) {
@@ -108,21 +124,55 @@ export async function GET(req: NextRequest) {
           });
         }
         isCompleted = true;
+
+        // simpan SubtestResult
+        await prisma.subtestResult.upsert({
+          where: {
+            attemptId_subTestId: {
+              attemptId: attempt.id,
+              subTestId: nextSubtest.id,
+            },
+          },
+          update: { isCompleted: true },
+          create: {
+            attemptId: attempt.id,
+            subTestId: nextSubtest.id,
+            rw: 0,
+            sw: 0,
+            isCompleted: true,
+          },
+        });
       }
     }
 
-    // 7️⃣ Update Result jika semua subtest selesai
+    // 8️⃣ Update Result jika semua subtest selesai
     if (isCompleted) {
       await prisma.result.upsert({
-        where: { userId_testTypeId: { userId, testTypeId: testType.id } },
+        where: {
+          attemptId_testTypeId: {
+            attemptId: attempt.id,
+            testTypeId: testType.id,
+          },
+        },
         update: { isCompleted: true },
-        create: { userId, testTypeId: testType.id, isCompleted: true },
+        create: {
+          userId,
+          attemptId: attempt.id,
+          testTypeId: testType.id,
+          isCompleted: true,
+        },
+      });
+
+      await prisma.testAttempt.update({
+        where: { id: attempt.id },
+        data: { isCompleted: true, finishedAt: new Date() },
       });
     }
 
     return NextResponse.json({
       nextSubtest: nextSubtest?.name || null,
       nextQuestionCode,
+      nextQuestionIndex, // 🔥 tambahan
       startTime: userProgress?.startTime || null,
       durationMinutes,
       isCompleted,

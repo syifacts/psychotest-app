@@ -82,6 +82,7 @@ async function seedISTQuestions() {
   create: {
     code,
     subTestId: subTest.id,
+    testTypeId: subTest.testTypeId,
     content: q.content,
     options: q.options ?? [],
     type: q.type ?? "single",           // <--- tambahkan ini

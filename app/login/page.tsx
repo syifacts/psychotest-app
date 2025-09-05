@@ -60,11 +60,18 @@ export default function LoginPage() {
         localStorage.setItem('user', JSON.stringify(data.user));
       }
 
-      setSuccess('Login berhasil! Mengarahkan ke dashboard...');
+      setSuccess('Login berhasil! Mengarahkan ke halaman utama...');
       setIsLoading(false);
 
-      // Redirect otomatis ke dashboard
-      setTimeout(() => router.push('/dashboard'), 2000);
+// Redirect otomatis setelah login
+setTimeout(() => {
+  if (data.user.role === 'SUPERADMIN') {
+    router.push('/admin');
+  } else {
+    router.push('/'); // user biasa langsung ke homepage
+  }
+}, 2000);
+
 
     } catch (err) {
       console.error(err);

@@ -49,9 +49,36 @@ const [typeTestDuration, setTypeTestDuration] = useState(60); // durasi tipe tes
 const [subtestDuration, setSubtestDuration] = useState(6); // durasi subtest
 const [testInfo, setTestInfo] = useState<{ id: number; name: string; duration: number; price: number | null } | null>(null);
 const [hasAccess, setHasAccess] = useState(false);
+const [testDate, setTestDate] = useState<string>("");
+
 
 
   const router = useRouter();
+
+  useEffect(() => {
+  const fetchTestDate = async () => {
+    const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    if (!savedUser.id || !testInfo?.id) return;
+
+    const attemptRes = await fetch(
+      `/api/attempts?userId=${savedUser.id}&testTypeId=${testInfo.id}`
+    );
+    const attempts = await attemptRes.json();
+    const startedAt = attempts[0]?.startedAt;
+    if (startedAt) setTestDate(new Date(startedAt).toISOString().split("T")[0]);
+  };
+  fetchTestDate();
+}, [testInfo]);
+
+
+const calculateAge = (dob: string) => {
+  const birth = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+};
 
   // -------------------------
   // Fetch progress & info subtest pertama
@@ -149,33 +176,33 @@ const loadQuestions = async (subtest: string) => {
     const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
     if (!savedUser.id) return;
 
-    const answerRes = await fetch(
-      `/api/tes/answers?userId=${savedUser.id}&type=IST&sub=${subtest}`
-    );
-    const savedAnswersData: {
-      answers: Record<string, string>;
-      alreadyTaken: boolean;
-    } = await answerRes.json();
+    const attemptRes = await fetch(
+  `/api/attempts?userId=${savedUser.id}&testTypeId=${testInfo?.id}`
+);
+const attempts = await attemptRes.json();
+const attemptId = attempts[0]?.id; // ambil attempt aktif user
 
-    const answersMap: Record<number, string | string[]> = {};
+if (attemptId) {
+  const answerRes = await fetch(
+    `/api/tes/answers?attemptId=${attemptId}&type=IST&sub=${subtest}`
+  );
+  const savedAnswersData: { answers: Record<string, string> } = await answerRes.json();
 
-    if (savedAnswersData.answers) {
-      Object.entries(savedAnswersData.answers).forEach(([questionCode, choice]) => {
-        const q = loadedQuestions.find((q) => q.code === questionCode);
-        if (!q) return;
+  const answersMap: Record<number, string | string[]> = {};
+  if (savedAnswersData.answers) {
+    Object.entries(savedAnswersData.answers).forEach(([questionCode, choice]) => {
+      const q = loadedQuestions.find((q) => q.code === questionCode);
+      if (!q) return;
 
-        // Jika MC, convert CSV jadi array
-        const parsedChoice: string | string[] =
-          typeof choice === "string" && choice.includes(",")
-            ? choice.split(",")
-            : choice;
+      const parsedChoice: string | string[] =
+        choice.includes(",") ? choice.split(",") : choice;
 
-        // ✅ Simpan **option asli** ke state
-        answersMap[q.id] = parsedChoice;
-      });
-    }
+      answersMap[q.id] = parsedChoice;
+    });
+  }
+  setAnswers(answersMap);
+}
 
-    setAnswers(answersMap);
   } catch (err) {
     console.error("Gagal load questions:", err);
   } finally {
@@ -383,15 +410,25 @@ const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
   if (!savedUser.id) return;
 
   try {
-    await fetch("/api/tes/save-answers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: savedUser.id,
-        questionId: qid,
-        choice: Array.isArray(choice) ? choice.join(",") : choice,
-      }),
-    });
+    const attemptRes = await fetch(
+  `/api/attempts?userId=${savedUser.id}&testTypeId=${testInfo?.id}`
+);
+const attempts = await attemptRes.json();
+const attemptId = attempts[0]?.id;
+if (!attemptId) return;
+
+await fetch("/api/tes/answers", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    userId: savedUser.id,
+    attemptId,
+    answers: [
+      { questionId: qid, choice: Array.isArray(choice) ? choice.join(",") : choice }
+    ],
+  }),
+});
+
   } catch (err) {
     console.error("Gagal simpan jawaban:", err);
   }
@@ -406,11 +443,11 @@ const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
     const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
     if (!savedUser.id || !currentSubtest) return;
 
+    // Mapping ke format backend
     const payload: AnswerPayload[] = Object.entries(answers).map(([qid, choice]) => ({
-  questionId: Number(qid),
-  choice: Array.isArray(choice) ? choice.join(",") : choice,
-}));
-
+      questionId: Number(qid),
+      choice: Array.isArray(choice) ? choice.join(",") : choice,
+    }));
 
     const res = await fetch("/api/tes/submit-subtest", {
       method: "POST",
@@ -426,45 +463,38 @@ const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Gagal submit jawaban");
 
-    alert(`Subtest ${currentSubtest.name} selesai!`);
+    alert(`✅ Subtest ${currentSubtest.name} selesai!`);
 
     setAnswers({});
     setCurrentIndex(0);
 
     // 🔥 ambil progress terbaru
-    const progressRes = await fetch(`/api/tes/progress?userId=${savedUser.id}&type=IST`);
+    const progressRes = await fetch(
+      `/api/tes/progress?userId=${savedUser.id}&type=IST`
+    );
     const progress = await progressRes.json();
 
     if (progress.nextSubtest) {
-      // langsung lanjut ke subtest berikutnya
       setCurrentSubtest({
         name: progress.nextSubtest,
         description: "Deskripsi subtest...",
         durationMinutes: progress.durationMinutes || 6,
       });
-
-      // langsung masuk ke detail subtest berikutnya
       setShowQuestions(false);
       setShowIntro(false);
       setShowForm(false);
       setShowSubtestDetail(true);
     } else {
-  // Hitung total skor dari semua subtest
-  try {
-    const totalRes = await fetch("/api/tes/submit-finish", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: savedUser.id, type: "IST" }),
-    });
-    const totalData = await totalRes.json();
-    alert(`Tes IST selesai! Hasil akan ada di Report`);
-  } catch (err) {
-    console.error("Gagal submit total skor:", err);
-  }
+      // Semua subtest selesai
+      await fetch("/api/tes/submit-finish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: savedUser.id, type: "IST" }),
+      });
 
-  router.push("/dashboard"); // arahkan ke dashboard/hasil
-}
-
+      alert("🎉 Tes IST selesai! Hasil ada di Dashboard.");
+      router.push("/dashboard");
+    }
   } catch (err: any) {
     alert(err.message);
   }
@@ -502,44 +532,74 @@ const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
 )}
 
 {!hasAccess ? (
+  // Kalau belum bayar
   <button
     className={styles.btn}
     onClick={async () => {
       const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
       if (!savedUser.id || !testInfo?.id) return;
 
-      const res = await fetch("/api/payment/start", {
+      // 1️⃣ Trigger payment
+      const payRes = await fetch("/api/payment/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: savedUser.id, testTypeId: testInfo.id }),
       });
-      const data = await res.json();
-      if (data.success) {
-        alert("Pembayaran berhasil diverifikasi!");
 
-        setHasAccess(true);
-        setShowForm(true); // → tampilkan form data diri
-        setShowIntro(false);
-      } else {
-        alert("Pembayaran gagal, coba lagi.");
+      const payData = await payRes.json();
+      if (!payRes.ok || !payData.success) {
+        alert("❌ Pembayaran gagal!");
+        return;
       }
+
+      // ✅ Munculkan alert sukses
+      alert("✅ Pembayaran berhasil! Anda sekarang bisa mengikuti tes.");
+
+      // 2️⃣ Kalau payment sukses → buat attempt
+      await fetch("/api/attempts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: savedUser.id,
+          testTypeId: testInfo.id,
+          paymentId: payData.payment.id, // optional kalau ada
+        }),
+      });
+
+      setHasAccess(true);
+      setShowForm(true);
+      setShowIntro(false);
     }}
   >
     Bayar untuk Ikut Tes
   </button>
 ) : (
+  // Kalau sudah punya akses
   <button
     className={styles.btn}
-    onClick={() => {
-      setShowForm(true); // langsung ke form
+    onClick={async () => {
+      const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      if (!savedUser.id || !testInfo?.id) return;
+
+      // pastikan attempt ada
+      const attemptRes = await fetch(`/api/attempts?userId=${savedUser.id}&testTypeId=${testInfo.id}`);
+      const attempts = await attemptRes.json();
+
+      if (!attempts.length) {
+        await fetch("/api/attempts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: savedUser.id, testTypeId: testInfo.id }),
+        });
+      }
+
+      setShowForm(true);
       setShowIntro(false);
     }}
   >
     Ikuti Tes
   </button>
 )}
-
-
         </div>
         <div className={styles.backWrapper}>
           <Link href="/dashboard">
@@ -561,36 +621,47 @@ const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
     );
   }
 
-  if (showForm) {
-    return (
-      <div className={styles.introContainer}>
-        <h2 className={styles.title}>Lengkapi Data Diri</h2>
+ if (showForm) {
+  return (
+    <div className={styles.introContainer}>
+      <h2 className={styles.title}>Data Diri Peserta</h2>
+
+      <div className={styles.formGroup}>
+        <label>Nama Lengkap</label>
+        <input type="text" value={fullName} className={styles.input} readOnly />
+      </div>
+
+      <div className={styles.formGroup}>
+        <label>Tanggal Lahir</label>
+        <input type="date" value={birthDate} className={styles.input} readOnly />
+      </div>
+
+      {birthDate && (
         <div className={styles.formGroup}>
-          <label>Nama Lengkap</label>
+          <label>Usia</label>
           <input
             type="text"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            value={`${calculateAge(birthDate)} tahun`}
             className={styles.input}
-            required
+            readOnly
           />
         </div>
+      )}
+
+      {testDate && (
         <div className={styles.formGroup}>
-          <label>Tanggal Lahir</label>
-          <input
-            type="date"
-            value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
-            className={styles.input}
-            required
-          />
+          <label>Tanggal Tes</label>
+          <input type="text" value={testDate} className={styles.input} readOnly />
         </div>
-        <button className={styles.btn} onClick={handleSaveProfile}>
-          Simpan Data Diri & Mulai Tes
-        </button>
-      </div>
-    );
-  }
+      )}
+
+      <button className={styles.btn} onClick={handleSaveProfile}>
+        Mulai Tes
+      </button>
+    </div>
+  );
+}
+
 
   if (showQuestions && currentQuestion) {
     return (
@@ -610,17 +681,18 @@ const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
 {currentQuestion.type === "essay" ? (
   <>
     <p>{currentQuestion.content}</p>
-    <textarea
-      value={answers[currentQuestion.id] || ""}
-      onChange={(e) =>
-        setAnswers((prev) => ({
-          ...prev,
-          [currentQuestion.id]: e.target.value,
-        }))
-      }
-      className={styles.textarea}
-      placeholder="Ketik jawaban Anda..."
-    />
+   <textarea
+  value={answers[currentQuestion.id] || ""}
+  onChange={(e) => {
+    const val = e.target.value;
+    setAnswers((prev) => ({ ...prev, [currentQuestion.id]: val }));
+    // langsung simpan ke backend
+    saveAnswerToBackend(currentQuestion.id, val);
+  }}
+  className={styles.textarea}
+  placeholder="Ketik jawaban Anda..."
+/>
+
   </>
 ) : (
   <>

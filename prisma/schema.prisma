@@ -64,9 +64,11 @@ model TestType {
   img            String?
 
   subTests       SubTest[]
+  questions      Question[]
   results        Result[]
   payments       Payment[]
   attempts       TestAttempt[]
+  preferenceQuestions PreferenceQuestion[] 
 }
 
 // ------------------
@@ -92,7 +94,8 @@ model SubTest {
 // ------------------
 model Question {
   id           Int       @id @default(autoincrement())
-  subTestId    Int
+  subTestId    Int?
+  testTypeId   Int
   code         String    @unique
   content      String?
   options      Json?
@@ -100,7 +103,8 @@ model Question {
   answer       Json?
   answerScores Json?
 
-  SubTest   SubTest   @relation(fields: [subTestId], references: [id])
+  SubTest   SubTest?   @relation(fields: [subTestId], references: [id])
+   TestType     TestType   @relation(fields: [testTypeId], references: [id])
   answers   Answer[]
 }
 
@@ -137,6 +141,7 @@ model TestAttempt {
   answers         Answer[]
   subtestResults  SubtestResult[]
   results         Result[]
+  personalityResults PersonalityResult[]
 }
 
 
@@ -185,15 +190,32 @@ model Result {
   attemptId   Int
   testTypeId  Int
   totalRw     Int?
-  totalSw     Int?
-  isCompleted Boolean      @default(false)
-  createdAt   DateTime     @default(now())
+  totalSw     Int?    // hasil konversi RW → SW total
+  swIq        Int?    // nilai SW yang dipakai untuk mapping IQ
+  iq          Float?  // hasil IQ dari mapping NormaIq
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
 
   User        User        @relation(fields: [userId], references: [id])
   Attempt     TestAttempt @relation(fields: [attemptId], references: [id])
   TestType    TestType    @relation(fields: [testTypeId], references: [id])
 
   @@unique([attemptId, testTypeId])
+}
+model NormaResult { 
+  id   Int @id @default(autoincrement())
+  age  Int
+  rw   Int
+  sw   Int
+
+  @@map("Norma_Result")
+}
+model NormaIq {
+  id  Int   @id @default(autoincrement())
+  sw  Int
+  iq  Float
+
+  @@map("Norma_Iq")  // nama tabel di MySQL jadi "Norma_Iq"
 }
 
 // ------------------
@@ -254,4 +276,29 @@ model UserProgress {
   User User @relation(fields: [userId], references: [id])
 
   @@unique([userId, subtest])
+}
+// ------------------
+// Soal tes kepribadian/preferensi (MBTI, DISC, EPPS, 16PF, HOLLAND, PAPIKOSTICK)
+// ------------------
+model PreferenceQuestion {
+  id         Int      @id @default(autoincrement())
+  testTypeId Int
+  code       String   @unique
+  dimension  String?  // MBTI: 'EI', DISC: 'D', dll.
+  content    String
+  options    Json     // Objek: { "a": "Teks A", "b": "Teks B" }
+
+  TestType   TestType @relation(fields: [testTypeId], references: [id])
+}
+// ------------------
+// Hasil Tes Personality
+// ------------------
+model PersonalityResult {
+  id         Int    @id @default(autoincrement())
+  attemptId  Int    @unique
+  resultType String // "ENFP", "High D", "Type 5"
+  summary    String @db.Text
+  scores     Json   // { "E": 7, "I": 3, "S": 2, "N": 8 }
+
+  Attempt    TestAttempt @relation(fields: [attemptId], references: [id])
 }

@@ -250,6 +250,78 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
+                  {/* Tanggal Lahir */}
+                  <div>
+                    <label
+                      htmlFor="birthDate"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      Tanggal Lahir
+                    </label>
+                    <div className="mt-1">
+                      <input
+                        id="birthDate"
+                        name="birthDate"
+                        type="date"
+                        required
+                        value={birthDate}
+                        onChange={(e) => setBirthDate(e.target.value)}
+                        className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Jenis Kelamin */}
+                  <div>
+                    <label
+                      htmlFor="gender"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      Jenis Kelamin
+                    </label>
+                    <div className="mt-1">
+                      <select
+                        id="gender"
+                        name="gender"
+                        required
+                        value={gender}
+                        onChange={(e) => setGender(e.target.value)}
+                        className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                      >
+                        <option value="">-- Pilih Jenis Kelamin --</option>
+                        <option value="LAKI_LAKI">Laki-laki</option>
+                        <option value="PEREMPUAN">Perempuan</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Pendidikan */}
+                  <div>
+                    <label
+                      htmlFor="education"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      Pendidikan Terakhir
+                    </label>
+                    <div className="mt-1">
+                      <select
+                        id="education"
+                        name="education"
+                        required
+                        value={education}
+                        onChange={(e) => setEducation(e.target.value)}
+                        className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                      >
+                        <option value="">-- Pilih Pendidikan --</option>
+                        <option value="SMA/SMK">SMA/SMK</option>
+                        <option value="Diploma">Diploma</option>
+                        <option value="Sarjana">Sarjana (S1)</option>
+                        <option value="Magister">Magister (S2)</option>
+                        <option value="Doktor">Doktor (S3)</option>
+                      </select>
+                    </div>
+                  </div>
+
                   {/* Info box */}
                   <div className="flex items-start mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-800 text-sm rounded-md">
                     <svg

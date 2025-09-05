@@ -10,13 +10,6 @@ type AnswerPayload = {
 
 type AnswerScore = { keyword: string; score: number };
 
-type AnswerData = {
-  userId: number;
-  questionCode: string;
-  choice: string;
-  isCorrect: boolean;
-};
-
 function isAnswerScoreArray(val: JsonValue | null): val is AnswerScore[] {
   return (
     Array.isArray(val) &&
@@ -48,111 +41,102 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Ambil jawaban benar + code soal dari DB
-    const questionIds = answers.map(a => a.questionId);
+    // Ambil testType
+    const testTypeEntity = await prisma.testType.findUnique({ where: { name: type } });
+    if (!testTypeEntity) return NextResponse.json({ error: "Test type tidak ditemukan" }, { status: 400 });
+
+    // Ambil attempt terakhir
+    const attempt = await prisma.testAttempt.findFirst({
+      where: { userId, testTypeId: testTypeEntity.id, isCompleted: false },
+      orderBy: { startedAt: "desc" },
+    });
+    if (!attempt) return NextResponse.json({ error: "Attempt tidak ditemukan" }, { status: 400 });
+
+    // Ambil pertanyaan
+    const questionIds = answers.map((a) => a.questionId);
     const questions = await prisma.question.findMany({
       where: { id: { in: questionIds } },
-      select: {
-        id: true,
-        code: true,
-        type: true,
-        answer: true,
-        answerScores: true,
-      },
+      select: { id: true, code: true, type: true, answer: true, answerScores: true },
     });
 
-    // Siapkan jawaban user dengan isCorrect & code, hitung total essay bonus
-    let essayBonus = 0;
-    const answerData: AnswerData[] = answers.map((a) => {
-      const question = questions.find(q => q.id === a.questionId);
+    // Simpan jawaban
+    const answerData = answers.map((a) => {
+      const question = questions.find((q) => q.id === a.questionId);
+      const questionCode = question?.code ?? "";
       let isCorrect = false;
-      let questionCode = question?.code ?? "";
 
       if (question) {
         if (question.type === "mc") {
-          const normalize = (val: string) =>
-            val.split(",").map(s => s.trim()).sort().join(",");
+          const normalize = (val: string) => val.split(",").map((s) => s.trim()).sort().join(",");
           isCorrect = normalize(a.choice) === normalize(String(question.answer ?? ""));
         } else if (question.type === "essay" && isAnswerScoreArray(question.answerScores)) {
-          question.answerScores.forEach(({ keyword, score }) => {
-            if (a.choice.toLowerCase().includes(keyword.toLowerCase())) {
-              essayBonus += score; // ✅ tambahkan ke bonus total
-              isCorrect = true;
-            }
-          });
+          // Essay: isCorrect = setidaknya ada 1 keyword match
+          isCorrect = question.answerScores.some(({ keyword }) =>
+            a.choice.toLowerCase().includes(keyword.toLowerCase())
+          );
         } else {
           isCorrect = String(question.answer ?? "") === a.choice;
         }
       }
 
-      return {
-        userId,
-        questionCode,
-        choice: a.choice,
-        isCorrect,
-      };
+      return { attemptId: attempt.id, questionCode, choice: a.choice, isCorrect, userId };
     });
 
-    // Simpan jawaban user
-    await Promise.allSettled(
-      answerData.map(ans =>
+    await Promise.all(
+      answerData.map((ans) =>
         prisma.answer.upsert({
-          where: { userId_questionCode: { userId: ans.userId, questionCode: ans.questionCode } },
+          where: { attemptId_questionCode: { attemptId: ans.attemptId, questionCode: ans.questionCode } },
           update: { choice: ans.choice, isCorrect: ans.isCorrect },
-          create: { userId: ans.userId, questionCode: ans.questionCode, choice: ans.choice, isCorrect: ans.isCorrect },
+          create: ans,
         })
       )
     );
 
-    // Hitung skor subtest
+    // Hitung RW & SW menggunakan scoreIST
     let rw = 0;
     let sw = 0;
     if (type === "IST") {
       const istScore: IstScoreResult = await scoreIST(userId, subtest);
-      rw = istScore.rw + essayBonus;         // ✅ total RW termasuk essay
-      sw = istScore.norma ?? istScore.rw;    // SW = norma atau fallback RW
+      rw = istScore.rw;
+      sw = istScore.norma ?? istScore.rw;
     }
 
-    // Ambil entitas TestType & SubTest
-    const testTypeEntity = await prisma.testType.findUnique({ where: { name: type } });
-    if (!testTypeEntity) return NextResponse.json({ error: "Test type tidak ditemukan", status: 400 });
-
+    // Ambil subtest entity
     const subtestEntity = await prisma.subTest.findUnique({
       where: { testTypeId_name: { testTypeId: testTypeEntity.id, name: subtest } },
     });
-    if (!subtestEntity) return NextResponse.json({ error: "Subtest tidak ditemukan", status: 400 });
+    if (!subtestEntity) return NextResponse.json({ error: "Subtest tidak ditemukan" }, { status: 400 });
 
-    // Simpan/upsert SubtestResult
+    // Simpan subtestResult
     await prisma.subtestResult.upsert({
-      where: {
-        userId_subTestId_testTypeId: {
-          userId,
-          subTestId: subtestEntity.id,
-          testTypeId: testTypeEntity.id,
-        },
-      },
+      where: { attemptId_subTestId: { attemptId: attempt.id, subTestId: subtestEntity.id } },
       update: { rw, sw, isCompleted: true },
-      create: {
-        userId,
-        subTestId: subtestEntity.id,
-        testTypeId: testTypeEntity.id,
-        rw,
-        sw,
-        isCompleted: true,
-      },
+      create: { attemptId: attempt.id, subTestId: subtestEntity.id, rw, sw, isCompleted: true },
     });
 
-    // Cari subtest berikutnya
+    // Hitung total RW & SW
+    const subtestResults = await prisma.subtestResult.findMany({ where: { attemptId: attempt.id } });
+    const totalRw = subtestResults.reduce((sum, r) => sum + (r.rw ?? 0), 0);
+    const totalSw = subtestResults.reduce((sum, r) => sum + (r.sw ?? 0), 0);
+
+    await prisma.result.upsert({
+      where: { attemptId_testTypeId: { attemptId: attempt.id, testTypeId: testTypeEntity.id } },
+      update: { totalRw, totalSw },
+      create: { userId, attemptId: attempt.id, testTypeId: testTypeEntity.id, totalRw, totalSw },
+    });
+
+    // Cari next subtest
     const subtests = await prisma.subTest.findMany({ where: { testTypeId: testTypeEntity.id }, orderBy: { id: "asc" } });
-    const doneSubtests = await prisma.subtestResult.findMany({ where: { userId, testTypeId: testTypeEntity.id, isCompleted: true }, select: { subTestId: true } });
-    const doneSet = new Set(doneSubtests.map(ds => ds.subTestId));
-    const nextSubtest = subtests.find(st => !doneSet.has(st.id));
+    const doneSubtests = subtestResults.map((r) => r.subTestId);
+    const nextSubtest = subtests.find((st) => !doneSubtests.includes(st.id));
 
     return NextResponse.json({
       message: "Jawaban & skor subtest berhasil disimpan",
       nextSubtest: nextSubtest?.name ?? null,
       durationMinutes: nextSubtest?.duration ?? 6,
       type,
+      totalRw,
+      totalSw,
     }, { status: 200 });
 
   } catch (err) {
