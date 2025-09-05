@@ -16,7 +16,7 @@ const testTypes = [
   { name: "MSAI", desc: "Multiple Self-Assessment Inventory", duration: 60, price: 150000 },
   { name: "MSDT", desc: "Multi-Stage Diagnostic Test", duration: 60, price: 150000 },
   { name: "Papikostick", desc: "Papikostick Handwriting Personality Test", duration: 60, price: 150000 },
-  { name: "RMIB", desc: "Edwards Personal Preference Schedule", duration: 60, price: 150000 },
+  { name: "RMIB", desc: "Rothwell-Miller Interest Blank", duration: 60, price: 150000 },
   { name: "TIU5", desc: "TIU Cognitive Ability Test Level 5", duration: 60, price: 150000 },
   { name: "TIU6", desc: "TIU Cognitive Ability Test Level 6", duration: 60, price: 150000 },
   { name: "Wartegg", desc: "Wartegg Drawing Personality Test", duration: 60, price: 150000 },

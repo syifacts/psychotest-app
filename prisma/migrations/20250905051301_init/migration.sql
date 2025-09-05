@@ -46,7 +46,8 @@ CREATE TABLE `SubTest` (
 -- CreateTable
 CREATE TABLE `Question` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `subTestId` INTEGER NOT NULL,
+    `subTestId` INTEGER NULL,
+    `testTypeId` INTEGER NOT NULL,
     `code` VARCHAR(191) NOT NULL,
     `content` VARCHAR(191) NULL,
     `options` JSON NULL,
@@ -106,10 +107,31 @@ CREATE TABLE `Result` (
     `testTypeId` INTEGER NOT NULL,
     `totalRw` INTEGER NULL,
     `totalSw` INTEGER NULL,
+    `swIq` INTEGER NULL,
+    `iq` DOUBLE NULL,
     `isCompleted` BOOLEAN NOT NULL DEFAULT false,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     UNIQUE INDEX `Result_attemptId_testTypeId_key`(`attemptId`, `testTypeId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Norma_Result` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `age` INTEGER NOT NULL,
+    `rw` INTEGER NOT NULL,
+    `sw` INTEGER NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Norma_Iq` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `sw` INTEGER NOT NULL,
+    `iq` DOUBLE NOT NULL,
+
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -151,11 +173,39 @@ CREATE TABLE `UserProgress` (
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `PreferenceQuestion` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `testTypeId` INTEGER NOT NULL,
+    `code` VARCHAR(191) NOT NULL,
+    `dimension` VARCHAR(191) NULL,
+    `content` VARCHAR(191) NOT NULL,
+    `options` JSON NOT NULL,
+
+    UNIQUE INDEX `PreferenceQuestion_code_key`(`code`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `PersonalityResult` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `attemptId` INTEGER NOT NULL,
+    `resultType` VARCHAR(191) NOT NULL,
+    `summary` TEXT NOT NULL,
+    `scores` JSON NOT NULL,
+
+    UNIQUE INDEX `PersonalityResult_attemptId_key`(`attemptId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- AddForeignKey
 ALTER TABLE `SubTest` ADD CONSTRAINT `SubTest_testTypeId_fkey` FOREIGN KEY (`testTypeId`) REFERENCES `TestType`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Question` ADD CONSTRAINT `Question_subTestId_fkey` FOREIGN KEY (`subTestId`) REFERENCES `SubTest`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Question` ADD CONSTRAINT `Question_subTestId_fkey` FOREIGN KEY (`subTestId`) REFERENCES `SubTest`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Question` ADD CONSTRAINT `Question_testTypeId_fkey` FOREIGN KEY (`testTypeId`) REFERENCES `TestType`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `TestAttempt` ADD CONSTRAINT `TestAttempt_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -198,3 +248,9 @@ ALTER TABLE `Payment` ADD CONSTRAINT `Payment_testTypeId_fkey` FOREIGN KEY (`tes
 
 -- AddForeignKey
 ALTER TABLE `UserProgress` ADD CONSTRAINT `UserProgress_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `PreferenceQuestion` ADD CONSTRAINT `PreferenceQuestion_testTypeId_fkey` FOREIGN KEY (`testTypeId`) REFERENCES `TestType`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `PersonalityResult` ADD CONSTRAINT `PersonalityResult_attemptId_fkey` FOREIGN KEY (`attemptId`) REFERENCES `TestAttempt`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

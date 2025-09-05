@@ -68,6 +68,7 @@ model TestType {
   results        Result[]
   payments       Payment[]
   attempts       TestAttempt[]
+  preferenceQuestions PreferenceQuestion[] 
 }
 
 // ------------------
@@ -94,6 +95,7 @@ model SubTest {
 model Question {
   id           Int       @id @default(autoincrement())
   subTestId    Int?
+  testTypeId   Int
   code         String    @unique
   content      String?
   options      Json?
@@ -125,6 +127,7 @@ model TestAttempt {
   answers         Answer[]
   subtestResults  SubtestResult[]
   results         Result[]
+  personalityResults PersonalityResult[]
 }
 
 
