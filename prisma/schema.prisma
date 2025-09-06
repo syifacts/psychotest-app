@@ -106,8 +106,6 @@ model Question {
   SubTest   SubTest?   @relation(fields: [subTestId], references: [id])
    TestType     TestType   @relation(fields: [testTypeId], references: [id])
   answers   Answer[]
-  payments  Payment[]
-  subtestResults SubtestResult[]
 }
 
 // ------------------
@@ -151,7 +149,8 @@ model Answer {
   Question                Question?   @relation(fields: [questionCode], references: [code])
   PreferenceQuestion      PreferenceQuestion? @relation("PreferenceAnswers", fields: [preferenceQuestionCode], references: [code])
 
-  @@unique([attemptId, questionCode, preferenceQuestionCode]) // unik per attempt
+  @@unique([attemptId, questionCode]) // unik per attempt
+  @@unique([attemptId, preferenceQuestionCode])
 }
 
 // ------------------
@@ -161,10 +160,11 @@ model SubtestResult {
   id          Int         @id @default(autoincrement())
   attemptId   Int
   subTestId   Int
-  rw          Int
-  sw          Int
+  rw          Int?
+  sw          Int?
+  kategori    String?
   createdAt   DateTime    @default(now())
-  isCompleted Boolean     @default(false)
+  isCompleted Boolean?     @default(false)
 
   Attempt   TestAttempt @relation(fields: [attemptId], references: [id])
   SubTest   SubTest     @relation(fields: [subTestId], references: [id])

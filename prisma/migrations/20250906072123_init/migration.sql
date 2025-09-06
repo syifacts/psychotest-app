@@ -82,7 +82,8 @@ CREATE TABLE `Answer` (
     `choice` VARCHAR(191) NOT NULL,
     `isCorrect` BOOLEAN NULL,
 
-    UNIQUE INDEX `Answer_attemptId_questionCode_preferenceQuestionCode_key`(`attemptId`, `questionCode`, `preferenceQuestionCode`),
+    UNIQUE INDEX `Answer_attemptId_questionCode_key`(`attemptId`, `questionCode`),
+    UNIQUE INDEX `Answer_attemptId_preferenceQuestionCode_key`(`attemptId`, `preferenceQuestionCode`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -91,10 +92,11 @@ CREATE TABLE `SubtestResult` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `attemptId` INTEGER NOT NULL,
     `subTestId` INTEGER NOT NULL,
-    `rw` INTEGER NOT NULL,
-    `sw` INTEGER NOT NULL,
+    `rw` INTEGER NULL,
+    `sw` INTEGER NULL,
+    `kategori` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `isCompleted` BOOLEAN NOT NULL DEFAULT false,
+    `isCompleted` BOOLEAN NULL DEFAULT false,
 
     UNIQUE INDEX `SubtestResult_attemptId_subTestId_key`(`attemptId`, `subTestId`),
     PRIMARY KEY (`id`)
