@@ -184,6 +184,8 @@ model Result {
   totalSw     Int?    // hasil konversi RW → SW total
   swIq        Int?    // nilai SW yang dipakai untuk mapping IQ
   iq          Float?  // hasil IQ dari mapping NormaIq
+  keteranganiq  String?
+  dominasi      String?
   isCompleted Boolean  @default(false)
   createdAt   DateTime @default(now())
 
