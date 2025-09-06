@@ -225,10 +225,16 @@ return (
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right font-medium">
-                      <a href={`/hasil/${historyItem.id}`} className="text-blue-600 hover:text-blue-900">
-                        Lihat Hasil
-                      </a>
-                    </td>
+  <a
+    href={`/tes/hasil/${historyItem.id}`} 
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-blue-600 hover:text-blue-900"
+  >
+    Lihat Hasil
+  </a>
+</td>
+
                   </tr>
                 ))}
               </tbody>
