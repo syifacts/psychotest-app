@@ -77,11 +77,12 @@ CREATE TABLE `Answer` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `userId` INTEGER NOT NULL,
     `attemptId` INTEGER NOT NULL,
-    `questionCode` VARCHAR(191) NOT NULL,
+    `questionCode` VARCHAR(191) NULL,
+    `preferenceQuestionCode` VARCHAR(191) NULL,
     `choice` VARCHAR(191) NOT NULL,
     `isCorrect` BOOLEAN NULL,
 
-    UNIQUE INDEX `Answer_attemptId_questionCode_key`(`attemptId`, `questionCode`),
+    UNIQUE INDEX `Answer_attemptId_questionCode_preferenceQuestionCode_key`(`attemptId`, `questionCode`, `preferenceQuestionCode`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -109,8 +110,6 @@ CREATE TABLE `Result` (
     `totalSw` INTEGER NULL,
     `swIq` INTEGER NULL,
     `iq` DOUBLE NULL,
-    `keteranganiq` VARCHAR(191) NULL,
-    `dominasi` VARCHAR(191) NULL,
     `isCompleted` BOOLEAN NOT NULL DEFAULT false,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
@@ -225,7 +224,10 @@ ALTER TABLE `Answer` ADD CONSTRAINT `Answer_userId_fkey` FOREIGN KEY (`userId`) 
 ALTER TABLE `Answer` ADD CONSTRAINT `Answer_attemptId_fkey` FOREIGN KEY (`attemptId`) REFERENCES `TestAttempt`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Answer` ADD CONSTRAINT `Answer_questionCode_fkey` FOREIGN KEY (`questionCode`) REFERENCES `Question`(`code`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Answer` ADD CONSTRAINT `Answer_questionCode_fkey` FOREIGN KEY (`questionCode`) REFERENCES `Question`(`code`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Answer` ADD CONSTRAINT `Answer_preferenceQuestionCode_fkey` FOREIGN KEY (`preferenceQuestionCode`) REFERENCES `PreferenceQuestion`(`code`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `SubtestResult` ADD CONSTRAINT `SubtestResult_attemptId_fkey` FOREIGN KEY (`attemptId`) REFERENCES `TestAttempt`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

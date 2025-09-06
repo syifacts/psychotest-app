@@ -108,7 +108,6 @@ model Question {
   answers   Answer[]
 }
 
-
 // ------------------
 // Attempt Tes (sesi user ikut 1 tes)
 // ------------------
@@ -139,15 +138,17 @@ model Answer {
   id            Int         @id @default(autoincrement())
   userId        Int
   attemptId     Int
-  questionCode  String
+  questionCode  String?
+  preferenceQuestionCode String?
   choice        String
   isCorrect     Boolean?
 
-  User         User        @relation(fields: [userId], references: [id])
-  Attempt      TestAttempt @relation(fields: [attemptId], references: [id])
-  Question     Question    @relation(fields: [questionCode], references: [code]) 
+  User                    User        @relation(fields: [userId], references: [id])
+  Attempt                 TestAttempt @relation(fields: [attemptId], references: [id])
+  Question                Question?   @relation(fields: [questionCode], references: [code])
+  PreferenceQuestion      PreferenceQuestion? @relation("PreferenceAnswers", fields: [preferenceQuestionCode], references: [code])
 
-  @@unique([attemptId, questionCode]) // unik per attempt
+  @@unique([attemptId, questionCode, preferenceQuestionCode]) // unik per attempt
 }
 
 // ------------------
@@ -180,8 +181,6 @@ model Result {
   totalSw     Int?    // hasil konversi RW → SW total
   swIq        Int?    // nilai SW yang dipakai untuk mapping IQ
   iq          Float?  // hasil IQ dari mapping NormaIq
-  keteranganiq  String?
-  dominasi      String?
   isCompleted Boolean  @default(false)
   createdAt   DateTime @default(now())
 
@@ -206,7 +205,6 @@ model NormaIq {
 
   @@map("Norma_Iq")  // nama tabel di MySQL jadi "Norma_Iq"
 }
-
 
 // ------------------
 // Pembayaran Tes
@@ -266,6 +264,7 @@ model PreferenceQuestion {
   options    Json     // Objek: { "a": "Teks A", "b": "Teks B" }
 
   TestType   TestType @relation(fields: [testTypeId], references: [id])
+  answers   Answer[] @relation("PreferenceAnswers")
 }
 // ------------------
 // Hasil Tes Personality
