@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     const { userId, attemptId, answers } = body as {
       userId: number;
       attemptId: number;
-      answers: { questionId: number; choice: string }[];
+      answers: { questionId?: number; preferenceQuestionId?: number; choice: string }[];
     };
 
     if (!userId || !attemptId || !answers?.length) {
@@ -18,56 +18,62 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Ambil kode & kunci jawaban
-    const questionIds = answers.map((a) => a.questionId);
+    // Ambil kode & kunci jawaban dari Question
+    const questionIds = answers.map((a) => a.questionId).filter(Boolean) as number[];
     const questions = await prisma.question.findMany({
       where: { id: { in: questionIds } },
       select: { id: true, code: true, answer: true },
     });
 
-    // Bentuk data untuk upsert
-    const answerData = answers.map((a) => {
-      const question = questions.find((q) => q.id === a.questionId);
-      const isCorrect = question ? question.answer === a.choice : false;
-      return {
-        userId,
-        attemptId,
-        questionCode: question?.code ?? "",
-        choice: a.choice,
-        isCorrect,
-      };
+    // Ambil kode untuk PreferenceQuestion
+    const prefIds = answers.map((a) => a.preferenceQuestionId).filter(Boolean) as number[];
+    const prefQuestions = await prisma.preferenceQuestion.findMany({
+      where: { id: { in: prefIds } },
+      select: { id: true, code: true },
     });
 
-    // Simpan (upsert per attemptId + questionCode)
+    // Bentuk data untuk upsert
+    const answerData = answers.map((a) => {
+      if (a.questionId) {
+        const question = questions.find((q) => q.id === a.questionId);
+        const isCorrect = question ? question.answer === a.choice : null;
+        return {
+          userId,
+          attemptId,
+          questionCode: question?.code ?? null,
+          preferenceQuestionCode: null,
+          choice: a.choice,
+          isCorrect,
+        };
+      } else if (a.preferenceQuestionId) {
+        const pref = prefQuestions.find((p) => p.id === a.preferenceQuestionId);
+        return {
+          userId,
+          attemptId,
+          questionCode: null,
+          preferenceQuestionCode: pref?.code ?? null,
+          choice: a.choice,
+          isCorrect: null, // preference biasanya ga ada benar/salah
+        };
+      }
+      return null;
+    }).filter(Boolean) as any[];
+
+    // Simpan jawaban
     await Promise.all(
       answerData.map((a) =>
         prisma.answer.upsert({
-          where: {
-            attemptId_questionCode: {
-              attemptId: a.attemptId,
-              questionCode: a.questionCode,
-            },
-          },
+          where: a.questionCode
+            ? { attemptId_questionCode: { attemptId: a.attemptId, questionCode: a.questionCode } }
+            : { attemptId_preferenceQuestionCode: { attemptId: a.attemptId, preferenceQuestionCode: a.preferenceQuestionCode } },
           update: { choice: a.choice, isCorrect: a.isCorrect },
           create: a,
         })
       )
     );
 
-    // Ambil ulang jawaban user untuk attempt ini
-    const savedAnswers = await prisma.answer.findMany({
-      where: { attemptId },
-      select: { questionCode: true, choice: true },
-      orderBy: { questionCode: "asc" },
-    });
-
-    const formatted: Record<string, string> = {};
-    savedAnswers.forEach((a) => (formatted[a.questionCode] = a.choice));
-
     return NextResponse.json({
       message: "Jawaban berhasil disimpan",
-      answers: formatted,
-      alreadyTaken: savedAnswers.length > 0,
     });
   } catch (error) {
     console.error("Gagal simpan jawaban:", error);
@@ -80,57 +86,26 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const attemptId = Number(url.searchParams.get("attemptId"));
-    const type = url.searchParams.get("type");
-    const sub = url.searchParams.get("sub");
 
-    if (!attemptId || !type || !sub) {
-      return NextResponse.json(
-        { error: "attemptId, type, dan sub wajib diisi" },
-        { status: 400 }
-      );
+    if (!attemptId) {
+      return NextResponse.json({ error: "attemptId wajib diisi" }, { status: 400 });
     }
 
-    // Cari attempt & testType
-    const attempt = await prisma.testAttempt.findUnique({
-      where: { id: attemptId },
-      select: { testTypeId: true },
-    });
-    if (!attempt) {
-      return NextResponse.json({ error: "Attempt tidak ditemukan" }, { status: 404 });
-    }
-
-    const testType = await prisma.testType.findUnique({
-      where: { id: attempt.testTypeId },
-    });
-    if (!testType || testType.name !== type) {
-      return NextResponse.json({ error: "TestType tidak cocok" }, { status: 404 });
-    }
-
-    // Cari subtest
-    const subTest = await prisma.subTest.findUnique({
-      where: { testTypeId_name: { testTypeId: testType.id, name: sub } },
-      select: { id: true },
-    });
-    if (!subTest) {
-      return NextResponse.json({ error: "Subtest tidak ditemukan" }, { status: 404 });
-    }
-
-    // Ambil semua kode soal subtest
-    const questions = await prisma.question.findMany({
-      where: { subTestId: subTest.id },
-      select: { code: true },
-    });
-    const questionCodes = questions.map((q) => q.code);
-
-    // Ambil jawaban attempt ini
+    // Ambil semua jawaban untuk attempt ini
     const answers = await prisma.answer.findMany({
-      where: { attemptId, questionCode: { in: questionCodes } },
-      select: { questionCode: true, choice: true },
-      orderBy: { questionCode: "asc" },
+      where: { attemptId },
+      select: { questionCode: true, preferenceQuestionCode: true, choice: true },
+      orderBy: [{ questionCode: "asc" }, { preferenceQuestionCode: "asc" }],
     });
 
     const formatted: Record<string, string> = {};
-    answers.forEach((a) => (formatted[a.questionCode] = a.choice));
+    answers.forEach((a) => {
+      if (a.questionCode) {
+        formatted[a.questionCode] = a.choice;
+      } else if (a.preferenceQuestionCode) {
+        formatted[a.preferenceQuestionCode] = a.choice;
+      }
+    });
 
     return NextResponse.json({
       answers: formatted,

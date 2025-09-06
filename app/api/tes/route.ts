@@ -49,8 +49,12 @@ export async function GET(req: NextRequest) {
       });
 
       savedAnswers.forEach(a => {
-        const choiceStr = String(a.choice);
-        userAnswers[a.questionCode] = choiceStr.includes(",") ? choiceStr.split(",") : choiceStr;
+        if (a.questionCode) { // ✅ cek biar ga null
+          const choiceStr = String(a.choice);
+          userAnswers[a.questionCode] = choiceStr.includes(",")
+            ? choiceStr.split(",")
+            : choiceStr;
+        }
       });
     }
 
