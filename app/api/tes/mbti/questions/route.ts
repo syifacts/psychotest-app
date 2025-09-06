@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'; // Sesuaikan path ke file prisma client A
 
 export async function GET() {
   try {
-    const mBTIQuestions = await prisma.mBTIQuestion.findMany({ 
+    const mBTIQuestions = await prisma.preferenceQuestion.findMany({ 
       orderBy: {
         code: 'asc', // Pastikan urutan soal konsisten
       },
