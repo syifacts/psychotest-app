@@ -3,6 +3,18 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { jwtDecode } from 'jwt-decode';
+import EditProfile from '@/components/account/editprofile';
+
+interface User {
+  id: number;
+  email: string;
+  fullName: string;
+  role?: string;
+  birthDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  profileImage?: string; 
+}
 
 interface TokenPayload {
   id: number;
@@ -13,7 +25,10 @@ interface TokenPayload {
 }
 
 export default function AccountPage() {
-  const [user, setUser] = useState<TokenPayload | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [testHistory, setTestHistory] = useState<any[]>([]); // <-- TAMBAHKAN INI
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true); // <-- Tambahkan state loading
+  const [isEditing, setIsEditing] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -78,19 +93,22 @@ export default function AccountPage() {
     fetchTestHistory();
   }
 }, [user]);
-
+ // <-- Dependency: useEffect ini berjalan saat 'user' berubah
 
   const handleLogout = () => {
-  // Hapus JWT dari localStorage
-  localStorage.removeItem('token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user'); // hapus data user juga
+    setUser(null);
+    router.push('/login');
+  };
 
-  // Reset state user
-  setUser(null);
-
-  // Redirect ke login
-  router.push('/login');
-};
-
+   const handleSaveSuccess = (updatedUser: User) => {
+    // Gabungkan data lama dengan data baru
+    const newUserState = { ...user, ...updatedUser };
+    setUser(newUserState as User); // Update state lokal
+    localStorage.setItem('user', JSON.stringify(newUserState)); // Update localStorage
+    setIsEditing(false); // Tutup modal
+  };
 
 if (!user) {
   return (
@@ -136,22 +154,111 @@ return (
         </div>
       </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Email</label>
-              <p className="mt-1 text-gray-900">{user.email}</p>
-            </div>
+      {/* Bagian Informasi Pribadi */}
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+          <div>
+            <label className="block text-gray-500">Full Name</label>
+            <p className="font-medium text-gray-800">{user.fullName || 'N/A'}</p>
           </div>
-
-          <div className="mt-8">
-            <button
-              onClick={handleLogout}
-              className="w-full flex justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-            >
-              Logout
-            </button>
+          <div>
+            <label className="block text-gray-500">Date of Birth</label>
+            <p className="font-medium text-gray-800">
+              {user.birthDate ? new Date(user.birthDate).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}
+            </p>
           </div>
+          <div>
+            <label className="block text-gray-500">Email Address</label>
+            <p className="font-medium text-gray-800">{user.email || 'N/A'}</p>
+          </div>
+          {/* <div>
+            <label className="block text-gray-500">Phone Number</label>
+            <p className="font-medium text-gray-800">{user.phone || 'N/A'}</p>
+          </div>
+          <div>
+            <label className="block text-gray-500">User Role</label>
+            <p className="font-medium text-gray-800">{user.role || 'User'}</p>
+          </div> */}
         </div>
       </div>
-    </main>
-  );
+
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Riwayat Tes</h3>
+        <div className="overflow-x-auto">
+          {isLoadingHistory ? (
+            <p className="text-center text-gray-500 py-4">Memuat riwayat...</p>
+          ) : testHistory.length > 0 ? (
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                    Nama Tes
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                    Tanggal Pengerjaan
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th scope="col" className="relative px-6 py-3">
+                    <span className="sr-only">Aksi</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {testHistory.map((historyItem) => (
+                  <tr key={historyItem.id}>
+                    <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                      {historyItem.testType.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                      {new Date(historyItem.completedAt).toLocaleDateString('id-ID', {
+                        year: 'numeric', month: 'long', day: 'numeric',
+                      })}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        Selesai
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right font-medium">
+                      <a href={`/hasil/${historyItem.id}`} className="text-blue-600 hover:text-blue-900">
+                        Lihat Hasil
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-center text-gray-500 py-4">
+              Anda belum pernah mengerjakan tes apapun.
+            </p>
+          )}
+        </div>
+      </div>
+      
+      {/* Tombol Logout (Jika Anda ingin menyertakannya) */}
+      <div className="mt-8 text-center">
+        <button
+          onClick={handleLogout}
+          className="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+        >
+          Logout
+        </button>
+      </div>
+
+      {isEditing && (
+        <EditProfile
+          user={user}
+          onClose={() => setIsEditing(false)}
+          onSave={handleSaveSuccess}
+        />
+      )}
+    </div>
+  </main>
+);
 }
