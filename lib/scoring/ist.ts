@@ -46,6 +46,7 @@ export async function scoreIST(userId: number, subtest: string): Promise<IstScor
 
   for (const a of answers) {
     const q = a.Question;
+    if (!q) continue; // ✅ skip jika null
 
     if (q.type === "essay" && isAnswerScoreArray(q.answerScores)) {
       // hitung essay sesuai keyword + score
@@ -53,7 +54,10 @@ export async function scoreIST(userId: number, subtest: string): Promise<IstScor
       const countedKeywords = new Set<string>();
 
       for (const { keyword, score } of q.answerScores) {
-        if (!countedKeywords.has(keyword) && a.choice.toLowerCase().includes(keyword.toLowerCase())) {
+        if (
+          !countedKeywords.has(keyword) &&
+          a.choice.toLowerCase().includes(keyword.toLowerCase())
+        ) {
           scoreForThisQuestion += score;
           countedKeywords.add(keyword);
         }
@@ -75,7 +79,10 @@ export async function scoreIST(userId: number, subtest: string): Promise<IstScor
     const birth = new Date(user.birthDate);
     const now = new Date();
     age = now.getFullYear() - birth.getFullYear();
-    if (now.getMonth() < birth.getMonth() || (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())) {
+    if (
+      now.getMonth() < birth.getMonth() ||
+      (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())
+    ) {
       age--;
     }
   }
