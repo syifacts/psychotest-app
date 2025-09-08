@@ -14,6 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           include: { SubTest: true }, // ambil nama subtest
         },
         results: true, // total hasil tes
+        answers: true,
       },
     });
 
