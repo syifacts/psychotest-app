@@ -163,9 +163,10 @@ model Answer {
   User                    User        @relation(fields: [userId], references: [id])
   Attempt                 TestAttempt @relation(fields: [attemptId], references: [id])
   Question                Question?   @relation(fields: [questionCode], references: [code])
-
+  
   @@unique([attemptId, questionCode]) // unik per attempt
   @@unique([attemptId, preferenceQuestionCode])
+  
 }
 
 // ------------------
