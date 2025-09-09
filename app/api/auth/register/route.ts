@@ -10,7 +10,8 @@ export async function POST(req: Request) {
       email,
       password,
       role,
-      organization,
+      lembagalayanan, // sesuai frontend untuk PSIKOLOG
+      organization,    // bisa dipakai untuk PERUSAHAAN
       phone,
       address,
       birthDate,
@@ -46,20 +47,17 @@ export async function POST(req: Request) {
     };
 
     if (role === "PSIKOLOG") {
-      if (!fullName || !organization || !phone) {
+      if (!fullName || !lembagalayanan || !phone) {
         return NextResponse.json({ error: "Semua field untuk Psikolog harus diisi" }, { status: 400 });
       }
       userData.fullName = fullName;
-      userData.lembagalayanan = organization;
+      userData.lembagalayanan = lembagalayanan; // sesuai field frontend
       userData.phone = phone;
-      if (birthDate) userData.birthDate = new Date(birthDate);
-      if (gender) userData.gender = gender;
-      if (education) userData.education = education;
     } else if (role === "PERUSAHAAN") {
-      if (!organization || !address) {
+      if (!fullName || !address) {
         return NextResponse.json({ error: "Semua field untuk Perusahaan harus diisi" }, { status: 400 });
       }
-      userData.fullName = organization; // nama perusahaan
+      userData.fullName = fullName; // nama perusahaan
       userData.address = address;
     } else {
       // USER biasa
