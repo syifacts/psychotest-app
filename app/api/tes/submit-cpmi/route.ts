@@ -136,9 +136,13 @@ export async function POST(req: NextRequest) {
 
     // Update attempt selesai
     await prisma.testAttempt.update({
-      where: { id: attemptId },
-      data: { finishedAt: new Date() },
-    });
+  where: { id: attemptId },
+  data: {
+    finishedAt: new Date(),
+    isCompleted: true, // ✅ tambahkan ini
+  },
+});
+
 
     // Simpan hasil CPMI
     await prisma.result.create({

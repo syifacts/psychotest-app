@@ -41,6 +41,8 @@ model User {
   birthDate       DateTime?
   gender          Gender?
   education       String?
+  phone           String?
+  address         String?
   profileImage    String?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -54,6 +56,12 @@ model User {
   answers         Answer[]
   payments        Payment[]
   attempts        TestAttempt[]
+   userPackages    UserPackage[]
+
+   purchasedPackagesAsCompany PackagePurchase[] @relation("CompanyPackagePurchase")
+  purchasedPackagesAsUser    PackagePurchase[] @relation("UserPackagePurchase")
+    validatedResults Result[] @relation("ValidatedResults")
+
 }
 
 
@@ -74,6 +82,7 @@ model TestType {
   results        Result[]
   payments       Payment[]
   attempts       TestAttempt[]
+  packageTests   PackageTest[]
   preferenceQuestions PreferenceQuestion[] 
 }
 
@@ -238,12 +247,21 @@ model Result {
   hasilBA String?
   hasilE  String?
 
+   // Validasi psikolog
+  barcode       String?
+  validated     Boolean   @default(false)
+  validatedById Int?
+  validatedAt   DateTime?
+  expiresAt     DateTime?
+
   isCompleted Boolean  @default(false)
   createdAt   DateTime @default(now())
 
   User        User        @relation(fields: [userId], references: [id])
   Attempt     TestAttempt @relation(fields: [attemptId], references: [id])
   TestType    TestType    @relation(fields: [testTypeId], references: [id])
+    ValidatedBy   User?     @relation("ValidatedResults", fields: [validatedById], references: [id])
+
 
   @@unique([attemptId, testTypeId])
 }
@@ -334,4 +352,49 @@ model PersonalityResult {
   scores     Json   // { "E": 7, "I": 3, "S": 2, "N": 8 }
 
   Attempt    TestAttempt @relation(fields: [attemptId], references: [id])
+}
+model Package {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  price       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  img         String?
+
+  tests       PackageTest[]
+  purchases   PackagePurchase[]
+}
+
+model PackageTest {
+  id        Int     @id @default(autoincrement())
+  packageId Int
+  testTypeId Int
+
+  package   Package  @relation(fields: [packageId], references: [id])
+  testType  TestType @relation(fields: [testTypeId], references: [id])
+}
+
+model PackagePurchase {
+  id        Int      @id @default(autoincrement())
+  companyId Int?     // perusahaan yang beli
+  userId    Int?     // user yang beli sendiri
+  packageId Int
+  purchasedAt DateTime @default(now())
+
+  company   User?    @relation("CompanyPackagePurchase", fields: [companyId], references: [id])
+  user      User?    @relation("UserPackagePurchase", fields: [userId], references: [id])
+  package   Package  @relation(fields: [packageId], references: [id])
+  userPackages UserPackage[]
+}
+
+model UserPackage {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  packagePurchaseId Int
+
+  User          User          @relation(fields: [userId], references: [id])
+  PackagePurchase PackagePurchase @relation(fields: [packagePurchaseId], references: [id])
+
+  @@unique([userId, packagePurchaseId])
 }

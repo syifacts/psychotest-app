@@ -111,7 +111,17 @@ const startAttempt = async () => {
   const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
   if (!savedUser.id || !testInfo?.id) return;
 
+  // ❌ Hapus attempt lama dari localStorage dan state
+  localStorage.removeItem("attemptId");
+  localStorage.removeItem("endTime");
+  localStorage.removeItem("currentIndex");
+  setAttemptId(null);
+  setAnswers({});
+  setCurrentIndex(0);
+  setTimeLeft(testInfo.duration ? testInfo.duration * 60 : 30 * 60);
+
   try {
+    // ✅ Buat attempt baru di backend
     const res = await fetch("/api/attempts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -125,22 +135,20 @@ const startAttempt = async () => {
     if (!res.ok) throw new Error(data.error || "Gagal memulai attempt");
 
     setAttemptId(data.id);
-    localStorage.setItem("attemptId", data.id.toString()); // ✅ simpan ke localStorage
+    localStorage.setItem("attemptId", data.id.toString());
 
-    // ✅ Hitung endTime (waktu selesai tes)
+    // Hitung endTime
     const duration = testInfo.duration || 30; // menit
     const endTime = new Date();
     endTime.setMinutes(endTime.getMinutes() + duration);
-
     localStorage.setItem("endTime", endTime.toISOString());
 
-    // reset index ke 0 saat mulai attempt baru
+    // Reset currentIndex
     setCurrentIndex(0);
     localStorage.setItem("currentIndex", "0");
 
-    // ✅ setelah dapat attemptId, langsung load soal + jawaban lama
+    // Load soal baru (jawaban lama kosong)
     await loadQuestions();
-    await loadExistingAnswers(data.id);
   } catch (err) {
     console.error("Gagal memulai attempt:", err);
   }
@@ -203,7 +211,7 @@ const handleSelectAnswer = async (qid: number, choice: string) => {
   // -------------------------
   // Submit
   // -------------------------
-  const handleSubmit = async () => {
+ const handleSubmit = async () => {
   try {
     const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
     if (!savedUser.id || !attemptId) return;
@@ -214,7 +222,7 @@ const handleSelectAnswer = async (qid: number, choice: string) => {
         const q = questions.find((q) => q.id === Number(qid));
         return {
           questionId: Number(qid),
-          questionCode: q?.code, // ✅ tambahkan code soal
+          questionCode: q?.code,
           choice,
         };
       }
@@ -234,12 +242,22 @@ const handleSelectAnswer = async (qid: number, choice: string) => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Gagal submit CPMI");
 
+    // ✅ hapus attempt lama
+    localStorage.removeItem("attemptId");
+    localStorage.removeItem("endTime");
+    localStorage.removeItem("currentIndex");
+
     alert("🎉 Tes CPMI selesai! Hasil bisa dilihat di Dashboard.");
     router.push("/dashboard");
   } catch (err: any) {
     alert(err.message);
+    // ❌ hapus localStorage juga saat error
+    localStorage.removeItem("attemptId");
+    localStorage.removeItem("endTime");
+    localStorage.removeItem("currentIndex");
   }
 };
+
 
 
   const currentQuestion = questions[currentIndex];
@@ -250,25 +268,24 @@ const handleSelectAnswer = async (qid: number, choice: string) => {
       // -------------------------
 // Restore attempt on refresh
 // -------------------------
-// -------------------------
-// Restore attempt on refresh
-// -------------------------
-// -------------------------
-// Restore attempt on refresh
-// -------------------------
 useEffect(() => {
-  const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const savedAttemptId = localStorage.getItem("attemptId");
-  const savedIndex = localStorage.getItem("currentIndex");
-  const savedEnd = localStorage.getItem("endTime");
+  const restoreAttempt = async () => {
+    const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const savedAttemptId = localStorage.getItem("attemptId");
+    const savedIndex = localStorage.getItem("currentIndex");
+    const savedEnd = localStorage.getItem("endTime");
 
-  if (savedUser.id && savedAttemptId) {
-    fetch(`/api/attempts/${savedAttemptId}`).then(async (res) => {
-      if (!res.ok) {
-        // ❌ attempt sudah dihapus → reset state
+    if (!savedUser.id || !savedAttemptId) return;
+
+    try {
+      const res = await fetch(`/api/attempts/${savedAttemptId}`);
+      const data = await res.json();
+
+      if (!res.ok || data.attempt?.isCompleted) {
+        // ❌ Attempt selesai atau sudah dihapus → reset
         localStorage.removeItem("attemptId");
-        localStorage.removeItem("currentIndex");
         localStorage.removeItem("endTime");
+        localStorage.removeItem("currentIndex");
         setAttemptId(null);
         setShowIntro(true);
         setShowQuestions(false);
@@ -276,28 +293,39 @@ useEffect(() => {
         return;
       }
 
-      // ✅ attempt masih ada → restore
+      // ✅ Attempt aktif → restore state
       setAttemptId(Number(savedAttemptId));
       setCurrentIndex(savedIndex ? Number(savedIndex) : 0);
 
-      // restore timer
-    if (savedEnd) {
-  const endTime = new Date(savedEnd);
-  const diff = Math.max(0, Math.floor((endTime.getTime() - Date.now()) / 1000));
-  setTimeLeft(diff);
-}
-
+      if (savedEnd) {
+        const endTime = new Date(savedEnd);
+        const diff = Math.max(
+          0,
+          Math.floor((endTime.getTime() - Date.now()) / 1000)
+        );
+        setTimeLeft(diff);
+      }
 
       await loadQuestions();
-
-      // ✅ langsung load jawaban dari DB
       await loadExistingAnswers(Number(savedAttemptId));
 
       setShowIntro(false);
       setShowQuestions(true);
-    });
-  }
+    } catch (err) {
+      console.error("Gagal restore attempt:", err);
+      localStorage.removeItem("attemptId");
+      localStorage.removeItem("endTime");
+      localStorage.removeItem("currentIndex");
+      setAttemptId(null);
+      setShowIntro(true);
+      setShowQuestions(false);
+      setHasAccess(false);
+    }
+  };
+
+  restoreAttempt();
 }, []);
+
 // -------------------------
 // Load existing answers (jalan setelah attemptId & questions siap)
 // -------------------------
