@@ -18,70 +18,86 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Ambil kode & kunci jawaban dari Question
+    // Ambil data Question
     const questionIds = answers.map((a) => a.questionId).filter(Boolean) as number[];
     const questions = await prisma.question.findMany({
       where: { id: { in: questionIds } },
       select: { id: true, code: true, answer: true },
     });
 
-    // Ambil kode untuk PreferenceQuestion
+    // Ambil data PreferenceQuestion
     const prefIds = answers.map((a) => a.preferenceQuestionId).filter(Boolean) as number[];
     const prefQuestions = await prisma.preferenceQuestion.findMany({
       where: { id: { in: prefIds } },
       select: { id: true, code: true },
     });
 
-    // Bentuk data untuk upsert
-    const answerData = answers.map((a) => {
-      if (a.questionId) {
-        const question = questions.find((q) => q.id === a.questionId);
-        const isCorrect = question ? question.answer === a.choice : null;
-        return {
-          userId,
-          attemptId,
-          questionCode: question?.code ?? null,
-          preferenceQuestionCode: null,
-          choice: a.choice,
-          isCorrect,
-        };
-      } else if (a.preferenceQuestionId) {
-        const pref = prefQuestions.find((p) => p.id === a.preferenceQuestionId);
-        return {
-          userId,
-          attemptId,
-          questionCode: null,
-          preferenceQuestionCode: pref?.code ?? null,
-          choice: a.choice,
-          isCorrect: null, // preference biasanya ga ada benar/salah
-        };
-      }
-      return null;
-    }).filter(Boolean) as any[];
+    // Siapkan data untuk upsert
+    const answerData = answers
+      .map((a) => {
+        if (a.questionId) {
+          const question = questions.find((q) => q.id === a.questionId);
+          return {
+            userId,
+            attemptId,
+            questionCode: question?.code ?? null,
+            preferenceQuestionCode: null,
+            choice: a.choice,
+            isCorrect: question ? question.answer === a.choice : null,
+          };
+        } else if (a.preferenceQuestionId) {
+          const pref = prefQuestions.find((p) => p.id === a.preferenceQuestionId);
+          return {
+            userId,
+            attemptId,
+            questionCode: null,
+            preferenceQuestionCode: pref?.code ?? null,
+            choice: a.choice,
+            isCorrect: null, // preference tidak ada benar/salah
+          };
+        }
+        return null;
+      })
+      .filter(Boolean) as {
+        userId: number;
+        attemptId: number;
+        questionCode: string | null;
+        preferenceQuestionCode: string | null;
+        choice: string;
+        isCorrect: boolean | null;
+      }[];
 
-    // Simpan jawaban
+    // Simpan jawaban (upsert)
     await Promise.all(
       answerData.map((a) =>
         prisma.answer.upsert({
           where: a.questionCode
-            ? { attemptId_questionCode: { attemptId: a.attemptId, questionCode: a.questionCode } }
-            : { attemptId_preferenceQuestionCode: { attemptId: a.attemptId, preferenceQuestionCode: a.preferenceQuestionCode } },
+            ? {
+                attemptId_questionCode: {
+                  attemptId: a.attemptId,
+                  questionCode: a.questionCode!,
+                },
+              }
+            : {
+                attemptId_preferenceQuestionCode: {
+                  attemptId: a.attemptId,
+                  preferenceQuestionCode: a.preferenceQuestionCode!,
+                },
+              },
           update: { choice: a.choice, isCorrect: a.isCorrect },
           create: a,
         })
       )
     );
 
-    return NextResponse.json({
-      message: "Jawaban berhasil disimpan",
-    });
+    return NextResponse.json({ message: "Jawaban berhasil disimpan" });
   } catch (error) {
     console.error("Gagal simpan jawaban:", error);
     return NextResponse.json({ error: "Gagal simpan jawaban" }, { status: 500 });
   }
 }
 
-// === GET: Ambil jawaban user berdasarkan subtest ===
+// === GET: Ambil jawaban user berdasarkan attempt ===
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
@@ -91,7 +107,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "attemptId wajib diisi" }, { status: 400 });
     }
 
-    // Ambil semua jawaban untuk attempt ini
     const answers = await prisma.answer.findMany({
       where: { attemptId },
       select: { questionCode: true, preferenceQuestionCode: true, choice: true },

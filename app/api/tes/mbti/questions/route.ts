@@ -1,11 +1,22 @@
+// Lokasi: app/api/tes/mbti/questions/route.ts (atau yang serupa)
+
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma'; // Sesuaikan path ke file prisma client Anda
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    const mBTIQuestions = await prisma.preferenceQuestion.findMany({ 
+    const mBTIQuestions = await prisma.preferenceQuestion.findMany({
+      // ======================================================
+      // TAMBAHKAN FILTER 'WHERE' DI SINI
+      // ======================================================
+      where: {
+        TestType: {
+          name: "MBTI", // Hanya ambil soal yang jenis tesnya MBTI
+        },
+      },
+      // ======================================================
       orderBy: {
-        code: 'asc', // Pastikan urutan soal konsisten
+        code: 'asc', // Urutkan soal MBTI yang sudah difilter
       },
       select: {
         id: true,

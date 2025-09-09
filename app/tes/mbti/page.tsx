@@ -1,43 +1,43 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import styles from "./Mbti.module.css"; // Gunakan file CSS yang sama
+import styles from "./Mbti.module.css";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
-// Tipe data untuk soal & hasil
+// =======================
+// Tipe Data
+// =======================
 interface Question {
   id: number;
   code: string;
   content: string;
   options: { a: string; b: string };
 }
+
 interface TestResult {
   type: string;
   scores: Record<string, number>;
 }
-type UserAnswers = { [questionCode: string]: 'a' | 'b' };
 
+// Tipe untuk data soal yang sudah digabung dengan attemptId
+type QuestionWithAttempt = Question & { attemptId: number };
+
+// =======================
+// Component Tes MBTI
+// =======================
 const TesMBTIPage = () => {
-  // State untuk mengontrol tahapan tes (tahap 'form' dihapus)
-  const [stage, setStage] = useState<'intro' | 'test' | 'result'>('intro');
-  
-  // State untuk data tes
+  const [stage, setStage] = useState<"intro" | "test" | "result">("intro");
   const [testInfo, setTestInfo] = useState<{ id: number; name: string; price: number | null } | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
-
-  // State untuk pengerjaan tes
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [answers, setAnswers] = useState<UserAnswers>({});
+  const [questions, setQuestions] = useState<QuestionWithAttempt[]>([]);
+  const [answers, setAnswers] = useState<Record<string, string>>({}); // Key: question.code, Value: 'a' atau 'b'
   const [result, setResult] = useState<TestResult | null>(null);
-  
-  // State untuk loading
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const router = useRouter();
-
-  // Efek untuk mengambil info tes & status pembayaran di awal
+  // =======================
+  // Inisialisasi tes
+  // =======================
   useEffect(() => {
     const initializeTest = async () => {
       setIsLoading(true);
@@ -61,91 +61,134 @@ const TesMBTIPage = () => {
     initializeTest();
   }, []);
 
-  // Handler yang memulai tes atau pembayaran
-  const handleStartTest = async () => {
+  // =======================
+  // Buat attempt baru
+  // =======================
+  const createAttempt = async () => {
     const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    if (!savedUser.id || !testInfo?.id) {
-      alert("Anda harus login untuk mengikuti tes.");
-      return;
-    }
-    
-    // Fungsi untuk memuat soal dan memulai tes
-    const loadAndStartTest = async () => {
-        setIsLoading(true);
-        try {
-            const res = await fetch('/api/tes/mbti/questions');
-            const data = await res.json();
-            setQuestions(data);
-            setStage('test'); // Langsung ke tahap tes
-        } catch (err) {
-            console.error("Gagal memuat soal:", err);
-            alert("Gagal memuat soal. Silakan coba lagi.");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    if (!savedUser.id || !testInfo?.id) return null;
 
-    // Jika sudah punya akses, langsung mulai
-    if (hasAccess) {
-      await loadAndStartTest();
-    } else {
-      // Jika belum, proses pembayaran dulu
-      try {
-        const res = await fetch("/api/payment/start", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: savedUser.id, testTypeId: testInfo.id }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert("Pembayaran berhasil! Tes akan segera dimulai.");
-          setHasAccess(true);
-          await loadAndStartTest(); // Setelah bayar, langsung mulai
-        } else {
-          alert("Pembayaran gagal, silakan coba lagi.");
-        }
-      } catch (err) {
-        console.error("Error pembayaran:", err);
+    try {
+      const res = await fetch("/api/attempts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: savedUser.id, testTypeId: testInfo.id }),
+      });
+
+      if (!res.ok) {
+        console.error("Gagal membuat attempt di server");
+        return null;
       }
+      const data = await res.json();
+      return data.id;
+    } catch (error) {
+        console.error("Error saat request pembuatan attempt:", error);
+        return null;
     }
   };
 
-  const handleAnswerChange = (questionCode: string, answer: 'a' | 'b') => {
-    setAnswers(prev => ({ ...prev, [questionCode]: answer }));
+  // =======================
+  // Simpan jawaban per soal (auto-save)
+  // =======================
+  const saveMbtiAnswer = async (attemptId: number, questionCode: string, choice: string) => {
+    const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    if (!attemptId || !savedUser.id) return;
+
+    await fetch("/api/tes/mbti/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: savedUser.id,
+        attemptId,
+        answers: [{ preferenceQuestionCode: questionCode, choice }],
+      }),
+    });
   };
 
+  // =======================
+  // Logika Mulai Tes
+  // =======================
+  const handleStartTest = async () => {
+    setIsLoading(true);
+    try {
+      const attemptId = await createAttempt();
+      if (!attemptId) throw new Error("Gagal membuat sesi tes (attempt) baru.");
+
+      const res = await fetch("/api/tes/mbti/questions");
+      const data = await res.json();
+
+      // Gabungkan attemptId ke setiap soal untuk referensi nanti
+      setQuestions(data.map((q: Question) => ({ ...q, attemptId })));
+      setAnswers({}); // Reset jawaban setiap memulai tes baru
+      setStage("test");
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memulai tes. Silakan coba lagi.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // =======================
+  // Logika Memilih Jawaban (Telah Diperbaiki)
+  // =======================
+  const handleAnswerChange = async (questionCode: string, answer: "a" | "b") => {
+    const question = questions.find((q) => q.code === questionCode);
+    if (!question) return;
+
+    // Simpan jawaban ke state menggunakan `code` soal sebagai key
+    setAnswers((prev) => ({ ...prev, [questionCode]: answer }));
+
+    // Kirim jawaban ke backend untuk auto-save
+    if (question.attemptId) {
+      await saveMbtiAnswer(question.attemptId, questionCode, answer);
+    }
+  };
+
+  // =======================
+  // Submit akhir dan proses scoring
+  // =======================
   const handleSubmit = async () => {
-    if (Object.keys(answers).length < questions.length) {
-      alert("Harap jawab semua pertanyaan.");
-      return;
-    }
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/tes/mbti/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(answers),
+      // Ambil attemptId dari soal pertama (semua soal punya attemptId yang sama)
+      const attemptId = questions[0]?.attemptId;
+      if (!attemptId) throw new Error("Sesi tes (attemptId) tidak ditemukan.");
+
+      const res = await fetch("/api/tes/mbti/scoring", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attemptId }),
       });
-      const data = await response.json();
-      setResult(data);
-      setStage('result');
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal mendapatkan hasil skor.");
+
+      setResult({
+        type: data.result.resultType,
+        scores: data.result.scores,
+      });
+      setStage("result");
     } catch (err) {
-      console.error("Gagal submit jawaban:", err);
+      console.error(err);
+      alert("Gagal menghitung skor. Silakan coba lagi.");
     } finally {
       setIsSubmitting(false);
     }
   };
-  
-  // RENDER TAHAPAN TES
-  if (isLoading) return <div className={styles.container}>Memuat...</div>;
 
-  if (stage === 'intro') {
+  // =======================
+  // Render Komponen
+  // =======================
+  if (isLoading) {
+    return <div className={styles.container}>Memuat...</div>;
+  }
+
+  if (stage === "intro") {
     return (
       <div className={styles.container}>
         <h1 className={styles.title}>Tes Kepribadian MBTI</h1>
-        <p className={styles.description}>
-          Tes ini dirancang untuk memahami preferensi psikologis Anda dalam melihat dunia dan membuat keputusan.
-        </p>
+        <p className={styles.description}>Tes ini dirancang untuk memahami preferensi psikologis Anda.</p>
         <div className={styles.infoBox}>
           <p><b>💰 Harga:</b> {testInfo?.price ? `Rp ${testInfo.price.toLocaleString("id-ID")}` : "Gratis"}</p>
           <button className={styles.btn} onClick={handleStartTest}>
@@ -157,9 +200,7 @@ const TesMBTIPage = () => {
     );
   }
 
-  // TAHAP FORM SUDAH DIHAPUS
-
-  if (stage === 'test') {
+  if (stage === "test") {
     return (
       <div className={styles.container}>
         <h1 className={styles.title}>Pilih yang Paling Sesuai Dengan Diri Anda</h1>
@@ -167,29 +208,45 @@ const TesMBTIPage = () => {
           <div key={q.id} className={styles.questionBox}>
             <p><b>{index + 1}.</b> {q.content}</p>
             <div className={styles.optionsContainer}>
-              <label className={answers[q.code] === 'a' ? styles.selected : ''}>
-                <input type="radio" name={q.code} onChange={() => handleAnswerChange(q.code, 'a')} /> {q.options.a}
+              <label className={answers[q.code] === "a" ? styles.selected : ""}>
+                <input
+                  type="radio"
+                  name={`q-${q.id}`}
+                  checked={answers[q.code] === "a"}
+                  onChange={() => handleAnswerChange(q.code, "a")}
+                /> {q.options.a}
               </label>
-              <label className={answers[q.code] === 'b' ? styles.selected : ''}>
-                <input type="radio" name={q.code} onChange={() => handleAnswerChange(q.code, 'b')} /> {q.options.b}
+              <label className={answers[q.code] === "b" ? styles.selected : ""}>
+                <input
+                  type="radio"
+                  name={`q-${q.id}`}
+                  checked={answers[q.code] === "b"}
+                  onChange={() => handleAnswerChange(q.code, "b")}
+                /> {q.options.b}
               </label>
             </div>
           </div>
         ))}
         <button className={styles.btn} onClick={handleSubmit} disabled={isSubmitting}>
-          {isSubmitting ? 'Memproses...' : 'Lihat Hasil'}
+          {isSubmitting ? "Memproses..." : "Submit Test"}
         </button>
       </div>
     );
   }
 
-  if (stage === 'result' && result) {
+  if (stage === "result" && result) {
     return (
       <div className={styles.container}>
         <div className={styles.resultBox}>
           <h2>Tipe Kepribadian Anda:</h2>
           <h3 className={styles.resultType}>{result.type}</h3>
-          <p>Terima kasih telah menyelesaikan tes. Hasil lengkap dapat dilihat di halaman dashboard Anda.</p>
+          <h4>Skor per Dimensi:</h4>
+          <ul>
+            {Object.entries(result.scores).map(([key, value]) => (
+              <li key={key}><b>{key}:</b> {value}%</li>
+            ))}
+          </ul>
+          <p>Terima kasih telah menyelesaikan tes. Hasil lengkap dapat dilihat di dashboard.</p>
           <Link href="/dashboard"><button className={styles.btn}>Kembali ke Dashboard</button></Link>
         </div>
       </div>
