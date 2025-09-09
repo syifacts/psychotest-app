@@ -163,9 +163,11 @@ model Answer {
   User                    User        @relation(fields: [userId], references: [id])
   Attempt                 TestAttempt @relation(fields: [attemptId], references: [id])
   Question                Question?   @relation(fields: [questionCode], references: [code])
+  PreferenceQuestion      PreferenceQuestion? @relation("PreferenceAnswers", fields: [preferenceQuestionCode], references: [code])
 
   @@unique([attemptId, questionCode]) // unik per attempt
   @@unique([attemptId, preferenceQuestionCode])
+  
 }
 
 // ------------------
@@ -338,6 +340,7 @@ model PreferenceQuestion {
   options    Json     // Objek: { "a": "Teks A", "b": "Teks B" }
 
   TestType   TestType @relation(fields: [testTypeId], references: [id])
+  answers Answer[] @relation("PreferenceAnswers")
 }
 // ------------------
 // Hasil Tes Personality
