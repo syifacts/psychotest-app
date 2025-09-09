@@ -16,7 +16,7 @@ export async function GET() {
       },
       // ======================================================
       orderBy: {
-        code: 'asc', // Urutkan soal MBTI yang sudah difilter
+        id: 'asc', // Urutkan soal MBTI yang sudah difilter
       },
       select: {
         id: true,

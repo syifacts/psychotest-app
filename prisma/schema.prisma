@@ -14,7 +14,8 @@ datasource db {
 enum Role {
   SUPERADMIN
   USER
-  DOKTER
+  PSIKOLOG
+  PERUSAHAAN
 }
 
 enum PaymentStatus {
@@ -40,16 +41,29 @@ model User {
   birthDate       DateTime?
   gender          Gender?
   education       String?
+  phone           String?
+  address         String?
   profileImage    String?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+
+
+// khusus psikolog
+  lembagalayanan         String?    // nama lembaga psikologi
 
   progresses      UserProgress[]
   results         Result[]
   answers         Answer[]
   payments        Payment[]
   attempts        TestAttempt[]
+   userPackages    UserPackage[]
+
+   purchasedPackagesAsCompany PackagePurchase[] @relation("CompanyPackagePurchase")
+  purchasedPackagesAsUser    PackagePurchase[] @relation("UserPackagePurchase")
+    validatedResults Result[] @relation("ValidatedResults")
+
 }
+
 
 // ------------------
 // Jenis Tes (IST, Pauli, dll.)
@@ -68,6 +82,7 @@ model TestType {
   results        Result[]
   payments       Payment[]
   attempts       TestAttempt[]
+  packageTests   PackageTest[]
   preferenceQuestions PreferenceQuestion[] 
 }
 
@@ -102,6 +117,7 @@ model Question {
   type         String
   answer       Json?
   answerScores Json?
+  aspek        String?
 
   SubTest   SubTest?   @relation(fields: [subTestId], references: [id])
    TestType     TestType   @relation(fields: [testTypeId], references: [id])
@@ -131,6 +147,7 @@ model TestAttempt {
 }
 
 
+
 // ------------------
 // Jawaban Peserta
 // ------------------
@@ -146,7 +163,6 @@ model Answer {
   User                    User        @relation(fields: [userId], references: [id])
   Attempt                 TestAttempt @relation(fields: [attemptId], references: [id])
   Question                Question?   @relation(fields: [questionCode], references: [code])
-  PreferenceQuestion      PreferenceQuestion? @relation("PreferenceAnswers", fields: [preferenceQuestionCode], references: [code])
 
   @@unique([attemptId, questionCode]) // unik per attempt
   @@unique([attemptId, preferenceQuestionCode])
@@ -185,12 +201,66 @@ model Result {
   iq          Float?  // hasil IQ dari mapping NormaIq
   keteranganiq  String?
   dominasi      String?
+  kategoriiq    String?
+  jumlahbenar   Int?
+  scoreiq       Int?
+  keteranganiqCPMI  String?
+  url         String?
+   // jumlah jawaban
+  jumlahA     Int?    // jumlah jawaban A
+  jumlahB     Int?    // jumlah jawaban B
+
+  // koreksi
+  jumlahAkor  Int?    // jumlah A setelah koreksi
+  jumlahBkor  Int?    // jumlah B setelah koreksi
+
+  // hasil per subskala
+  Ds          Int?    // jumlah akhir subskala Ds
+  Mi          Int?
+  Au          Int?
+  Co          Int?
+  Bu          Int?
+  Dv          Int?
+  Ba          Int?
+  E           Int?
+
+  // totalskala
+  totalSkalaTO Int?
+  totalSkalaRO Int?
+  totalSkalaE  Int?
+  totalSkalaO  Int?
+
+  // konversi ke norma / SW / IQ
+  konversiTO Float?
+  konversiRO Float?
+  konversiE  Float?
+  konversiO  Float?
+
+  // hasil per subskala (OK / Tidak OK)
+  hasilDS String?
+  hasilMI String?
+  hasilAU String?
+  hasilCO String?
+  hasilBU String?
+  hasilDV String?
+  hasilBA String?
+  hasilE  String?
+
+   // Validasi psikolog
+  barcode       String?
+  validated     Boolean   @default(false)
+  validatedById Int?
+  validatedAt   DateTime?
+  expiresAt     DateTime?
+
   isCompleted Boolean  @default(false)
   createdAt   DateTime @default(now())
 
   User        User        @relation(fields: [userId], references: [id])
   Attempt     TestAttempt @relation(fields: [attemptId], references: [id])
   TestType    TestType    @relation(fields: [testTypeId], references: [id])
+    ValidatedBy   User?     @relation("ValidatedResults", fields: [validatedById], references: [id])
+
 
   @@unique([attemptId, testTypeId])
 }
@@ -268,7 +338,6 @@ model PreferenceQuestion {
   options    Json     // Objek: { "a": "Teks A", "b": "Teks B" }
 
   TestType   TestType @relation(fields: [testTypeId], references: [id])
-  answers   Answer[] @relation("PreferenceAnswers")
 }
 // ------------------
 // Hasil Tes Personality
@@ -281,4 +350,49 @@ model PersonalityResult {
   scores     Json   // { "E": 7, "I": 3, "S": 2, "N": 8 }
 
   Attempt    TestAttempt @relation(fields: [attemptId], references: [id])
+}
+model Package {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  price       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  img         String?
+
+  tests       PackageTest[]
+  purchases   PackagePurchase[]
+}
+
+model PackageTest {
+  id        Int     @id @default(autoincrement())
+  packageId Int
+  testTypeId Int
+
+  package   Package  @relation(fields: [packageId], references: [id])
+  testType  TestType @relation(fields: [testTypeId], references: [id])
+}
+
+model PackagePurchase {
+  id        Int      @id @default(autoincrement())
+  companyId Int?     // perusahaan yang beli
+  userId    Int?     // user yang beli sendiri
+  packageId Int
+  purchasedAt DateTime @default(now())
+
+  company   User?    @relation("CompanyPackagePurchase", fields: [companyId], references: [id])
+  user      User?    @relation("UserPackagePurchase", fields: [userId], references: [id])
+  package   Package  @relation(fields: [packageId], references: [id])
+  userPackages UserPackage[]
+}
+
+model UserPackage {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  packagePurchaseId Int
+
+  User          User          @relation(fields: [userId], references: [id])
+  PackagePurchase PackagePurchase @relation(fields: [packagePurchaseId], references: [id])
+
+  @@unique([userId, packagePurchaseId])
 }

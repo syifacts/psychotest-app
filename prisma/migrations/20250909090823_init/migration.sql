@@ -4,13 +4,16 @@ CREATE TABLE `User` (
     `fullName` VARCHAR(191) NOT NULL,
     `email` VARCHAR(191) NOT NULL,
     `password` VARCHAR(191) NOT NULL,
-    `role` ENUM('SUPERADMIN', 'USER', 'DOKTER') NOT NULL DEFAULT 'USER',
+    `role` ENUM('SUPERADMIN', 'USER', 'PSIKOLOG', 'PERUSAHAAN') NOT NULL DEFAULT 'USER',
     `birthDate` DATETIME(3) NULL,
     `gender` ENUM('LAKI_LAKI', 'PEREMPUAN') NULL,
     `education` VARCHAR(191) NULL,
+    `phone` VARCHAR(191) NULL,
+    `address` VARCHAR(191) NULL,
     `profileImage` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
+    `lembagalayanan` VARCHAR(191) NULL,
 
     UNIQUE INDEX `User_email_key`(`email`),
     PRIMARY KEY (`id`)
@@ -54,6 +57,7 @@ CREATE TABLE `Question` (
     `type` VARCHAR(191) NOT NULL,
     `answer` JSON NULL,
     `answerScores` JSON NULL,
+    `aspek` VARCHAR(191) NULL,
 
     UNIQUE INDEX `Question_code_key`(`code`),
     PRIMARY KEY (`id`)
@@ -114,6 +118,44 @@ CREATE TABLE `Result` (
     `iq` DOUBLE NULL,
     `keteranganiq` VARCHAR(191) NULL,
     `dominasi` VARCHAR(191) NULL,
+    `kategoriiq` VARCHAR(191) NULL,
+    `jumlahbenar` INTEGER NULL,
+    `scoreiq` INTEGER NULL,
+    `keteranganiqCPMI` VARCHAR(191) NULL,
+    `url` VARCHAR(191) NULL,
+    `jumlahA` INTEGER NULL,
+    `jumlahB` INTEGER NULL,
+    `jumlahAkor` INTEGER NULL,
+    `jumlahBkor` INTEGER NULL,
+    `Ds` INTEGER NULL,
+    `Mi` INTEGER NULL,
+    `Au` INTEGER NULL,
+    `Co` INTEGER NULL,
+    `Bu` INTEGER NULL,
+    `Dv` INTEGER NULL,
+    `Ba` INTEGER NULL,
+    `E` INTEGER NULL,
+    `totalSkalaTO` INTEGER NULL,
+    `totalSkalaRO` INTEGER NULL,
+    `totalSkalaE` INTEGER NULL,
+    `totalSkalaO` INTEGER NULL,
+    `konversiTO` DOUBLE NULL,
+    `konversiRO` DOUBLE NULL,
+    `konversiE` DOUBLE NULL,
+    `konversiO` DOUBLE NULL,
+    `hasilDS` VARCHAR(191) NULL,
+    `hasilMI` VARCHAR(191) NULL,
+    `hasilAU` VARCHAR(191) NULL,
+    `hasilCO` VARCHAR(191) NULL,
+    `hasilBU` VARCHAR(191) NULL,
+    `hasilDV` VARCHAR(191) NULL,
+    `hasilBA` VARCHAR(191) NULL,
+    `hasilE` VARCHAR(191) NULL,
+    `barcode` VARCHAR(191) NULL,
+    `validated` BOOLEAN NOT NULL DEFAULT false,
+    `validatedById` INTEGER NULL,
+    `validatedAt` DATETIME(3) NULL,
+    `expiresAt` DATETIME(3) NULL,
     `isCompleted` BOOLEAN NOT NULL DEFAULT false,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
@@ -203,6 +245,49 @@ CREATE TABLE `PersonalityResult` (
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `Package` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(191) NOT NULL,
+    `description` VARCHAR(191) NULL,
+    `price` INTEGER NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `img` VARCHAR(191) NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `PackageTest` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `packageId` INTEGER NOT NULL,
+    `testTypeId` INTEGER NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `PackagePurchase` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `companyId` INTEGER NULL,
+    `userId` INTEGER NULL,
+    `packageId` INTEGER NOT NULL,
+    `purchasedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `UserPackage` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `userId` INTEGER NOT NULL,
+    `packagePurchaseId` INTEGER NOT NULL,
+
+    UNIQUE INDEX `UserPackage_userId_packagePurchaseId_key`(`userId`, `packagePurchaseId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- AddForeignKey
 ALTER TABLE `SubTest` ADD CONSTRAINT `SubTest_testTypeId_fkey` FOREIGN KEY (`testTypeId`) REFERENCES `TestType`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -231,9 +316,6 @@ ALTER TABLE `Answer` ADD CONSTRAINT `Answer_attemptId_fkey` FOREIGN KEY (`attemp
 ALTER TABLE `Answer` ADD CONSTRAINT `Answer_questionCode_fkey` FOREIGN KEY (`questionCode`) REFERENCES `Question`(`code`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Answer` ADD CONSTRAINT `Answer_preferenceQuestionCode_fkey` FOREIGN KEY (`preferenceQuestionCode`) REFERENCES `PreferenceQuestion`(`code`) ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE `SubtestResult` ADD CONSTRAINT `SubtestResult_attemptId_fkey` FOREIGN KEY (`attemptId`) REFERENCES `TestAttempt`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -249,6 +331,9 @@ ALTER TABLE `Result` ADD CONSTRAINT `Result_attemptId_fkey` FOREIGN KEY (`attemp
 ALTER TABLE `Result` ADD CONSTRAINT `Result_testTypeId_fkey` FOREIGN KEY (`testTypeId`) REFERENCES `TestType`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `Result` ADD CONSTRAINT `Result_validatedById_fkey` FOREIGN KEY (`validatedById`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `Payment` ADD CONSTRAINT `Payment_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -262,3 +347,24 @@ ALTER TABLE `PreferenceQuestion` ADD CONSTRAINT `PreferenceQuestion_testTypeId_f
 
 -- AddForeignKey
 ALTER TABLE `PersonalityResult` ADD CONSTRAINT `PersonalityResult_attemptId_fkey` FOREIGN KEY (`attemptId`) REFERENCES `TestAttempt`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `PackageTest` ADD CONSTRAINT `PackageTest_packageId_fkey` FOREIGN KEY (`packageId`) REFERENCES `Package`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `PackageTest` ADD CONSTRAINT `PackageTest_testTypeId_fkey` FOREIGN KEY (`testTypeId`) REFERENCES `TestType`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `PackagePurchase` ADD CONSTRAINT `PackagePurchase_companyId_fkey` FOREIGN KEY (`companyId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `PackagePurchase` ADD CONSTRAINT `PackagePurchase_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `PackagePurchase` ADD CONSTRAINT `PackagePurchase_packageId_fkey` FOREIGN KEY (`packageId`) REFERENCES `Package`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `UserPackage` ADD CONSTRAINT `UserPackage_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `UserPackage` ADD CONSTRAINT `UserPackage_packagePurchaseId_fkey` FOREIGN KEY (`packagePurchaseId`) REFERENCES `PackagePurchase`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

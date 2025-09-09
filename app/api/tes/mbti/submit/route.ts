@@ -14,26 +14,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Data tidak lengkap" }, { status: 400 });
     }
 
-    // Upsert jawaban
-    await Promise.all(
-      answers.map(async (ans) => {
-        await prisma.answer.upsert({
-          where: {
-            attemptId_preferenceQuestionCode: {
-              attemptId: Number(attemptId),
-              preferenceQuestionCode: ans.preferenceQuestionCode,
-            },
-          },
-          update: { choice: ans.choice },
-          create: {
-            userId: Number(userId),
-            attemptId: Number(attemptId),
+    // Simpan jawaban sesuai urutan array answers
+    for (const ans of answers) {
+      await prisma.answer.upsert({
+        where: {
+          attemptId_preferenceQuestionCode: {
+            attemptId,
             preferenceQuestionCode: ans.preferenceQuestionCode,
-            choice: ans.choice,
           },
-        });
-      })
-    );
+        },
+        update: { choice: ans.choice },
+        create: {
+          userId,
+          attemptId,
+          preferenceQuestionCode: ans.preferenceQuestionCode,
+          choice: ans.choice,
+        },
+      });
+    }
 
     return NextResponse.json({ message: "Jawaban berhasil disimpan" });
   } catch (err) {
