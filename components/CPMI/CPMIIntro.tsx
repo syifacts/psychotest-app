@@ -6,7 +6,7 @@ import styles from "../../app/tes/cpmi/cpmi.module.css";
 import CPMIPaymentButton from "./CPMIPaymentButton";
 
 interface Props {
-  testInfo: { id: number; duration: number | null } | null;
+   testInfo: { id: number; duration: number | null; price?: number | null } | null;
   hasAccess: boolean;
   setHasAccess: (val: boolean) => void;
   startAttempt: () => Promise<void>;
@@ -14,70 +14,84 @@ interface Props {
 
 const CPMIIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAttempt }) => {
   return (
-    <div className={styles.introContainer}>
-      {/* HEADER */}
-      <div className={styles.header}>
-        <h1 className={styles.title}>Tes CPMI (Calon Pekerja Migran Indonesia)</h1>
-        <p className={styles.subtitle}>
-          Tes ini dirancang untuk mengukur <b>tingkat konsentrasi</b>,{" "}
-          <b>pengendalian diri</b>, dan <b>ketahanan kerja</b> sebagai syarat penting
-          dalam kesiapan bekerja di luar negeri.
-        </p>
+    <div className={styles.pageWrapper}>
+      {/* LEFT - Deskripsi */}
+      <div className={styles.leftColumn}>
+        <header className={styles.header}>
+          <h1 className={styles.title}>Tes CPMI (Calon Pekerja Migran Indonesia)</h1>
+          <p className={styles.subtitle}>
+            Tes ini dirancang untuk mengukur <b>tingkat konsentrasi</b>,{" "}
+            <b>pengendalian diri</b>, dan <b>ketahanan kerja</b> sebagai syarat penting
+            dalam kesiapan bekerja di luar negeri.
+          </p>
+        </header>
+
+        <section className={styles.benefitsBox}>
+          <h2 className={styles.sectionTitle}>Mengapa Ikut Tes CPMI?</h2>
+          <ul className={styles.benefitList}>
+            <li>✅ Hasil tes <b>tervalidasi</b> & <b>tersertifikasi dokter</b></li>
+            <li>✅ Membantu memastikan kesiapan mental & emosional</li>
+            <li>✅ Salah satu syarat resmi keberangkatan kerja luar negeri</li>
+            <li>✅ Bukti kemampuan konsentrasi & stabilitas kerja</li>
+          </ul>
+        </section>
+
+        <section className={styles.instructions}>
+          <h2 className={styles.sectionTitle}>Instruksi Tes</h2>
+          <p className={styles.instructionsText}>
+           Intruksi: Perhatikan simbol yang ada untuk menentukan apakah sama atau berbeda.
+            Lingkari <b>A</b> jika simbol sama, <b>B</b> jika simbol berbeda, dan <b>C</b> jika tidak ada jawaban yang tepat.
+          </p>
+          <ul className={styles.keyPoints}>
+            <li>📌 Tingkat konsentrasi & kecermatan</li>
+            <li>📌 Pengendalian diri & stabilitas emosi</li>
+            <li>📌 Ketahanan kerja</li>
+          </ul>
+        </section>
       </div>
 
-      {/* BENEFITS */}
-      <div className={styles.benefitsBox}>
-        <h2 className={styles.sectionTitle}>Mengapa Ikut Tes CPMI?</h2>
-        <ul className={styles.benefitList}>
-          <li>✅ Mendapat hasil tes yang <b>tervalidasi</b> dan <b>tersertifikasi dokter</b>.</li>
-          <li>✅ Membantu memastikan kesiapan mental dan emosional dalam bekerja.</li>
-          <li>✅ Menjadi salah satu syarat resmi untuk keberangkatan kerja ke luar negeri.</li>
-          <li>✅ Hasil tes dapat digunakan sebagai bukti kemampuan di bidang konsentrasi & stabilitas kerja.</li>
-        </ul>
-      </div>
-
-      {/* INSTRUCTIONS */}
-      <div className={styles.instructions}>
-        <h2 className={styles.sectionTitle}>Instruksi Tes</h2>
-        <p>
-          Perhatikan simbol yang ada untuk menentukan apakah sama atau berbeda.
-          Pilih:
-        </p>
-        <ol>
-          <li><b>A</b> jika simbol sama</li>
-          <li><b>B</b> jika simbol berbeda</li>
-          <li><b>C</b> jika tidak ada jawaban yang tepat</li>
-        </ol>
-        <p>
-          Tes ini akan mengukur aspek:
-        </p>
-        <ul>
-          <li>📌 Tingkat konsentrasi & kecermatan</li>
-          <li>📌 Pengendalian diri & stabilitas emosi</li>
-          <li>📌 Ketahanan kerja</li>
-        </ul>
-      </div>
-
-      {/* INFO + BUTTON */}
-      <div className={styles.infoBox}>
-        <p><b>⏳ Durasi Tes:</b> {testInfo?.duration || 30} menit</p>
-        <div className={styles.paymentWrapper}>
-          <CPMIPaymentButton
-            hasAccess={hasAccess}
-            setHasAccess={setHasAccess}
-            startAttempt={startAttempt}
-            testInfo={testInfo}
-          />
-        </div>
-      </div>
-
-      {/* BACK BUTTON */}
-      <div className={styles.backWrapper}>
-        <Link href="/dashboard">
-          <button className={styles.backBtn}>← Kembali ke Dashboard</button>
-        </Link>
-      </div>
+      {/* RIGHT - Payment Box */}
+<aside className={styles.rightColumn}>
+  <div className={styles.paymentBox}>
+    <img src="/cpmi.jpg" alt="Ilustrasi Tes CPMI" className={styles.illustration} />
+    
+    <p><b>⏳ Durasi Tes:</b> {testInfo?.duration || 30} menit</p>
+    
+    <div className={styles.extraInfo}>
+  <p><b>💳 Biaya Tes:</b> Rp {testInfo?.price?.toLocaleString("id-ID") || "0"}</p>
+      <p><b>📜 Hasil:</b> Tersedia setelah tes selesai</p>
     </div>
+
+    <div className={styles.paymentWrapper}>
+      <CPMIPaymentButton
+        hasAccess={hasAccess}
+        setHasAccess={setHasAccess}
+        startAttempt={startAttempt}
+        testInfo={testInfo}
+      />
+    </div>
+
+    <div className={styles.benefitsMini}>
+      <h3>✨ Keuntungan Ikut Tes:</h3>
+      <ul>
+        <li>Hasil resmi & tervalidasi</li>
+        <li>Meningkatkan peluang kerja</li>
+        <li>Bisa diakses secara online</li>
+      </ul>
+    </div>
+
+    <div className={styles.supportBox}>
+      <p>❓ Butuh bantuan? Hubungi <b>support@cpmi-test.com</b></p>
+    </div>
+
+    <div className={styles.backWrapper}>
+      <Link href="/dashboard">
+        <button className={styles.backBtn}>← Kembali ke Dashboard</button>
+      </Link>
+    </div>
+  </div>
+</aside>
+</div>
   );
 };
 

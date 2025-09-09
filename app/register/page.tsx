@@ -91,7 +91,7 @@ export default function RegisterPage() {
       termsCheckbox.checked = false;
 
       // Redirect untuk USER default
-      if (role === "USER") setTimeout(() => router.push("/login"), 2000);
+      setTimeout(() => router.push("/login"), 2000);
     } catch (err) {
       console.error(err);
       setError("Terjadi kesalahan saat menghubungi server");

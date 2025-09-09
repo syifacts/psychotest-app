@@ -1,88 +1,3 @@
-/* 🔹 Tampilan Halaman Awal Tes (intro) */
-.introContainer {
-  max-width: 800px;
-  margin: 60px auto;
-  padding: 30px;
-  font-family: "Poppins", sans-serif;
-  line-height: 1.8;
-  color: #333;
-}
-
-.title {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1a237e;
-  margin-bottom: 15px;
-  text-align: center;
-}
-
-.description {
-  font-size: 1rem;
-  margin-bottom: 15px;
-  text-align: justify;
-}
-
-.list {
-  margin: 15px 0 25px 20px;
-  padding-left: 15px;
-}
-
-.list li {
-  margin-bottom: 8px;
-}
-
-.infoBox {
-  margin-top: 20px;
-  padding: 20px;
-  background: linear-gradient(135deg, #f7f9fc, #e3f2fd);
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  text-align: center;
-}
-
-.infoBox p {
-  margin: 8px 0;
-  font-size: 1.1rem;
-}
-
-.btn {
-  margin-top: 20px;
-  padding: 12px 25px;
-  font-size: 1rem;
-  font-weight: 600;
-  background: linear-gradient(135deg, #0070f3, #0057c2);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.btn:hover {
-  background: linear-gradient(135deg, #0057c2, #003f8c);
-  transform: scale(1.05);
-}
-
-.backWrapper {
-  margin-top: 20px;
-}
-
-.backBtn {
-  padding: 10px 20px;
-  background-color: #e5e7eb;
-  color: #111;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background 0.3s ease;
-}
-
-.backBtn:hover {
-  background-color: #d1d5db;
-}
-
 /* 🔹 Tampilan Saat Soal Dimulai */
 .container {
   max-width: 1200px;
@@ -242,118 +157,230 @@
   outline: 3px solid #f59e0b;
 }
 
-/* Input umum */
-.input {
-  width: 100%;
-  padding: 10px 12px;
-  margin-top: 6px;
-  margin-bottom: 14px;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  font-size: 14px;
-  outline: none;
-  transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+
+/* GRID LAYOUT */
+.pageWrapper {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 40px;
+  max-width: 1200px;
+  margin: 60px auto;
+  padding: 20px;
 }
 
-.input:focus {
-  border-color: #0070f3;
-  box-shadow: 0 0 5px rgba(0, 112, 243, 0.3);
-}
-
-/* Label supaya lebih rapi */
-.infoBox label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: #333;
-}
-.introContainer {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 24px;
-  font-family: 'Poppins', sans-serif;
-  line-height: 1.6;
+/* LEFT */
+.leftColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  animation: fadeIn 0.8s ease forwards;
 }
 
 .header {
   text-align: center;
-  margin-bottom: 32px;
 }
 
 .title {
-  font-size: 28px;
+  font-size: 2.3rem;
   font-weight: 700;
-  color: #2d2f31;
+  color: #1e3a8a;
+  margin-bottom: 12px;
 }
 
 .subtitle {
-  font-size: 16px;
+  font-size: 1.05rem;
   color: #555;
-  margin-top: 8px;
+  line-height: 1.6;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+/* BOXES */
+.benefitsBox,
+.instructions {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.benefitsBox:hover,
+.instructions:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
 }
 
 .sectionTitle {
-  font-size: 20px;
+  font-size: 1.4rem;
   font-weight: 600;
+  color: #1e40af;
   margin-bottom: 12px;
-  color: #333;
 }
 
-.benefitsBox,
-.instructions,
-.infoBox {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
-
+/* BENEFITS LIST */
 .benefitList {
   list-style: none;
   padding: 0;
+  margin: 0;
 }
 
 .benefitList li {
-  margin: 8px 0;
-  font-size: 15px;
+  margin-bottom: 10px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.2s ease;
 }
 
-.paymentWrapper {
-  margin-top: 16px;
+.benefitList li:hover {
+  transform: translateX(5px);
+}
+
+/* INSTRUCTIONS */
+.instructionsText {
+  margin-bottom: 12px;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.keyPoints {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.keyPoints li {
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+}
+
+/* RIGHT */
+.rightColumn {
+  display: flex;
+  justify-content: center;
+  animation: fadeIn 0.8s ease forwards;
+}
+
+.paymentBox {
+  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+  border-radius: 20px;
+  padding: 30px;
   text-align: center;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
+.paymentBox:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.15);
+}
+
+.illustration {
+  max-width: 220px;
+  margin: 0 auto 20px auto;
+  display: block;
+  border-radius: 12px;
+  transition: transform 0.3s ease;
+}
+
+.illustration:hover {
+  transform: scale(1.05) rotate(-2deg);
+}
+
+/* BUTTONS */
 .btn {
-  background-color: #6c5ce7;
+  background: linear-gradient(135deg, #3b82f6, #1e40af);
   color: #fff;
   font-weight: 600;
   padding: 12px 24px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: 0.3s;
+  transition: all 0.3s ease;
 }
 
 .btn:hover {
-  background-color: #5a4dd2;
-}
-
-.backWrapper {
-  text-align: center;
-  margin-top: 20px;
+  background: linear-gradient(135deg, #1e40af, #1e3a8a);
+  transform: scale(1.05);
 }
 
 .backBtn {
-  background: transparent;
+  background: #f3f4f6;
   border: 1px solid #ccc;
-  padding: 8px 16px;
-  border-radius: 6px;
+  padding: 10px 20px;
+  border-radius: 8px;
   cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  margin-top: 16px;
 }
 
 .backBtn:hover {
-  background: #f5f5f5;
+  background: #e5e7eb;
+  transform: scale(1.03);
 }
 
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .pageWrapper {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .rightColumn {
+    margin-top: 20px;
+  }
+}
+
+/* ANIMATIONS */
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.extraInfo {
+  margin: 15px 0;
+  text-align: left;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.benefitsMini {
+  margin-top: 20px;
+  text-align: left;
+}
+
+.benefitsMini h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #1e40af;
+}
+
+.benefitsMini ul {
+  list-style: none;
+  padding: 0;
+}
+
+.benefitsMini li {
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+}
+
+.benefitsMini li::before {
+  content: "✔️";
+  margin-right: 6px;
+}
+
+.supportBox {
+  margin-top: 20px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: #444;
+  border: 1px solid #e5e7eb;
+}
