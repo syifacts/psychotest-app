@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "mysql"
-  url       = env("DATABASE_URL")
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
@@ -33,35 +33,34 @@ enum Gender {
 // User (Peserta / Dokter / Superadmin)
 // ------------------
 model User {
-  id              Int              @id @default(autoincrement())
-  fullName        String
-  email           String           @unique
-  password        String
-  role            Role             @default(USER)
-  birthDate       DateTime?
-  gender          Gender?
-  education       String?
-  phone           String?
-  address         String?
-  profileImage    String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id        Int      @id @default(autoincrement())
+  fullName  String
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  birthDate DateTime?
+  gender    Gender?
+  education String?
+  phone     String?
+  address   String?
+  profileImage String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
 
-// khusus psikolog
-  lembagalayanan         String?    // nama lembaga psikologi
+  // khusus psikolog
+  lembagalayanan String? // nama lembaga psikologi
 
-  progresses      UserProgress[]
-  results         Result[]
-  answers         Answer[]
-  payments        Payment[]
-  attempts        TestAttempt[]
-   userPackages    UserPackage[]
-
-   purchasedPackagesAsCompany PackagePurchase[] @relation("CompanyPackagePurchase")
-  purchasedPackagesAsUser    PackagePurchase[] @relation("UserPackagePurchase")
-    validatedResults Result[] @relation("ValidatedResults")
-
+  progresses                   UserProgress[]
+  results                      Result[]
+  answers                      Answer[]
+  payments                     Payment[]
+  attempts                     TestAttempt[]
+  userPackages                 UserPackage[]
+  purchasedPackagesAsCompany   PackagePurchase[] @relation("CompanyPackagePurchase")
+  purchasedPackagesAsUser      PackagePurchase[] @relation("UserPackagePurchase")
+  validatedResults             Result[]          @relation("ValidatedResults")
+  personalityResults           PersonalityResult[] // Relasi ke hasil personality
 }
 
 
@@ -69,21 +68,22 @@ model User {
 // Jenis Tes (IST, Pauli, dll.)
 // ------------------
 model TestType {
-  id             Int             @id @default(autoincrement())
-  name           String          @unique
-  desc           String?
-  createdAt      DateTime        @default(now())
-  duration       Int
-  price          Int?
-  img            String?
-
-  subTests       SubTest[]
-  questions      Question[]
-  results        Result[]
-  payments       Payment[]
-  attempts       TestAttempt[]
-  packageTests   PackageTest[]
-  preferenceQuestions PreferenceQuestion[] 
+  id            Int            @id @default(autoincrement())
+  name          String         @unique
+  desc          String?
+  createdAt     DateTime       @default(now())
+  duration      Int
+  price         Int?
+  img           String?
+  subTests      SubTest[]
+  questions     Question[]
+  results       Result[]
+  payments      Payment[]
+  attempts      TestAttempt[]
+  packageTests  PackageTest[]
+  preferenceQuestions PreferenceQuestion[]
+  personalityDescriptions PersonalityDescription[] // Relasi ke deskripsi personality
+  personalityResults      PersonalityResult[]    // Relasi ke hasil personality
 }
 
 // ------------------
@@ -96,7 +96,6 @@ model SubTest {
   desc           String?
   createdAt      DateTime        @default(now())
   duration       Int?
-
   questions      Question[]
   TestType       TestType        @relation(fields: [testTypeId], references: [id])
   SubtestResults SubtestResult[]
@@ -108,41 +107,38 @@ model SubTest {
 // Soal IST
 // ------------------
 model Question {
-  id           Int       @id @default(autoincrement())
+  id           Int      @id @default(autoincrement())
   subTestId    Int?
   testTypeId   Int
-  code         String    @unique
+  code         String   @unique
   content      String?
   options      Json?
   type         String
   answer       Json?
   answerScores Json?
   aspek        String?
-
-  SubTest   SubTest?   @relation(fields: [subTestId], references: [id])
-   TestType     TestType   @relation(fields: [testTypeId], references: [id])
-  answers   Answer[]
+  SubTest      SubTest? @relation(fields: [subTestId], references: [id])
+  TestType     TestType @relation(fields: [testTypeId], references: [id])
+  answers      Answer[]
 }
 
 // ------------------
 // Attempt Tes (sesi user ikut 1 tes)
 // ------------------
 model TestAttempt {
-  id           Int          @id @default(autoincrement())
-  userId       Int
-  testTypeId   Int
-  paymentId    Int?
-  startedAt    DateTime     @default(now())
-  finishedAt   DateTime?
-  isCompleted  Boolean      @default(false)
-
-  User         User         @relation(fields: [userId], references: [id])
-  TestType     TestType     @relation(fields: [testTypeId], references: [id])
-  Payment      Payment?     @relation(fields: [paymentId], references: [id])
-
-  answers         Answer[]
-  subtestResults  SubtestResult[]
-  results         Result[]
+  id                 Int                 @id @default(autoincrement())
+  userId             Int
+  testTypeId         Int
+  paymentId          Int?
+  startedAt          DateTime            @default(now())
+  finishedAt         DateTime?
+  isCompleted        Boolean             @default(false)
+  User               User                @relation(fields: [userId], references: [id])
+  TestType           TestType            @relation(fields: [testTypeId], references: [id])
+  Payment            Payment?            @relation(fields: [paymentId], references: [id])
+  answers            Answer[]
+  subtestResults     SubtestResult[]
+  results            Result[]
   personalityResults PersonalityResult[]
 }
 
@@ -152,38 +148,36 @@ model TestAttempt {
 // Jawaban Peserta
 // ------------------
 model Answer {
-  id            Int         @id @default(autoincrement())
-  userId        Int
-  attemptId     Int
-  questionCode  String?
+  id                     Int       @id @default(autoincrement())
+  userId                 Int
+  attemptId              Int
+  questionCode           String?
   preferenceQuestionCode String?
-  choice        String
-  isCorrect     Boolean?
+  choice                 String
+  isCorrect              Boolean?
+  User                   User      @relation(fields: [userId], references: [id])
+  Attempt                TestAttempt @relation(fields: [attemptId], references: [id])
+  Question               Question? @relation(fields: [questionCode], references: [code])
 
-  User                    User        @relation(fields: [userId], references: [id])
-  Attempt                 TestAttempt @relation(fields: [attemptId], references: [id])
-  Question                Question?   @relation(fields: [questionCode], references: [code])
-  
   @@unique([attemptId, questionCode]) // unik per attempt
   @@unique([attemptId, preferenceQuestionCode])
-  
+
 }
 
 // ------------------
 // Hasil SubTest
 // ------------------
 model SubtestResult {
-  id          Int         @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   attemptId   Int
   subTestId   Int
   rw          Int?
   sw          Int?
   kategori    String?
-  createdAt   DateTime    @default(now())
-  isCompleted Boolean?     @default(false)
-
-  Attempt   TestAttempt @relation(fields: [attemptId], references: [id])
-  SubTest   SubTest     @relation(fields: [subTestId], references: [id])
+  createdAt   DateTime  @default(now())
+  isCompleted Boolean?  @default(false)
+  Attempt     TestAttempt @relation(fields: [attemptId], references: [id])
+  SubTest     SubTest   @relation(fields: [subTestId], references: [id])
 
   @@unique([attemptId, subTestId])
 }
@@ -192,110 +186,109 @@ model SubtestResult {
 // Hasil Tes Utama
 // ------------------
 model Result {
-  id          Int         @id @default(autoincrement())
-  userId      Int
-  attemptId   Int
-  testTypeId  Int
-  totalRw     Int?
-  totalSw     Int?    // hasil konversi RW → SW total
-  swIq        Int?    // nilai SW yang dipakai untuk mapping IQ
-  iq          Float?  // hasil IQ dari mapping NormaIq
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  attemptId     Int
+  testTypeId    Int
+  totalRw       Int?
+  totalSw       Int? // hasil konversi RW → SW total
+  swIq          Int? // nilai SW yang dipakai untuk mapping IQ
+  iq            Float? // hasil IQ dari mapping NormaIq
   keteranganiq  String?
   dominasi      String?
   kategoriiq    String?
   jumlahbenar   Int?
   scoreiq       Int?
-  keteranganiqCPMI  String?
-  url         String?
-   // jumlah jawaban
-  jumlahA     Int?    // jumlah jawaban A
-  jumlahB     Int?    // jumlah jawaban B
+  keteranganiqCPMI String?
+  url           String?
+  // jumlah jawaban
+  jumlahA       Int? // jumlah jawaban A
+  jumlahB       Int? // jumlah jawaban B
 
   // koreksi
-  jumlahAkor  Int?    // jumlah A setelah koreksi
-  jumlahBkor  Int?    // jumlah B setelah koreksi
+  jumlahAkor    Int? // jumlah A setelah koreksi
+  jumlahBkor    Int? // jumlah B setelah koreksi
 
   // hasil per subskala
-  Ds          Int?    // jumlah akhir subskala Ds
-  Mi          Int?
-  Au          Int?
-  Co          Int?
-  Bu          Int?
-  Dv          Int?
-  Ba          Int?
-  E           Int?
+  Ds            Int? // jumlah akhir subskala Ds
+  Mi            Int?
+  Au            Int?
+  Co            Int?
+  Bu            Int?
+  Dv            Int?
+  Ba            Int?
+  E             Int?
 
   // totalskala
-  totalSkalaTO Int?
-  totalSkalaRO Int?
-  totalSkalaE  Int?
-  totalSkalaO  Int?
+  totalSkalaTO  Int?
+  totalSkalaRO  Int?
+  totalSkalaE   Int?
+  totalSkalaO   Int?
 
   // konversi ke norma / SW / IQ
-  konversiTO Float?
-  konversiRO Float?
-  konversiE  Float?
-  konversiO  Float?
+  konversiTO    Float?
+  konversiRO    Float?
+  konversiE     Float?
+  konversiO     Float?
 
   // hasil per subskala (OK / Tidak OK)
-  hasilDS String?
-  hasilMI String?
-  hasilAU String?
-  hasilCO String?
-  hasilBU String?
-  hasilDV String?
-  hasilBA String?
-  hasilE  String?
+  hasilDS       String?
+  hasilMI       String?
+  hasilAU       String?
+  hasilCO       String?
+  hasilBU       String?
+  hasilDV       String?
+  hasilBA       String?
+  hasilE        String?
 
-   // Validasi psikolog
+  // Validasi psikolog
   barcode       String?
-  validated     Boolean   @default(false)
+  validated     Boolean  @default(false)
   validatedById Int?
   validatedAt   DateTime?
   expiresAt     DateTime?
-
-  isCompleted Boolean  @default(false)
-  createdAt   DateTime @default(now())
-
-  User        User        @relation(fields: [userId], references: [id])
-  Attempt     TestAttempt @relation(fields: [attemptId], references: [id])
-  TestType    TestType    @relation(fields: [testTypeId], references: [id])
-    ValidatedBy   User?     @relation("ValidatedResults", fields: [validatedById], references: [id])
+  isCompleted   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  User          User     @relation(fields: [userId], references: [id])
+  Attempt       TestAttempt @relation(fields: [attemptId], references: [id])
+  TestType      TestType @relation(fields: [testTypeId], references: [id])
+  ValidatedBy   User?    @relation("ValidatedResults", fields: [validatedById], references: [id])
 
 
   @@unique([attemptId, testTypeId])
 }
-model NormaResult { 
-  id   Int @id @default(autoincrement())
-  age  Int
-  rw   Int
-  sw   Int
+
+model NormaResult {
+  id  Int @id @default(autoincrement())
+  age Int
+  rw  Int
+  sw  Int
 
   @@map("Norma_Result")
 }
-model NormaIq {
-  id  Int   @id @default(autoincrement())
-  sw  Int
-  iq  Float
 
-  @@map("Norma_Iq")  // nama tabel di MySQL jadi "Norma_Iq"
+model NormaIq {
+  id Int   @id @default(autoincrement())
+  sw Int
+  iq Float
+
+  @@map("Norma_Iq") // nama tabel di MySQL jadi "Norma_Iq"
 }
 
 // ------------------
 // Pembayaran Tes
 // ------------------
 model Payment {
-  id          Int           @id @default(autoincrement())
-  userId      Int
-  testTypeId  Int
-  amount      Int
-  status      PaymentStatus @default(PENDING)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  User        User          @relation(fields: [userId], references: [id])
-  TestType    TestType      @relation(fields: [testTypeId], references: [id])
-  attempts    TestAttempt[]
+  id         Int           @id @default(autoincrement())
+  userId     Int
+  testTypeId Int
+  amount     Int
+  status     PaymentStatus @default(PENDING)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  User       User          @relation(fields: [userId], references: [id])
+  TestType   TestType      @relation(fields: [testTypeId], references: [id])
+  attempts   TestAttempt[]
 }
 
 // ------------------
@@ -322,78 +315,95 @@ model UserProgress {
   currentIdx  Int      @default(0)
   startTime   DateTime
   isCompleted Boolean  @default(false)
-
-  User User @relation(fields: [userId], references: [id])
+  User        User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, subtest])
 }
+
 // ------------------
 // Soal tes kepribadian/preferensi (MBTI, DISC, EPPS, 16PF, HOLLAND, PAPIKOSTICK)
 // ------------------
 model PreferenceQuestion {
-  id         Int      @id @default(autoincrement())
+  id         Int    @id @default(autoincrement())
   testTypeId Int
-  code       String   @unique
-  dimension  String?  // MBTI: 'EI', DISC: 'D', dll.
+  code       String @unique
+  dimension  String? // MBTI: 'EI', DISC: 'D', dll.
   content    String
-  options    Json     // Objek: { "a": "Teks A", "b": "Teks B" }
-
+  options    Json // Objek: { "a": "Teks A", "b": "Teks B" }
   TestType   TestType @relation(fields: [testTypeId], references: [id])
 }
+
 // ------------------
 // Hasil Tes Personality
 // ------------------
 model PersonalityResult {
-  id         Int    @id @default(autoincrement())
-  attemptId  Int    @unique
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  testTypeId Int
+  attemptId  Int       @unique
   resultType String // "ENFP", "High D", "Type 5"
-  summary    String @db.Text
-  scores     Json   // { "E": 7, "I": 3, "S": 2, "N": 8 }
-
+  summary    String    @db.Text
+  scores     Json // { "E": 7, "I": 3, "S": 2, "N": 8 }
+  User       User        @relation(fields: [userId], references: [id])
+  TestType   TestType    @relation(fields: [testTypeId], references: [id])
   Attempt    TestAttempt @relation(fields: [attemptId], references: [id])
 }
+
 model Package {
-  id          Int      @id @default(autoincrement())
+  id          Int               @id @default(autoincrement())
   name        String
   description String?
   price       Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   img         String?
-
   tests       PackageTest[]
   purchases   PackagePurchase[]
 }
 
 model PackageTest {
-  id        Int     @id @default(autoincrement())
+  id        Int    @id @default(autoincrement())
   packageId Int
   testTypeId Int
-
   package   Package  @relation(fields: [packageId], references: [id])
   testType  TestType @relation(fields: [testTypeId], references: [id])
 }
 
 model PackagePurchase {
-  id        Int      @id @default(autoincrement())
-  companyId Int?     // perusahaan yang beli
-  userId    Int?     // user yang beli sendiri
-  packageId Int
-  purchasedAt DateTime @default(now())
-
-  company   User?    @relation("CompanyPackagePurchase", fields: [companyId], references: [id])
-  user      User?    @relation("UserPackagePurchase", fields: [userId], references: [id])
-  package   Package  @relation(fields: [packageId], references: [id])
+  id           Int           @id @default(autoincrement())
+  companyId    Int? // perusahaan yang beli
+  userId       Int? // user yang beli sendiri
+  packageId    Int
+  purchasedAt  DateTime      @default(now())
+  company      User?         @relation("CompanyPackagePurchase", fields: [companyId], references: [id])
+  user         User?         @relation("UserPackagePurchase", fields: [userId], references: [id])
+  package      Package       @relation(fields: [packageId], references: [id])
   userPackages UserPackage[]
 }
 
 model UserPackage {
-  id          Int      @id @default(autoincrement())
-  userId      Int
+  id                Int             @id @default(autoincrement())
+  userId            Int
   packagePurchaseId Int
-
-  User          User          @relation(fields: [userId], references: [id])
-  PackagePurchase PackagePurchase @relation(fields: [packagePurchaseId], references: [id])
+  User              User            @relation(fields: [userId], references: [id])
+  PackagePurchase   PackagePurchase @relation(fields: [packagePurchaseId], references: [id])
 
   @@unique([userId, packagePurchaseId])
 }
+
+// ------------------
+// DESKRIPSI HASIL PERSONALITY (MODEL BARU)
+// ------------------
+model PersonalityDescription {
+  id          Int      @id @default(autoincrement())
+  testTypeId  Int
+  type        String // "INFP", "High D", dll.
+  description String   @db.Text // Diubah dari String[] menjadi String dengan tipe data TEXT
+  suggestions String   @db.Text // Diubah dari String[] menjadi String dengan tipe data TEXT
+  professions String   @db.Text // Diubah dari String[] menjadi String dengan tipe data TEXT
+
+  TestType    TestType @relation(fields: [testTypeId], references: [id])
+
+  @@unique([testTypeId, type]) // Tipe harus unik untuk setiap jenis tes
+}
+
