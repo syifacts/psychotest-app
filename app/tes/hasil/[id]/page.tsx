@@ -25,40 +25,40 @@ export default function HasilPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
+  if (!id) return;
 
-    const fetchReport = async () => {
-      try {
-        const res = await fetch(`/api/attempts/${id}`);
-        if (!res.ok) throw new Error('Gagal ambil data report');
-        const data = await res.json();
-        
-        setAttempt(data.attempt);
-        setSubtestResults(data.subtestResults || []);
-        setResult(data.result || null);
-        setCpmiResult(data.cpmiResult || null);
+  const fetchReport = async () => {
+    try {
+      const res = await fetch(`/api/attempts/${id}`);
+      if (!res.ok) throw new Error("Gagal ambil data report");
+      const data = await res.json();
 
-        // ✅ isi kesimpulan dan ttd dari data API
-        if (data.cpmiResult) {
-          setKesimpulan(data.cpmiResult.kesimpulan || '');
-          setTtd(data.cpmiResult.ttd || '');
-        } else if (data.result) {
-          setKesimpulan(data.result.kesimpulan || '');
-          setTtd(data.result.ttd || '');
-        }
+      console.log("📌 Full API response:", data);
 
-        console.log('Fetched attempt:', data.attempt);
-        console.log('CPMI Result:', data.cpmiResult);
-        console.log('TestType:', data.attempt.TestType);
-      } catch (err) {
-        console.error('Error fetching report:', err);
-      } finally {
-        setIsLoading(false);
+      setAttempt(data.attempt);
+      setSubtestResults(data.subtestResults || []);
+      setResult(data.result || null);
+      setCpmiResult(data.cpmiResult || null);
+
+      if (data.cpmiResult) {
+        console.log("✅ CPMI TTD dari API:", data.cpmiResult.ttd);
+        setKesimpulan(data.cpmiResult.kesimpulan || "");
+        setTtd(data.cpmiResult.ttd || "");
+      } else if (data.result) {
+        console.log("✅ IST TTD dari API:", data.result.ttd);
+        setKesimpulan(data.result.kesimpulan || "");
+        setTtd(data.result.ttd || "");
       }
-    };
+    } catch (err) {
+      console.error("❌ Error fetching report:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchReport();
-  }, [id]);
+  fetchReport();
+}, [id]);
+
 
   if (isLoading) {
     return (

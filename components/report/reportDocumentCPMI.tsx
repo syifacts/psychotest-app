@@ -18,6 +18,10 @@ interface Props {
     keteranganiqCPMI?: string;
     kesimpulan: string; // default dari summaryTemplate
     aspekSTK: string | AspekScore[];
+    ValidatedBy?: {
+      fullName: string;
+      lembagalayanan?: string;
+    };
   };
   kesimpulan?: string; // bisa diedit, fallback ke result.kesimpulan
   ttd?: string;
@@ -129,11 +133,25 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, ttd }:
         </View>
 
         <View style={{ marginTop: 20, marginBottom: 20 }}>
-          <Text style={[styles.bold, styles.text]}>Identitas Psikolog / Psychologist's Identity</Text>
-          <Text style={styles.text}>Nama Psikolog / Psychologist's Name: TIARA MUSTIKA AYU, M.Psi, Psikolog</Text>
-          <Text style={styles.text}>Nama Fasyankes/Lembaga Layanan Psikologi / Clinic/Hospital: YULIARPAN MEDIKA/ETP</Text>
-          <Text style={styles.text}>Tanggal Pemeriksaan / Date of Assessment: {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}</Text>
-        </View>
+  <Text style={[styles.bold, styles.text]}>
+    Identitas Psikolog / Psychologist's Identity
+  </Text>
+  <Text style={styles.text}>
+    Nama Psikolog / Psychologist's Name: {result?.ValidatedBy?.fullName || "-"}
+  </Text>
+  <Text style={styles.text}>
+    Nama Fasyankes/Lembaga Layanan Psikologi / Clinic/Hospital: {result?.ValidatedBy?.lembagalayanan || "-"}
+  </Text>
+  <Text style={styles.text}>
+    Tanggal Pemeriksaan / Date of Assessment:{" "}
+    {new Date().toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).toUpperCase()}
+  </Text>
+</View>
+
 
         <View style={{ marginBottom: 1 }}>
           <Text style={[styles.bold, { fontSize: 12 }]}>I. KEMAMPUAN INTELEKTUAL</Text>
@@ -185,18 +203,21 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, ttd }:
         </View>
 
         {/* Footer */}
-        <View style={{ marginTop: 96, textAlign: "right" }}>
+        <View style={{ marginTop: 95, textAlign: "right" }}>
           <Text style={styles.text}>Jakarta, {new Date().toLocaleDateString('id-ID')}</Text>
           <View style={{ height: 50 }} /> {/* space TTD */}
             {ttd && (
     <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
-<Image src={ttd} style={{ width: 150, height: 50 }} />
+<Image src={ttd} style={{ marginTop:-50,width: 90, height: 90 }} />
 
 
     </View>
   )}
-          <Text style={[styles.text, { marginTop: 10 }]}>Psikolog,</Text>
-          <Text style={styles.text}>TIARA MUSTIKA AYU, M.Psi, Psikolog</Text>
+         <Text style={[styles.text, { marginTop: 10 }]}>Psikolog,</Text>
+<Text style={styles.text}>
+  {result?.ValidatedBy?.fullName || "____________________"}
+</Text>
+
         </View>
       </Page>
     </Document>

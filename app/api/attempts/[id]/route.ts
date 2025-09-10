@@ -16,20 +16,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         TestType: true,
         subtestResults: { include: { SubTest: true } },
         results: {
-          include: { summaryTemplate: true },
-          orderBy: { id: "desc" }, // ambil yang terbaru duluan
+          include: { 
+            summaryTemplate: true,
+            ValidatedBy: true,   // ✅ ambil data psikolog yang validasi
+          },
+          orderBy: { id: "desc" },
         },
         answers: true,
       },
     });
-    console.log(
-  attempt?.results.map(r => ({
-    id: r.id,
-    testTypeId: r.testTypeId,
-    ttd: r.ttd,
-    kesimpulan: r.kesimpulan,
-  }))
-);
 
     if (!attempt) {
       return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
@@ -55,7 +50,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           kesimpulan: istResultRaw.kesimpulan 
             ?? istResultRaw.summaryTemplate?.template 
             ?? "-",
-          ttd: istResultRaw.ttd ?? null, // ✅ selalu ambil versi terbaru
+          ttd: istResultRaw.ttd ?? null,
+          ValidatedBy: istResultRaw.ValidatedBy 
+            ? {
+                fullName: istResultRaw.ValidatedBy.fullName,
+                lembagalayanan: istResultRaw.ValidatedBy.lembagalayanan,
+              }
+            : null,
         }
       : null;
 
@@ -91,8 +92,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         kategoriiq: cpmiResultRaw.kategoriiq ?? "-",
         keteranganiqCPMI: cpmiResultRaw.keteranganiqCPMI ?? "-",
         kesimpulan,
-        ttd: cpmiResultRaw.ttd ?? null, // ✅ versi terbaru
+        ttd: cpmiResultRaw.ttd ?? null,
         aspekSTK,
+        ValidatedBy: cpmiResultRaw.ValidatedBy 
+          ? {
+              fullName: cpmiResultRaw.ValidatedBy.fullName,
+              lembagalayanan: cpmiResultRaw.ValidatedBy.lembagalayanan,
+            }
+          : null,
       };
     }
 
