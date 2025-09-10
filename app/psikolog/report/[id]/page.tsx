@@ -22,44 +22,36 @@ export default function HasilPage() {
   const [kesimpulan, setKesimpulan] = useState('');
   const [ttd, setTtd] = useState('');
 
-  useEffect(() => {
-    if (!id) return;
+useEffect(() => {
+  if (!id) return;
 
-    const fetchReport = async () => {
-      try {
-        const res = await fetch(`/api/attempts/${id}`);
-        const data = await res.json();
-        setAttempt(data.attempt);
-        setResult(data.result);
-        setCpmiResult(data.cpmiResult);
-        setSubtestResults(data.subtestResults || []);
+  const fetchReport = async () => {
+    try {
+      const res = await fetch(`/api/attempts/${id}`);
+      const data = await res.json();
+      setAttempt(data.attempt);
+      setResult(data.result);
+      setCpmiResult(data.cpmiResult);
+      setSubtestResults(data.subtestResults || []);
 
-        // Ambil kesimpulan dari summaryTemplateId jika ada
-        if (data.result?.summaryTemplateId) {
-          try {
-            const summaryRes = await fetch(
-              `/api/reports/summary/${data.result.summaryTemplateId}`
-            );
-            const summaryData = await summaryRes.json();
-            setKesimpulan(summaryData.kesimpulan || '');
-          } catch (err) {
-            console.error('Gagal ambil summaryTemplate:', err);
-            setKesimpulan(data.result?.kesimpulan || '');
-          }
-        } else {
-          setKesimpulan(data.result?.kesimpulan || '');
-        }
-
-        setTtd(data.result?.ttd || '');
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsLoading(false);
+      // ✅ Ambil kesimpulan & ttd, sesuai jenis tes
+      if (data.cpmiResult) {
+        setKesimpulan(data.cpmiResult.kesimpulan || '');
+        setTtd(data.cpmiResult.ttd || '');
+      } else if (data.result) {
+        setKesimpulan(data.result.kesimpulan || '');
+        setTtd(data.result.ttd || '');
       }
-    };
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchReport();
-  }, [id]);
+  fetchReport();
+}, [id]);
+
 
   if (isLoading) return <p>Memuat laporan...</p>;
   if (!attempt) return <p>Data laporan tidak ditemukan.</p>;

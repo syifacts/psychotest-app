@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const attemptId = Number(params.id);
+    if (!attemptId) {
+      return NextResponse.json({ error: "Invalid attempt ID" }, { status: 400 });
+    }
 
     const attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
@@ -13,19 +16,26 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         TestType: true,
         subtestResults: { include: { SubTest: true } },
         results: {
-          include: {
-            summaryTemplate: true, // tambahkan biar bisa ambil template kesimpulan
-          },
+          include: { summaryTemplate: true },
+          orderBy: { id: "desc" }, // ambil yang terbaru duluan
         },
         answers: true,
       },
     });
+    console.log(
+  attempt?.results.map(r => ({
+    id: r.id,
+    testTypeId: r.testTypeId,
+    ttd: r.ttd,
+    kesimpulan: r.kesimpulan,
+  }))
+);
 
     if (!attempt) {
       return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
     }
 
-    // format hasil per subtest
+    // SubtestResults
     const subtestResults = attempt.subtestResults.map((s) => ({
       ...s,
       rw: s.rw ?? 0,
@@ -33,43 +43,45 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       kategori: s.kategori ?? "-",
     }));
 
-    // hasil IST (biar tetap ada)
-    const totalResult = attempt.results.length > 0 ? {
-      totalRw: attempt.results[0].totalRw ?? 0,
-      totalSw: attempt.results[0].swIq ?? 0,
-      iq: attempt.results[0].iq ?? null,
-      keteranganiq: attempt.results[0].keteranganiq ?? null,
-      dominasi: attempt.results[0].dominasi ?? null,
-    } : null;
+    // Ambil IST result terbaru (selain CPMI)
+    const istResultRaw = attempt.results.find(r => r.testTypeId !== 30);
+    const totalResult = istResultRaw
+      ? {
+          totalRw: istResultRaw.totalRw ?? 0,
+          totalSw: istResultRaw.swIq ?? 0,
+          iq: istResultRaw.iq ?? null,
+          keteranganiq: istResultRaw.keteranganiq ?? null,
+          dominasi: istResultRaw.dominasi ?? null,
+          kesimpulan: istResultRaw.kesimpulan 
+            ?? istResultRaw.summaryTemplate?.template 
+            ?? "-",
+          ttd: istResultRaw.ttd ?? null, // ✅ selalu ambil versi terbaru
+        }
+      : null;
 
-    // hasil CPMI - PERBAIKAN: pastikan data lengkap
-    const cpmiResultRaw = attempt.results.find(r => r.testTypeId === 30); // 30 = CPMI
+    // Ambil CPMI result terbaru (testTypeId = 30)
+    const cpmiResultRaw = attempt.results.find(r => r.testTypeId === 30);
     let cpmiResult = null;
-    
     if (cpmiResultRaw) {
-      // Parse aspekSTK dengan aman
-      let aspekSTK = [];
+      // Parse aspekSTK
+      let aspekSTK: any[] = [];
       try {
         if (Array.isArray(cpmiResultRaw.aspekSTK)) {
           aspekSTK = cpmiResultRaw.aspekSTK;
-        } else if (typeof cpmiResultRaw.aspekSTK === 'string') {
+        } else if (typeof cpmiResultRaw.aspekSTK === "string") {
           aspekSTK = JSON.parse(cpmiResultRaw.aspekSTK);
         }
-      } catch (error) {
-        console.error('Error parsing aspekSTK:', error);
+      } catch (err) {
+        console.error("Error parsing aspekSTK:", err);
         aspekSTK = [];
       }
 
-      // Ambil template kesimpulan
-      let kesimpulan = "-";
-      if (cpmiResultRaw.summaryTemplate?.template) {
-        kesimpulan = cpmiResultRaw.summaryTemplate.template;
-        // Replace placeholder {name} jika ada
-        if (attempt.User?.fullName) {
-          kesimpulan = kesimpulan.replace(/{name}/g, attempt.User.fullName);
-        }
-      } else if (cpmiResultRaw.keteranganiqCPMI) {
-        kesimpulan = cpmiResultRaw.keteranganiqCPMI;
+      // Kesimpulan (pakai template + replace nama user)
+      let kesimpulan = cpmiResultRaw.kesimpulan 
+        ?? cpmiResultRaw.summaryTemplate?.template 
+        ?? "-";
+      if (attempt.User?.fullName) {
+        kesimpulan = kesimpulan.replace(/{name}/g, attempt.User.fullName);
       }
 
       cpmiResult = {
@@ -78,8 +90,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         scoreiq: cpmiResultRaw.scoreiq ?? 0,
         kategoriiq: cpmiResultRaw.kategoriiq ?? "-",
         keteranganiqCPMI: cpmiResultRaw.keteranganiqCPMI ?? "-",
-        kesimpulan: kesimpulan,
-        aspekSTK: aspekSTK,
+        kesimpulan,
+        ttd: cpmiResultRaw.ttd ?? null, // ✅ versi terbaru
+        aspekSTK,
       };
     }
 
@@ -87,22 +100,17 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const testTypeData = {
       id: attempt.TestType?.id,
       name: attempt.TestType?.name || `TEST_${attempt.TestType?.id}`,
-      code: attempt.TestType?.id || attempt.TestType?.name || 'IST',
+      code: attempt.TestType?.id || attempt.TestType?.name || "IST",
     };
 
-    console.log('CPMI Result:', cpmiResult); // Debug log
-
     return NextResponse.json({
-      attempt: {
-        ...attempt,
-        TestType: testTypeData,
-      },
+      attempt: { ...attempt, TestType: testTypeData },
       subtestResults,
-      result: totalResult,  // tetap ada untuk IST
-      cpmiResult,           // hasil CPMI lebih rapi
+      result: totalResult,
+      cpmiResult,
     });
   } catch (err: any) {
-    console.error('Error in attempts API:', err);
+    console.error("Error in attempts API:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

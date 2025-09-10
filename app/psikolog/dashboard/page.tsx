@@ -119,8 +119,8 @@ export default function DashboardPsikolog() {
                 <th className="p-2 border">Tes</th>
                 <th className="p-2 border">Tanggal</th>
                 <th className="p-2 border">Status</th>
-                <th className="p-2 border">Hasil Test</th>
-                <th className="p-2 border">Validasi</th>
+                {tab === "pending" && <th className="p-2 border">Hasil Test</th>}
+                {tab === "pending" && <th className="p-2 border">Validasi</th>}
               </tr>
             </thead>
             <tbody>
@@ -136,32 +136,43 @@ export default function DashboardPsikolog() {
                   <td className="p-2 border">
                     {report.validated ? "Sudah Validasi" : "Belum Validasi"}
                   </td>
-                  <td className="p-2 border">
-                    <button
-                      className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                      onClick={() => handlePreviewPDF(report)}
-                      disabled={!report.Attempt?.id}
-                    >
-                      Preview PDF
-                    </button>
-                  </td>
-                  <td className="p-2 border">
-                    {!report.validated && report.Attempt?.id ? (
+
+                  {/* Preview PDF hanya muncul di tab pending */}
+                  {tab === "pending" && (
+                    <td className="p-2 border">
                       <button
-                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                        onClick={() => handleValidasi(report.id)}
+                        className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                        onClick={() => handlePreviewPDF(report)}
+                        disabled={!report.Attempt?.id}
                       >
-                        Validasi
+                        Preview PDF
                       </button>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
+                    </td>
+                  )}
+
+                  {/* Validasi hanya muncul di tab pending */}
+                  {tab === "pending" && (
+                    <td className="p-2 border">
+                      {!report.validated && report.Attempt?.id ? (
+                        <button
+                          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                          onClick={() => handleValidasi(report.id)}
+                        >
+                          Validasi
+                        </button>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
               {reports.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-4 border text-center text-gray-500">
+                  <td
+                    colSpan={tab === "pending" ? 6 : 4}
+                    className="p-4 border text-center text-gray-500"
+                  >
                     Tidak ada laporan
                   </td>
                 </tr>

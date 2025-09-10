@@ -190,7 +190,9 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, ttd }:
           <View style={{ height: 50 }} /> {/* space TTD */}
             {ttd && (
     <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
-      <Image src={ttd} style={{ width: 150, height: 50 }} />
+<Image src={ttd} style={{ width: 150, height: 50 }} />
+
+
     </View>
   )}
           <Text style={[styles.text, { marginTop: 10 }]}>Psikolog,</Text>

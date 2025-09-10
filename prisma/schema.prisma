@@ -44,6 +44,7 @@ model User {
   phone     String?
   address   String?
   profileImage String?
+  tujuan      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -202,7 +203,7 @@ model Result {
   keteranganiqCPMI String?
   aspekSTK         Json?
   url           String?
-  kesimpulan  String?
+  kesimpulan  String? @db.Text
   ttd         String?
   summaryTemplateId Int?
   // jumlah jawaban

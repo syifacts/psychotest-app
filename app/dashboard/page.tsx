@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import Footer from '@/components/layout/footer';
+//import Footer from '@/components/layout/footer';
 import AnimatedOnScroll from '@/components/ui/animatedonscroll';
 
 interface TestType {
@@ -86,7 +86,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <Footer />
+     {/*  <Footer /> */}
     </main>
   );
 }
