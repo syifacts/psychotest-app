@@ -208,6 +208,7 @@ const CPMIPage = () => {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal submit CPMI");
+      const aspekScores = data.aspek;
 
       localStorage.removeItem("attemptId");
       localStorage.removeItem("endTime");

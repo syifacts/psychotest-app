@@ -1,3 +1,4 @@
+// app/api/cpmi/submit/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -7,8 +8,7 @@ type AnswerPayload = {
   choice: string;
 };
 
-// 🔹 Tabel mapping total skor → skor IQ
-// Contoh: total skor maksimal CPMI = 50 (sesuaikan dengan total skor sebenarnya)
+// Tabel mapping total skor → IQ
 const iqTable = [
   { correct: 50, score: 120, kategori: "Superior", status: "LULUS" },
   { correct: 49, score: 120, kategori: "Superior", status: "LULUS" },
@@ -62,9 +62,8 @@ const iqTable = [
   { correct: 1, score: 78, kategori: "Di bawah rata-rata", status: "TIDAK LULUS" },
 ];
 
-// 🔹 Helper mapping IQ
+// Helper mapping IQ
 function getIQResult(totalScore: number) {
-  // Cari row di iqTable yang paling dekat tapi tidak lebih besar dari totalScore
   const sortedTable = [...iqTable].sort((a, b) => b.correct - a.correct);
   for (const row of sortedTable) {
     if (totalScore >= row.correct) return row;
@@ -72,51 +71,69 @@ function getIQResult(totalScore: number) {
   return { score: null, kategori: "Tidak diketahui", status: "TIDAK LULUS" };
 }
 
+// Mapping aspek → nomor soal CPMI
+const aspekQuestionsMap: Record<number, number[]> = {
+  1: [1, 2, 3],
+  2: [4, 5, 6],
+  3: [7, 8, 9],
+  4: [10, 11, 12],
+  5: [13, 14, 15],
+  6: [16, 17, 18],
+};
+
+// Hitung kategori tiap aspek
+function getKategoriAspek(total: number) {
+  if (total >= 8) return "T";
+  if (total >= 6) return "S";
+  if (total >= 3) return "R";
+  return "-";
+}
+
+// Function untuk replace placeholder di template
+function replaceTemplatePlaceholders(template: string, user: any, scoreiq: number): string {
+  let result = template;
+  
+  // Replace {name}
+  if (user?.fullName) {
+    result = result.replace(/{name}/g, user.fullName);
+  }
+  
+  // Replace {scoreiq}
+  if (scoreiq) {
+    result = result.replace(/{scoreiq}/g, scoreiq.toString());
+  }
+  
+  return result;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { userId, attemptId, answers } = await req.json();
-
-    if (!userId || !attemptId || !answers) {
+    if (!userId || !attemptId || !answers)
       return NextResponse.json({ error: "Data tidak lengkap" }, { status: 400 });
-    }
 
-    // Filter jawaban CPMI valid
-    const validAnswers = (answers as AnswerPayload[]).filter(
-      (a) => typeof a.questionCode === "string" && a.questionCode.startsWith("CPMI-")
+    const validAnswers = (answers as AnswerPayload[]).filter(a =>
+      a.questionCode?.startsWith("CPMI-")
     );
 
-    if (validAnswers.length === 0) {
-      return NextResponse.json({ error: "Tidak ada jawaban CPMI valid" }, { status: 400 });
-    }
-
-    // Ambil soal CPMI dari DB
     const questionList = await prisma.question.findMany({
-      where: { code: { in: validAnswers.map((a) => a.questionCode!) } },
-      select: { id: true, code: true, answerScores: true },
+      where: { code: { in: validAnswers.map(a => a.questionCode!) } },
+      select: { code: true, answerScores: true },
     });
 
     const scoreMap: Record<string, any[]> = {};
-    questionList.forEach((q) => {
-      scoreMap[q.code] = q.answerScores as any[];
-    });
+    questionList.forEach(q => (scoreMap[q.code] = q.answerScores as any[]));
 
     // Hapus jawaban lama
     await prisma.answer.deleteMany({ where: { attemptId } });
 
     let totalScore = 0;
-
     for (const ans of validAnswers) {
       const scores = scoreMap[ans.questionCode!];
-
-      // Normalisasi jawaban
       const choiceNormalized = ans.choice.trim().toUpperCase();
-
-      // Ambil skor jawaban yang dipilih
-      const scoreObj = scores?.find((s) => {
-        const optLetter = s.options.trim()[0].toUpperCase();
-        return optLetter === choiceNormalized[0];
-      });
-
+      const scoreObj = scores?.find(
+        s => s.options.trim()[0].toUpperCase() === choiceNormalized[0]
+      );
       const score = scoreObj?.score || 0;
       totalScore += score;
 
@@ -131,40 +148,100 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Mapping ke IQ table berdasarkan totalScore
+    // Hitung kategori tiap aspek
+    const aspekScores = Object.entries(aspekQuestionsMap).map(([no, soalNums]) => {
+      const totalAspek = soalNums.reduce((sum, qNum) => {
+        const ans = validAnswers.find(a => a.questionCode === `CPMI-${qNum}`);
+        const scoreObj = scoreMap[ans?.questionCode!]?.find(
+          s => s.options.trim()[0].toUpperCase() === ans?.choice.trim()[0].toUpperCase()
+        );
+        return sum + (scoreObj?.score || 0);
+      }, 0);
+      return { no: Number(no), kategori: getKategoriAspek(totalAspek), total: totalAspek };
+    });
+
     const iqResult = getIQResult(totalScore);
 
-    // Update attempt selesai
+    // update attempt
     await prisma.testAttempt.update({
-  where: { id: attemptId },
-  data: {
-    finishedAt: new Date(),
-    isCompleted: true, // ✅ tambahkan ini
-  },
-});
+      where: { id: attemptId },
+      data: { finishedAt: new Date(), isCompleted: true },
+    });
 
-
-    // Simpan hasil CPMI
-    await prisma.result.create({
-      data: {
-        userId,
-        attemptId,
-        testTypeId: 30, // CPMI selalu id 30
-        jumlahbenar: totalScore, // sekarang total skor
-        scoreiq: iqResult.score,
-        kategoriiq: iqResult.kategori,
-        keteranganiqCPMI: iqResult.status,
+    // Ambil user dan template summary sesuai scoreiq
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const summaryTemplate = await prisma.summaryTemplate.findFirst({
+      where: {
+        testTypeId: 30,
+        minScore: { lte: iqResult.score! },
+        maxScore: { gte: iqResult.score! },
       },
     });
 
+    // Replace placeholder di template SEBELUM disimpan ke database
+    let kesimpulan = "Kesimpulan tidak tersedia";
+    if (summaryTemplate?.template) {
+      kesimpulan = replaceTemplatePlaceholders(
+  summaryTemplate.template,
+  user,
+  iqResult.score ?? 0 // fallback 0 jika null
+);
+
+    }
+
+    console.log('Original template:', summaryTemplate?.template);
+    console.log('Processed kesimpulan:', kesimpulan);
+    console.log('User fullName:', user?.fullName);
+    console.log('IQ Score:', iqResult.score);
+    console.log('PDF - Score IQ:', iqResult?.score);
+
+
+    // Cek apakah Result sudah ada
+    const existingResult = await prisma.result.findUnique({
+      where: { attemptId_testTypeId: { attemptId, testTypeId: 30 } },
+    });
+
+    if (existingResult) {
+      // Update Result lama
+      await prisma.result.update({
+        where: { id: existingResult.id },
+        data: {
+          jumlahbenar: totalScore,
+          scoreiq: iqResult.score,
+          kategoriiq: iqResult.kategori,
+          keteranganiqCPMI: iqResult.status,
+          aspekSTK: aspekScores,
+          summaryTemplateId: summaryTemplate?.id,
+          // Tidak perlu simpan kesimpulan ke database karena akan di-replace lagi di API attempts
+        },
+      });
+    } else {
+      // Buat Result baru
+      await prisma.result.create({
+        data: {
+          userId,
+          attemptId,
+          testTypeId: 30,
+          jumlahbenar: totalScore,
+          scoreiq: iqResult.score,
+          kategoriiq: iqResult.kategori,
+          keteranganiqCPMI: iqResult.status,
+          aspekSTK: aspekScores,
+          summaryTemplateId: summaryTemplate?.id,
+          // Tidak perlu simpan kesimpulan ke database karena akan di-replace lagi di API attempts
+        },
+      });
+    }
+
     return NextResponse.json({
       success: true,
-      message: "Jawaban CPMI berhasil disimpan",
       totalScore,
       hasil: iqResult,
+      aspek: aspekScores,
+      kesimpulan, // Return kesimpulan yang sudah di-replace untuk response
     });
   } catch (err: any) {
-    console.error("❌ Error submit CPMI:", err);
+    console.error('Error in CPMI submit:', err);
     return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });
   }
 }
