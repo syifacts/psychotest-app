@@ -15,20 +15,21 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  // 🔹 Cek login saat mount
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    if (token && user) {
-      // Redirect langsung ke dashboard jika sudah login
-      const parsedUser = JSON.parse(user);
-      if (parsedUser.role === 'SUPERADMIN') {
-        router.replace('/admin');
-      } else {
-        router.replace('/');
-      }
+// 🔹 Cek login saat mount
+useEffect(() => {
+  const token = localStorage.getItem('token');
+  const user = localStorage.getItem('user');
+  if (token && user) {
+    const parsedUser = JSON.parse(user);
+    if (parsedUser.role === 'SUPERADMIN') {
+      router.replace('/admin');
+    } else if (parsedUser.role === 'PSIKOLOG') {
+      router.replace('/psikolog/dashboard');
+    } else {
+      router.replace('/');
     }
-  }, [router]);
+  }
+}, [router]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -56,14 +57,16 @@ export default function LoginPage() {
       setSuccess('Login berhasil! Mengarahkan ke halaman utama...');
       setIsLoading(false);
 
-// Redirect otomatis setelah login
 setTimeout(() => {
   if (data.user.role === 'SUPERADMIN') {
     router.push('/admin');
+  } else if (data.user.role === 'PSIKOLOG') {
+    router.push('/psikolog/dashboard');
   } else {
-    router.push('/'); // user biasa langsung ke homepage
+    router.push('/'); // user biasa
   }
 }, 2000);
+
 
 
     } catch (err) {
