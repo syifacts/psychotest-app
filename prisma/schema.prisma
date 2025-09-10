@@ -204,7 +204,7 @@ model Result {
   aspekSTK         Json?
   url           String?
   kesimpulan  String? @db.Text
-  ttd         String?
+  ttd         String? @db.Text
   summaryTemplateId Int?
   // jumlah jawaban
   jumlahA       Int? // jumlah jawaban A

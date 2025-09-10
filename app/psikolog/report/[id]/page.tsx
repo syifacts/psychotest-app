@@ -135,11 +135,12 @@ useEffect(() => {
         </div>
 
         {/* Preview PDF kanan */}
-        <div className="w-2/3 border rounded shadow">
-          <PDFViewer key={pdfKey} width="100%" height="100%">
-            <PDFTemplate {...pdfProps} />
-          </PDFViewer>
-        </div>
+    <div className="flex-grow">
+  <PDFViewer key={pdfKey} style={{ width: '100%', height: '100%' }}>
+    <PDFTemplate {...pdfProps} />
+  </PDFViewer>
+</div>
+
       </div>
     </div>
   );

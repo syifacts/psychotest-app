@@ -19,7 +19,9 @@ export default function HasilPage() {
   const [attempt, setAttempt] = useState<any | null>(null);
   const [subtestResults, setSubtestResults] = useState<any[]>([]);
   const [result, setResult] = useState<any | null>(null);
-  const [cpmiResult, setCpmiResult] = useState<any | null>(null); // Tambahkan state untuk CPMI
+  const [cpmiResult, setCpmiResult] = useState<any | null>(null); 
+  const [kesimpulan, setKesimpulan] = useState('');   // ✅ Tambah
+  const [ttd, setTtd] = useState('');                 // ✅ Tambah
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -34,9 +36,17 @@ export default function HasilPage() {
         setAttempt(data.attempt);
         setSubtestResults(data.subtestResults || []);
         setResult(data.result || null);
-        setCpmiResult(data.cpmiResult || null); // Set CPMI result
+        setCpmiResult(data.cpmiResult || null);
 
-        // Debug: tampilkan data
+        // ✅ isi kesimpulan dan ttd dari data API
+        if (data.cpmiResult) {
+          setKesimpulan(data.cpmiResult.kesimpulan || '');
+          setTtd(data.cpmiResult.ttd || '');
+        } else if (data.result) {
+          setKesimpulan(data.result.kesimpulan || '');
+          setTtd(data.result.ttd || '');
+        }
+
         console.log('Fetched attempt:', data.attempt);
         console.log('CPMI Result:', data.cpmiResult);
         console.log('TestType:', data.attempt.TestType);
@@ -66,14 +76,10 @@ export default function HasilPage() {
     );
   }
 
-  // Tentukan jenis tes dan template PDF yang akan digunakan
+  // Tentukan jenis tes
   const rawTestType = attempt.TestType?.name || attempt.TestType?.code || attempt.TestType?.id || 'IST';
   const testType = String(rawTestType).toUpperCase();
   const PDFTemplate = PDFComponents[testType] || ReportISTDocument;
-
-  // Debug: cek PDFTemplate yang dipilih
-  console.log('Test Type:', testType);
-  console.log('Using PDFTemplate:', PDFTemplate.name);
 
   const fileName = `${attempt.TestType?.name || 'Tes'}_${attempt.User?.fullName || 'User'}.pdf`.replace(/\s+/g, '_');
 
@@ -82,13 +88,17 @@ export default function HasilPage() {
     if (testType === 'CPMI' && cpmiResult) {
       return {
         attempt,
-        result: cpmiResult, // Untuk CPMI, gunakan cpmiResult
+        result: cpmiResult,
+        kesimpulan,   // ✅ sekarang sudah ada
+        ttd,          // ✅ sekarang sudah ada
       };
     } else {
       return {
         attempt,
         subtestResults,
-        result, // Untuk IST, gunakan result biasa
+        result,
+        kesimpulan,
+        ttd,
       };
     }
   };
