@@ -202,6 +202,8 @@ model Result {
   keteranganiqCPMI String?
   aspekSTK         Json?
   url           String?
+  kesimpulan  String?
+  ttd         String?
   summaryTemplateId Int?
   // jumlah jawaban
   jumlahA       Int? // jumlah jawaban A
