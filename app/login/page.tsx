@@ -25,7 +25,11 @@ useEffect(() => {
       router.replace('/admin');
     } else if (parsedUser.role === 'PSIKOLOG') {
       router.replace('/psikolog/dashboard');
-    } else {
+    } 
+    else if (parsedUser.role === 'PERUSAHAAN') {
+      router.replace('/company/dashboard');
+    }
+    else {
       router.replace('/');
     }
   }
@@ -62,7 +66,11 @@ setTimeout(() => {
     router.push('/admin');
   } else if (data.user.role === 'PSIKOLOG') {
     router.push('/psikolog/dashboard');
-  } else {
+  } 
+  else if (data.user.role === 'PERUSAHAAN') {
+    router.push('/');
+  }
+  else {
     router.push('/'); // user biasa
   }
 }, 2000);

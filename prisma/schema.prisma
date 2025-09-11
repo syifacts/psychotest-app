@@ -304,6 +304,7 @@ model Payment {
   userId     Int
   testTypeId Int
   amount     Int
+  quantity   Int           @default(1)
   status     PaymentStatus @default(PENDING)
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
@@ -395,6 +396,7 @@ model PackagePurchase {
   companyId    Int? // perusahaan yang beli
   userId       Int? // user yang beli sendiri
   packageId    Int
+  quantity     Int           @default(1)
   purchasedAt  DateTime      @default(now())
   company      User?         @relation("CompanyPackagePurchase", fields: [companyId], references: [id])
   user         User?         @relation("UserPackagePurchase", fields: [userId], references: [id])

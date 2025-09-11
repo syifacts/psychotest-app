@@ -35,10 +35,12 @@ const CPMIPage = () => {
 
   const [attemptId, setAttemptId] = useState<number | null>(null);
 
+  const [role, setRole] = useState<"USER" | "PERUSAHAAN">("USER"); // ✅ state untuk role
+
   const router = useRouter();
 
   // -------------------------
-  // Fetch CPMI Test Info
+  // Fetch CPMI Test Info + Role user
   // -------------------------
   useEffect(() => {
     const fetchInfo = async () => {
@@ -49,6 +51,11 @@ const CPMIPage = () => {
 
         const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
         if (savedUser.id) {
+          // ✅ Simpan role user dari localStorage
+          if (savedUser.role === "PERUSAHAAN") {
+            setRole("PERUSAHAAN");
+          }
+
           const accessRes = await fetch(`/api/tes/check-access?userId=${savedUser.id}&type=CPMI`);
           const accessData = await accessRes.json();
           setHasAccess(accessData.access);
@@ -292,7 +299,7 @@ const CPMIPage = () => {
   // -------------------------
   // Render
   // -------------------------
-  if (showIntro) {
+   if (showIntro) {
     return (
       <CPMIIntro
         testInfo={testInfo}
@@ -303,6 +310,7 @@ const CPMIPage = () => {
           setShowIntro(false);
           setShowQuestions(true);
         }}
+        role={role} // ✅ kirim role ke intro
       />
     );
   }

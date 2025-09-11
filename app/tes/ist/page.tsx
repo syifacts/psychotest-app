@@ -52,6 +52,13 @@ const [hasAccess, setHasAccess] = useState(false);
 const [testDate, setTestDate] = useState<string>("");
 
 
+const [quantity, setQuantity] = useState(1);
+const [userRole, setUserRole] = useState("USER"); // default
+
+useEffect(() => {
+  const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  if (savedUser.role) setUserRole(savedUser.role); // role = "USER" atau "COMPANY"
+}, []);
 
   const router = useRouter();
 
@@ -531,50 +538,77 @@ await fetch("/api/tes/answers", {
   </p>
 )}
 
+
 {!hasAccess ? (
-  // Kalau belum bayar
-  <button
-    className={styles.btn}
-    onClick={async () => {
-      const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-      if (!savedUser.id || !testInfo?.id) return;
+  <div>
+    {/* Kalau perusahaan → bisa input kuantitas */}
+    {userRole === "PERUSAHAAN" && (
+      <div className={styles.formGroup}>
+        <label>Jumlah Tes</label>
+        <input
+          type="number"
+          value={quantity}
+          min={1}
+          onChange={(e) => setQuantity(parseInt(e.target.value))}
+          className={styles.input}
+        />
+        {/* ✅ Tambahkan total harga */}
+        {testInfo?.price && testInfo.price > 0 && (
+          <p className={styles.totalPrice}>
+            Total: Rp {(testInfo.price * quantity).toLocaleString("id-ID")}
+          </p>
+        )}
+      </div>
+    )}
 
-      // 1️⃣ Trigger payment
-      const payRes = await fetch("/api/payment/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: savedUser.id, testTypeId: testInfo.id }),
-      });
+    <button
+      className={styles.btn}
+      onClick={async () => {
+        const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        if (!savedUser.id || !testInfo?.id) return;
 
-      const payData = await payRes.json();
-      if (!payRes.ok || !payData.success) {
-        alert("❌ Pembayaran gagal!");
-        return;
-      }
+        // 1️⃣ Trigger payment
+        const payRes = await fetch("/api/payment/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: savedUser.id,
+            testTypeId: testInfo.id,
+            quantity: userRole === "PERUSAHAAN" ? quantity : 1, // ✅ bedakan
+          }),
+        });
 
-      // ✅ Munculkan alert sukses
-      alert("✅ Pembayaran berhasil! Anda sekarang bisa mengikuti tes.");
+        const payData = await payRes.json();
+        if (!payRes.ok || !payData.success) {
+          alert("❌ Pembayaran gagal!");
+          return;
+        }
 
-      // 2️⃣ Kalau payment sukses → buat attempt
-      await fetch("/api/attempts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: savedUser.id,
-          testTypeId: testInfo.id,
-          paymentId: payData.payment.id, // optional kalau ada
-        }),
-      });
+        alert("✅ Pembayaran berhasil! Anda sekarang bisa mengikuti tes.");
 
-      setHasAccess(true);
-      setShowForm(true);
-      setShowIntro(false);
-    }}
-  >
-    Bayar untuk Ikut Tes
-  </button>
+        // 2️⃣ Buat attempt
+        await fetch("/api/attempts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: savedUser.id,
+            testTypeId: testInfo.id,
+            paymentId: payData.payment.id,
+          }),
+        });
+
+        setHasAccess(true);
+        setShowForm(true);
+        setShowIntro(false);
+      }}
+    >
+      {userRole === "PERUSAHAAN"
+        ? "Beli Tes (dengan Kuantitas)"
+        : "Bayar untuk Ikut Tes"}
+    </button>
+  </div>
 ) : (
-  // Kalau sudah punya akses
+  // kalau sudah punya akses
   <button
     className={styles.btn}
     onClick={async () => {
@@ -582,7 +616,9 @@ await fetch("/api/tes/answers", {
       if (!savedUser.id || !testInfo?.id) return;
 
       // pastikan attempt ada
-      const attemptRes = await fetch(`/api/attempts?userId=${savedUser.id}&testTypeId=${testInfo.id}`);
+      const attemptRes = await fetch(
+        `/api/attempts?userId=${savedUser.id}&testTypeId=${testInfo.id}`
+      );
       const attempts = await attemptRes.json();
 
       if (!attempts.length) {
@@ -600,6 +636,8 @@ await fetch("/api/tes/answers", {
     Ikuti Tes
   </button>
 )}
+
+
         </div>
         <div className={styles.backWrapper}>
           <Link href="/dashboard">

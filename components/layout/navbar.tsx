@@ -41,7 +41,6 @@ const Navbar = () => {
       { href: "/account", label: "Akun" },
     ],
     PSIKOLOG: [
-      //{ href: "/", label: "Beranda" },
       { href: "/psikolog/dashboard", label: "List Tes" },
       { href: "/account", label: "Akun" },
     ],
@@ -50,10 +49,18 @@ const Navbar = () => {
       { href: "/admin", label: "Dashboard Admin" },
       { href: "/account", label: "Akun" },
     ],
+    PERUSAHAAN: [
+      { href: "/", label: "Beranda" },
+      { href: "/company/dashboard", label: "Dashboard" },
+      { href: "/dashboard", label: "Layanan Tes" },
+      { href: "/company/packages", label: "Bundle Paket" },
+      { href: "/account", label: "Akun" },
+    ],
   };
 
+  // Pilih menu berdasarkan role, fallback ke GUEST jika undefined
   const currentMenu = isLoggedIn
-    ? menuConfig[role ?? "USER"]
+    ? menuConfig[role ?? "GUEST"] || menuConfig["GUEST"]
     : menuConfig["GUEST"];
 
   return (
@@ -73,9 +80,9 @@ const Navbar = () => {
 
         <div className="right">
           <nav className="nav-links">
-            {currentMenu.map((item) => (
+            {currentMenu?.map((item) => (
               <Link key={item.href} href={item.href} legacyBehavior>
-                <a>{item.label}</a>
+                <a className={pathname === item.href ? "active" : ""}>{item.label}</a>
               </Link>
             ))}
 
@@ -88,6 +95,7 @@ const Navbar = () => {
           </nav>
         </div>
       </header>
+
       <style jsx>{`
         .header {
           display: flex;
@@ -99,7 +107,7 @@ const Navbar = () => {
           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
           flex-wrap: wrap;
           gap: 10px;
-          height: 120px
+          height: 120px;
         }
 
         .left {
@@ -112,8 +120,8 @@ const Navbar = () => {
         .right {
           display: flex;
           align-items: center;
-          gap: 200px;
-          margin-right:70px
+          gap: 50px;
+          margin-right:70px;
         }
 
         .logo {
@@ -139,9 +147,9 @@ const Navbar = () => {
 
         .nav-links {
           display: flex;
-          gap: 80px;
+          gap: 40px;
           align-items: center;
-          font-size : 1.2rem
+          font-size : 1.2rem;
         }
 
         .nav-links a {
@@ -151,7 +159,7 @@ const Navbar = () => {
           transition: all 0.3s ease;
         }
 
-        .nav-links a:hover {
+        .nav-links a.active {
           color: #0070f3;
           font-weight: 600;
         }
