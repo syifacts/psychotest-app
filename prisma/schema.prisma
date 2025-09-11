@@ -202,7 +202,7 @@ model Result {
   scoreiq       Int?
   keteranganiqCPMI String?
   aspekSTK         Json?
-  url           String?
+  url           String? @db.Text 
   kesimpulan  String? @db.Text
   ttd         String? @db.Text
   summaryTemplateId Int?
@@ -247,11 +247,12 @@ model Result {
   hasilE        String?
 
   // Validasi psikolog
-  barcode       String?
+  barcode String? @unique @db.VarChar(30)
   validated     Boolean  @default(false)
   validatedById Int?
   validatedAt   DateTime?
   expiresAt     DateTime?
+  //validationNotes?  String? @db.Text
   isCompleted   Boolean  @default(false)
   createdAt     DateTime @default(now())
   User          User     @relation(fields: [userId], references: [id])

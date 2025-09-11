@@ -85,22 +85,25 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         kesimpulan = kesimpulan.replace(/{name}/g, attempt.User.fullName);
       }
 
-      cpmiResult = {
-        id: cpmiResultRaw.id,
-        jumlahbenar: cpmiResultRaw.jumlahbenar ?? 0,
-        scoreiq: cpmiResultRaw.scoreiq ?? 0,
-        kategoriiq: cpmiResultRaw.kategoriiq ?? "-",
-        keteranganiqCPMI: cpmiResultRaw.keteranganiqCPMI ?? "-",
-        kesimpulan,
-        ttd: cpmiResultRaw.ttd ?? null,
-        aspekSTK,
-        ValidatedBy: cpmiResultRaw.ValidatedBy 
-          ? {
-              fullName: cpmiResultRaw.ValidatedBy.fullName,
-              lembagalayanan: cpmiResultRaw.ValidatedBy.lembagalayanan,
-            }
-          : null,
-      };
+     cpmiResult = {
+  id: cpmiResultRaw.id,
+  jumlahbenar: cpmiResultRaw.jumlahbenar ?? 0,
+  scoreiq: cpmiResultRaw.scoreiq ?? 0,
+  kategoriiq: cpmiResultRaw.kategoriiq ?? "-",
+  keteranganiqCPMI: cpmiResultRaw.keteranganiqCPMI ?? "-",
+  kesimpulan,
+  ttd: cpmiResultRaw.ttd ?? null,
+  barcode: cpmiResultRaw.barcode ?? null,       // ✅ tambahkan
+  expiresAt: cpmiResultRaw.expiresAt ?? null,   // ✅ tambahkan
+  aspekSTK,
+  ValidatedBy: cpmiResultRaw.ValidatedBy 
+    ? {
+        fullName: cpmiResultRaw.ValidatedBy.fullName,
+        lembagalayanan: cpmiResultRaw.ValidatedBy.lembagalayanan,
+      }
+    : null,
+};
+
     }
 
     // TestType fallback

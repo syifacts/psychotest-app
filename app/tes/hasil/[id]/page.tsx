@@ -91,6 +91,7 @@ export default function HasilPage() {
         result: cpmiResult,
         kesimpulan,   // ✅ sekarang sudah ada
         ttd,          // ✅ sekarang sudah ada
+        barcode: cpmiResult.barcode,
       };
     } else {
       return {
@@ -99,6 +100,7 @@ export default function HasilPage() {
         result,
         kesimpulan,
         ttd,
+         barcode: result?.barcode,
       };
     }
   };
