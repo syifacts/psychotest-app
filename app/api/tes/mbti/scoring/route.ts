@@ -1,5 +1,3 @@
-// Lokasi: app/api/tes/mbti/scoring/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -9,6 +7,14 @@ export async function POST(req: NextRequest) {
     if (!attemptId) {
       return NextResponse.json({ error: "attemptId wajib dikirim" }, { status: 400 });
     }
+
+    // Ambil data attempt untuk mendapatkan userId dan testTypeId
+    const attempt = await prisma.testAttempt.findUnique({ where: { id: attemptId } });
+    if (!attempt) {
+      return NextResponse.json({ error: "Attempt tidak ditemukan" }, { status: 404 });
+    }
+
+    const { userId, testTypeId } = attempt;
 
     const answers = await prisma.answer.findMany({ where: { attemptId } });
     if (!answers.length) {
@@ -33,53 +39,66 @@ export async function POST(req: NextRequest) {
       JP: ["J", "P"],
     };
     
-    const percentageMap: Record<string, number> = { EI: 10, SN: 5, TF: 5, JP: 5 };
+    const valueMap: Record<string, number> = { EI: 10, SN: 5, TF: 5, JP: 5 };
 
-    const percent: Record<string, number> = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
+    const scores: Record<string, number> = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
 
-    // Proses perhitungan persentase - PENJUMLAHAN LANGSUNG
+    // Proses perhitungan skor mentah berdasarkan bobot
     for (const ans of answersWithQuestion) {
       const dim = ans.question?.dimension;
       if (!dim || !ans.choice) continue;
 
       const [first, second] = dimensionMap[dim as keyof typeof dimensionMap];
-      const percentageToAdd = percentageMap[dim as keyof typeof percentageMap];
+      const valueToAdd = valueMap[dim as keyof typeof valueMap];
 
       if (ans.choice.toLowerCase() === "a") {
-        percent[first] += percentageToAdd;
+        scores[first] += valueToAdd;
       } else if (ans.choice.toLowerCase() === "b") {
-        percent[second] += percentageToAdd;
+        scores[second] += valueToAdd;
       }
     }
     
-    // =================================================================
-    // LOGIKA PENENTUAN TIPE MBTI DENGAN TIPE DEFAULT
-    // =================================================================
-    // Menetapkan tipe dasar jika pengguna tidak menjawab soal di dimensi tertentu.
-    const defaultType = {
-      EI: "I", // Introvert
-      SN: "N", // Intuition
-      TF: "F", // Feeling
-      JP: "P", // Perceiving
-    };
+    // Logika penentuan tipe MBTI dengan tipe default INFP
+    const defaultType = { EI: "I", SN: "N", TF: "F", JP: "P" };
 
-    // Tentukan huruf untuk setiap dimensi secara kondisional
-    const letterEI = (percent.E + percent.I > 0) ? (percent.E >= percent.I ? "E" : "I") : defaultType.EI;
-    const letterSN = (percent.S + percent.N > 0) ? (percent.S >= percent.N ? "S" : "N") : defaultType.SN;
-    const letterTF = (percent.T + percent.F > 0) ? (percent.T >= percent.F ? "T" : "F") : defaultType.TF;
-    const letterJP = (percent.J + percent.P > 0) ? (percent.J >= percent.P ? "J" : "P") : defaultType.JP;
+    const letterEI = (scores.E > 0 || scores.I > 0) ? (scores.E >= scores.I ? "E" : "I") : defaultType.EI;
+    const letterSN = (scores.S > 0 || scores.N > 0) ? (scores.S >= scores.N ? "S" : "N") : defaultType.SN;
+    const letterTF = (scores.T > 0 || scores.F > 0) ? (scores.T >= scores.F ? "T" : "F") : defaultType.TF;
+    const letterJP = (scores.J > 0 || scores.P > 0) ? (scores.J >= scores.P ? "J" : "P") : defaultType.JP;
 
-    // Gabungkan huruf-huruf menjadi tipe hasil akhir
     const resultType = `${letterEI}${letterSN}${letterTF}${letterJP}`;
 
-    // Simpan hasil scoring
+    // Simpan hasil scoring ke database
     const personalityResult = await prisma.personalityResult.upsert({
       where: { attemptId },
-      update: { resultType, scores: percent, summary: `Hasil tes MBTI: ${resultType}` },
-      create: { attemptId, resultType, scores: percent, summary: `Hasil tes MBTI: ${resultType}` },
+      update: { resultType, scores, summary: `Hasil tes MBTI: ${resultType}` },
+      create: { 
+        attemptId,
+        userId,
+        testTypeId,
+        resultType, 
+        scores, 
+        summary: `Hasil tes MBTI: ${resultType}` 
+      },
     });
 
-    return NextResponse.json({ message: "Scoring berhasil", result: personalityResult });
+    // Ambil detail deskripsi dari tabel PersonalityDescription
+    const descriptionDetails = await prisma.personalityDescription.findUnique({
+      where: {
+        testTypeId_type: {
+          testTypeId: testTypeId,
+          type: resultType,
+        },
+      },
+    });
+
+    // Gabungkan hasil dan kirim sebagai respons
+    return NextResponse.json({
+      message: "Scoring berhasil",
+      result: personalityResult,
+      details: descriptionDetails,
+    });
+
   } catch (err) {
     console.error("❌ Error scoring MBTI:", err);
     return NextResponse.json({ error: "Gagal melakukan scoring" }, { status: 500 });

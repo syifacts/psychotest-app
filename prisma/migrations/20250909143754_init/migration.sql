@@ -236,6 +236,8 @@ CREATE TABLE `PreferenceQuestion` (
 -- CreateTable
 CREATE TABLE `PersonalityResult` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `userId` INTEGER NOT NULL,
+    `testTypeId` INTEGER NOT NULL,
     `attemptId` INTEGER NOT NULL,
     `resultType` VARCHAR(191) NOT NULL,
     `summary` TEXT NOT NULL,
@@ -285,6 +287,19 @@ CREATE TABLE `UserPackage` (
     `packagePurchaseId` INTEGER NOT NULL,
 
     UNIQUE INDEX `UserPackage_userId_packagePurchaseId_key`(`userId`, `packagePurchaseId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `PersonalityDescription` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `testTypeId` INTEGER NOT NULL,
+    `type` VARCHAR(191) NOT NULL,
+    `description` TEXT NOT NULL,
+    `suggestions` TEXT NOT NULL,
+    `professions` TEXT NOT NULL,
+
+    UNIQUE INDEX `PersonalityDescription_testTypeId_type_key`(`testTypeId`, `type`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -346,6 +361,12 @@ ALTER TABLE `UserProgress` ADD CONSTRAINT `UserProgress_userId_fkey` FOREIGN KEY
 ALTER TABLE `PreferenceQuestion` ADD CONSTRAINT `PreferenceQuestion_testTypeId_fkey` FOREIGN KEY (`testTypeId`) REFERENCES `TestType`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `PersonalityResult` ADD CONSTRAINT `PersonalityResult_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `PersonalityResult` ADD CONSTRAINT `PersonalityResult_testTypeId_fkey` FOREIGN KEY (`testTypeId`) REFERENCES `TestType`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `PersonalityResult` ADD CONSTRAINT `PersonalityResult_attemptId_fkey` FOREIGN KEY (`attemptId`) REFERENCES `TestAttempt`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -368,3 +389,6 @@ ALTER TABLE `UserPackage` ADD CONSTRAINT `UserPackage_userId_fkey` FOREIGN KEY (
 
 -- AddForeignKey
 ALTER TABLE `UserPackage` ADD CONSTRAINT `UserPackage_packagePurchaseId_fkey` FOREIGN KEY (`packagePurchaseId`) REFERENCES `PackagePurchase`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `PersonalityDescription` ADD CONSTRAINT `PersonalityDescription_testTypeId_fkey` FOREIGN KEY (`testTypeId`) REFERENCES `TestType`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

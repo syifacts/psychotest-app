@@ -1,104 +1,37 @@
-// import { prisma } from "../lib/prisma"; // Sesuaikan path jika perlu
-// import { MBTIQuestions } from "./data/MBTI/question";
+import { PrismaClient } from '@prisma/client';
+import { MBTIQuestions } from './data/MBTI/question'; // Pastikan path ini benar
+import { MBTIDescriptions } from './data/MBTI/description';
 
-// /**
-//  * Fungsi ini bertugas untuk mengisi tabel PreferenceQuestion
-//  * dengan data dari file MBTIQuestions.ts.
-//  */
-// async function seedMBTIQuestions() {
-//   console.log("🚀 Memulai proses seeding untuk tabel PreferenceQuestion...");
+const prisma = new PrismaClient();
 
-//   // ---Cari ID dari TestType "MBTI" ---
-//   const mbtiTestType = await prisma.testType.findUnique({
-//     where: { name: "MBTI" },
-//   });
+async function main() {
+  console.log(`🚀 Memulai proses seeding...`);
 
-//   if (!mbtiTestType) {
-//     console.error("❌ TestType 'MBTI' tidak ditemukan. Harap seed TestType terlebih dahulu.");
-//     return;
-//   }
-//   // ---------------------------------------------------
-
-//   // Loop melalui setiap soal yang ada di file data Anda
-//   for (const [index, q] of MBTIQuestions.entries()) {
-//     // Buat kode unik untuk setiap soal, contoh: MBTI-EI-1
-//     const code = `MBTI-${q.dimension}-${index + 1}`;
-
-//     // Gunakan 'upsert' untuk memasukkan data ke model PreferenceQuestion
-//     await prisma.preferenceQuestion.upsert({
-//       where: { code }, // Cari berdasarkan kode unik untuk menghindari duplikasi
-//       update: {},      // Jika sudah ada, jangan lakukan apa-apa
-//       create: {
-//         code: code,
-//         testTypeId: mbtiTestType.id, // <-- Tambahkan ini
-//         dimension: q.dimension,
-//         content: q.content,
-//         options: q.options,
-//       },
-//     });
-//   }
-
-//   console.log(`✅ ${MBTIQuestions.length} soal MBTI berhasil dimasukkan ke database!`);
-// }
-
-// // Panggil fungsi seeder untuk dieksekusi
-// seedMBTIQuestions()
-//   .catch((e) => {
-//     console.error("Terjadi error saat menjalankan seeder MBTI:", e);
-//     process.exit(1);
-//   })
-//   .finally(async () => {
-//     await prisma.$disconnect();
-//   });
-
-import { prisma } from "../lib/prisma"; // Sesuaikan path jika perlu
-import { MBTIQuestions } from "./data/MBTI/question";
-
-/**
- * Fungsi ini bertugas untuk mengisi atau memperbarui tabel PreferenceQuestion
- * dengan data dari file MBTIQuestions.ts.
- */
-async function seedMBTIQuestions() {
-  console.log("🚀 Memulai proses seeding untuk tabel PreferenceQuestion...");
-
-  // --- Cari atau Buat TestType "MBTI" untuk mendapatkan ID-nya ---
+  // --- 1. Seed TestType "MBTI" ---
+  console.log(`Seeding TestType...`);
   const mbtiTestType = await prisma.testType.upsert({
     where: { name: "MBTI" },
-    // Jika sudah ada, jangan lakukan apa-apa
     update: {},
-    // Jika belum ada, buat baru
     create: {
       name: "MBTI",
-      desc: "Myers-Briggs Type Indicator",
-      duration: 20, // Estimasi durasi total dalam menit
+      desc: "Myers-Briggs Type Indicator Test",
+      duration: 20, // durasi dalam menit
     },
   });
+  console.log(`✅ TestType 'MBTI' berhasil dibuat/ditemukan.`);
 
-  if (!mbtiTestType) {
-    console.error("❌ Gagal membuat atau menemukan TestType 'MBTI'.");
-    return;
-  }
-  // ---------------------------------------------------
-
-  // Loop melalui setiap soal yang ada di file data Anda
+  // --- 2. Seed Soal-soal MBTI (PreferenceQuestion) ---
+  console.log(`Seeding PreferenceQuestions...`);
   for (const [index, q] of MBTIQuestions.entries()) {
-    // Buat kode unik untuk setiap soal, contoh: MBTI-EI-1
     const code = `MBTI-${q.dimension}-${index + 1}`;
-
-    // Gunakan 'upsert' untuk memasukkan atau memperbarui data
     await prisma.preferenceQuestion.upsert({
-      where: { code }, // Cari berdasarkan kode unik
-
-      // ✅ PERUBAHAN UTAMA: Tambahkan data di dalam 'update'
-      // Jika soal sudah ada, pastikan datanya sesuai dengan file terbaru.
+      where: { code },
       update: {
         testTypeId: mbtiTestType.id,
         dimension: q.dimension,
         content: q.content,
         options: q.options,
       },
-      
-      // Jika soal belum ada, buat data baru.
       create: {
         code: code,
         testTypeId: mbtiTestType.id,
@@ -108,16 +41,34 @@ async function seedMBTIQuestions() {
       },
     });
   }
+  console.log(`✅ ${MBTIQuestions.length} soal MBTI berhasil di-seed.`);
 
-  console.log(`✅ ${MBTIQuestions.length} soal MBTI berhasil di-seed/diperbarui!`);
+  // --- 3. Seed Deskripsi Tipe MBTI (PersonalityDescription) ---
+  console.log(`Seeding PersonalityDescriptions...`);
+  for (const data of MBTIDescriptions) {
+    await prisma.personalityDescription.upsert({
+      where: { testTypeId_type: { testTypeId: mbtiTestType.id, type: data.type } },
+      update: {},
+      create: {
+        testTypeId: mbtiTestType.id,
+        type: data.type,
+        description: data.description,
+        suggestions: data.suggestions,
+        professions: data.professions,
+      },
+    });
+  }
+  console.log(`✅ ${MBTIDescriptions.length} deskripsi tipe MBTI berhasil di-seed.`);
+  
+  console.log(`Seeding finished.`);
 }
 
-// Panggil fungsi seeder untuk dieksekusi
-seedMBTIQuestions()
+main()
   .catch((e) => {
-    console.error("Terjadi error saat menjalankan seeder MBTI:", e);
+    console.error("Terjadi error saat menjalankan seeder:", e);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
   });
+
