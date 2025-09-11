@@ -33,21 +33,18 @@ export default function DashboardPsikolog() {
 
   // Fetch reports
   useEffect(() => {
-    const fetchReports = async () => {
-      setIsLoading(true);
-      try {
-        const url =
-          tab === "pending"
-            ? "/api/reports/pending"
-            : "/api/reports/history";
-        const res = await axios.get(url);
-        setReports(res.data);
-      } catch (err) {
-        console.error("Error fetching reports:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+   const fetchReports = async () => {
+  setIsLoading(true);
+  try {
+    const url = tab === "pending" ? "/api/reports/pending" : "/api/reports/history";
+    const res = await axios.get(url, { headers: { "x-user-id": userId! } });
+    setReports(res.data);
+  } catch (err) {
+    console.error("Error fetching reports:", err);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
     fetchReports();
   }, [tab]);
