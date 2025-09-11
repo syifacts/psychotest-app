@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
         ttd: ttd ?? result.ttd,
         barcode: barcodeId,
         expiresAt: expiry,
+        isCompleted: true,
       },
     });
 
