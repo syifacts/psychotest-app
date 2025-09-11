@@ -19,8 +19,11 @@ export const ISTQuestions = [
     options: [], 
     answerScores: [  
       { keyword: "Alat Indera", score: 2 },
+      { keyword: "Alat Indra", score: 2 },
       { keyword: "Indera", score: 2 },
+      { keyword: "Indra", score: 2 },
       { keyword: "Panca Indera", score: 2 },
+      { keyword: "Panca Indra", score: 2 },
       { keyword: "Organ", score: 1 },
       { keyword: "Alat Tubuh", score: 1 },
       { keyword: "Kepala", score: 0 },

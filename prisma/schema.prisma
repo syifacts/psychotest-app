@@ -44,6 +44,7 @@ model User {
   phone     String?
   address   String?
   profileImage String?
+  tujuan      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -111,7 +112,7 @@ model Question {
   subTestId    Int?
   testTypeId   Int
   code         String   @unique
-  content      String?
+  content String? @db.Text
   options      Json?
   type         String
   answer       Json?
@@ -200,7 +201,11 @@ model Result {
   jumlahbenar   Int?
   scoreiq       Int?
   keteranganiqCPMI String?
-  url           String?
+  aspekSTK         Json?
+  url           String? @db.Text 
+  kesimpulan  String? @db.Text
+  ttd         String? @db.Text
+  summaryTemplateId Int?
   // jumlah jawaban
   jumlahA       Int? // jumlah jawaban A
   jumlahB       Int? // jumlah jawaban B
@@ -242,21 +247,37 @@ model Result {
   hasilE        String?
 
   // Validasi psikolog
-  barcode       String?
+  barcode String? @unique @db.VarChar(30)
   validated     Boolean  @default(false)
   validatedById Int?
   validatedAt   DateTime?
   expiresAt     DateTime?
+  //validationNotes?  String? @db.Text
   isCompleted   Boolean  @default(false)
   createdAt     DateTime @default(now())
   User          User     @relation(fields: [userId], references: [id])
   Attempt       TestAttempt @relation(fields: [attemptId], references: [id])
   TestType      TestType @relation(fields: [testTypeId], references: [id])
   ValidatedBy   User?    @relation("ValidatedResults", fields: [validatedById], references: [id])
+  summaryTemplate   SummaryTemplate? @relation(fields: [summaryTemplateId], references: [id])
 
 
   @@unique([attemptId, testTypeId])
 }
+
+model SummaryTemplate {
+  id         Int      @id @default(autoincrement())
+  testTypeId Int      // hubung ke tipe tes (misal CPMI, Tes IQ lain)
+  minScore   Int?      // skor minimal untuk template ini
+  maxScore   Int?      // skor maksimal untuk template ini
+  template String  @db.Text   // teks kesimpulan
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relasi ke Result
+  results Result[]
+}
+
 
 model NormaResult {
   id  Int @id @default(autoincrement())

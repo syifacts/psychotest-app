@@ -97,12 +97,23 @@ export async function POST(req: NextRequest) {
     });
     if (!subtestEntity) return NextResponse.json({ error: "Subtest tidak ditemukan" }, { status: 400 });
 
+    // ===== Tambahan: Kategori SW =====
+function swCategory(sw: number): string {
+  if (sw <= 80) return "Sangat Rendah";
+  if (sw <= 94) return "Rendah";
+  if (sw <= 99) return "Sedang";
+  if (sw <= 104) return "Cukup";
+  if (sw <= 118) return "Tinggi";
+  return "Sangat Tinggi";
+}
+
     // Simpan subtestResult
     await prisma.subtestResult.upsert({
-      where: { attemptId_subTestId: { attemptId: attempt.id, subTestId: subtestEntity.id } },
-      update: { rw, sw, isCompleted: true },
-      create: { attemptId: attempt.id, subTestId: subtestEntity.id, rw, sw, isCompleted: true },
-    });
+  where: { attemptId_subTestId: { attemptId: attempt.id, subTestId: subtestEntity.id } },
+  update: { rw, sw, kategori: swCategory(sw), isCompleted: true },
+  create: { attemptId: attempt.id, subTestId: subtestEntity.id, rw, sw, kategori: swCategory(sw), isCompleted: true },
+});
+
 
     // Cek semua subtest selesai
     const subTestResults = await prisma.subtestResult.findMany({ where: { attemptId: attempt.id } });

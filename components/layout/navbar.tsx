@@ -7,26 +7,54 @@ import { useRouter, usePathname } from "next/navigation";
 
 const Navbar = () => {
   const router = useRouter();
-  const pathname = usePathname(); // dapatkan route saat ini
+  const pathname = usePathname();
 
-  // Simulasi state login
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    setIsLoggedIn(!!token);
+    const user = localStorage.getItem("user");
+    if (token && user) {
+      setIsLoggedIn(true);
+      setRole(JSON.parse(user).role);
+    } else {
+      setIsLoggedIn(false);
+      setRole(null);
+    }
   }, []);
 
-  const handleLogin = () => {
-    router.push("/login");
-  };
+  const handleLogin = () => router.push("/login");
+  const handleSignup = () => router.push("/register");
 
-  const handleSignup = () => {
-    router.push("/register");
-  };
-
-  // cek apakah halaman saat ini adalah login, register, atau account
   const hideSearch = ["/login", "/register", "/account"].includes(pathname);
+
+  // Config menu per role
+  const menuConfig: Record<string, { href: string; label: string }[]> = {
+    GUEST: [
+      { href: "/", label: "Beranda" },
+      { href: "/dashboard", label: "Layanan Tes" },
+    ],
+    USER: [
+      { href: "/", label: "Beranda" },
+      { href: "/dashboard", label: "Layanan Tes" },
+      { href: "/account", label: "Akun" },
+    ],
+    PSIKOLOG: [
+      //{ href: "/", label: "Beranda" },
+      { href: "/psikolog/dashboard", label: "List Tes" },
+      { href: "/account", label: "Akun" },
+    ],
+    SUPERADMIN: [
+      { href: "/", label: "Beranda" },
+      { href: "/admin", label: "Dashboard Admin" },
+      { href: "/account", label: "Akun" },
+    ],
+  };
+
+  const currentMenu = isLoggedIn
+    ? menuConfig[role ?? "USER"]
+    : menuConfig["GUEST"];
 
   return (
     <>
@@ -36,7 +64,7 @@ const Navbar = () => {
             <Image src="/logoklinik.png" alt="Logo Klinik" width={80} height={40} />
             <h1>Klinik Yuliarpan Medika</h1>
           </div>
-          {!hideSearch && (
+          {!hideSearch && role !== "PSIKOLOG" && (
             <div className="search">
               <input type="text" placeholder="Cari tes..." />
             </div>
@@ -44,26 +72,21 @@ const Navbar = () => {
         </div>
 
         <div className="right">
-  <nav className="nav-links">
-    <Link href="/" legacyBehavior>
-      <a>Beranda</a>
-    </Link>
-    <Link href="/dashboard" legacyBehavior>
-      <a>Layanan Tes</a>
-    </Link>
-    {isLoggedIn ? (
-      <Link href="/account" legacyBehavior>
-        <a>Akun</a>
-      </Link>
-    ) : (
-      <div className="auth">
-        <button className="login" onClick={handleLogin}>Login</button>
-        <button className="signup" onClick={handleSignup}>Sign Up</button>
-      </div>
-    )}
-  </nav>
-</div>
+          <nav className="nav-links">
+            {currentMenu.map((item) => (
+              <Link key={item.href} href={item.href} legacyBehavior>
+                <a>{item.label}</a>
+              </Link>
+            ))}
 
+            {!isLoggedIn && (
+              <div className="auth">
+                <button className="login" onClick={handleLogin}>Login</button>
+                <button className="signup" onClick={handleSignup}>Sign Up</button>
+              </div>
+            )}
+          </nav>
+        </div>
       </header>
       <style jsx>{`
         .header {
