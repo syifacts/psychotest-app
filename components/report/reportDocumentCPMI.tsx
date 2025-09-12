@@ -72,7 +72,7 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, ttd, b
 
   useEffect(() => {
     if (barcode) {
-      const url = ` ${process.env.NEXT_PUBLIC_BASE_URL}${barcode}`;
+      const url = ` ${process.env.NEXT_PUBLIC_BASE_URL}/validate/${barcode}`;
       QRCode.toDataURL(url)
         .then(setQrCodeBase64)
         .catch((err) => console.error("QR generation error:", err));

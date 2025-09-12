@@ -1,19 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET!;
+
+async function getLoggedUserId(req: NextRequest) {
+  try {
+    const token = req.cookies.get("token")?.value;
+    if (!token) return null;
+
+    const payload: any = jwt.verify(token, JWT_SECRET);
+    return payload.id; // pastikan sesuai key di JWT-mu
+  } catch (err) {
+    console.error("JWT error:", err);
+    return null;
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
-    const userIdHeader = req.headers.get("x-user-id");
-    if (!userIdHeader) {
+    const userId = await getLoggedUserId(req);
+    if (!userId) {
       return NextResponse.json({ error: "User ID tidak ditemukan" }, { status: 401 });
     }
-    const userId = parseInt(userIdHeader);
 
-    // Ambil hanya hasil yang divalidasi oleh psikolog ini
     const reports = await prisma.result.findMany({
       where: {
         validated: true,
-        validatedById: userId, // Hanya result yang divalidasi oleh psikolog ini
+        validatedById: userId,
       },
       include: {
         Attempt: {
@@ -29,7 +43,6 @@ export async function GET(req: NextRequest) {
       orderBy: { validatedAt: "desc" },
     });
 
-    // Format supaya sesuai frontend
     const formattedReports = reports.map((r) => ({
       id: r.id,
       User: r.Attempt?.User,

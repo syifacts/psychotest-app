@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import styles from "./cpmi.module.css";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CPMIIntro from "../../../components/CPMI/CPMIIntro";
 
@@ -16,10 +15,18 @@ interface Question {
 
 type AnswerPayload = {
   questionId: number;
+  questionCode?: string;
   choice: string;
 };
 
 const CPMIPage = () => {
+  const router = useRouter();
+
+  const [user, setUser] = useState<{ id: number; role: "USER" | "PERUSAHAAN" } | null>(null);
+  const [role, setRole] = useState<"USER" | "PERUSAHAAN">("USER");
+  const [testInfo, setTestInfo] = useState<{ id: number; name: string; duration: number; price: number | null } | null>(null);
+  const [hasAccess, setHasAccess] = useState(false);
+
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(false);
@@ -30,42 +37,43 @@ const CPMIPage = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30 * 60);
 
-  const [testInfo, setTestInfo] = useState<{ id: number; name: string; duration: number; price: number | null } | null>(null);
-  const [hasAccess, setHasAccess] = useState(false);
-
   const [attemptId, setAttemptId] = useState<number | null>(null);
 
-  const [role, setRole] = useState<"USER" | "PERUSAHAAN">("USER"); // ✅ state untuk role
-
-  const router = useRouter();
-
   // -------------------------
-  // Fetch CPMI Test Info + Role user
+  // Ambil user & test info dari server
   // -------------------------
   useEffect(() => {
-    const fetchInfo = async () => {
+    const fetchUserAndTest = async () => {
       try {
-        const res = await fetch("/api/tes/info?type=CPMI");
-        const data = await res.json();
-        setTestInfo(data);
-
-        const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-        if (savedUser.id) {
-          // ✅ Simpan role user dari localStorage
-          if (savedUser.role === "PERUSAHAAN") {
-            setRole("PERUSAHAAN");
-          }
-
-          const accessRes = await fetch(`/api/tes/check-access?userId=${savedUser.id}&type=CPMI`);
-          const accessData = await accessRes.json();
-          setHasAccess(accessData.access);
+        // fetch user
+        const userRes = await fetch("/api/auth/me", { credentials: "include" });
+        if (!userRes.ok) {
+          router.push("/login");
+          return;
         }
+        const userData = await userRes.json();
+        if (!userData.user) {
+          router.push("/login");
+          return;
+        }
+        setUser(userData.user);
+        setRole(userData.user.role === "PERUSAHAAN" ? "PERUSAHAAN" : "USER");
+
+        // fetch test info
+        const testRes = await fetch("/api/tes/info?type=CPMI");
+        const testData = await testRes.json();
+        setTestInfo(testData);
+
+        // cek akses
+        const accessRes = await fetch(`/api/tes/check-access?userId=${userData.user.id}&type=CPMI`);
+        const accessData = await accessRes.json();
+        setHasAccess(accessData.access);
       } catch (err) {
-        console.error("Gagal fetch info CPMI:", err);
+        console.error("Gagal fetch user/test info CPMI:", err);
       }
     };
-    fetchInfo();
-  }, []);
+    fetchUserAndTest();
+  }, [router]);
 
   // -------------------------
   // Load CPMI Questions
@@ -73,7 +81,7 @@ const CPMIPage = () => {
   const loadQuestions = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/tes?type=CPMI`);
+      const res = await fetch(`/api/tes?type=CPMI`, { credentials: "include" });
       const data = await res.json();
       const qList: Question[] = Array.isArray(data) ? data : data.questions;
       setQuestions(qList || []);
@@ -85,9 +93,12 @@ const CPMIPage = () => {
     }
   };
 
+  // -------------------------
+  // Load existing answers
+  // -------------------------
   const loadExistingAnswers = async (attemptId: number) => {
     try {
-      const res = await fetch(`/api/attempts/${attemptId}`);
+      const res = await fetch(`/api/attempts/${attemptId}`, { credentials: "include" });
       const data = await res.json();
 
       if (res.ok && data.attempt?.answers) {
@@ -107,8 +118,7 @@ const CPMIPage = () => {
   // Start Attempt
   // -------------------------
   const startAttempt = async () => {
-    const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    if (!savedUser.id || !testInfo?.id) return;
+    if (!testInfo?.id || !user) return;
 
     localStorage.removeItem("attemptId");
     localStorage.removeItem("endTime");
@@ -122,7 +132,8 @@ const CPMIPage = () => {
       const res = await fetch("/api/attempts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: savedUser.id, testTypeId: testInfo.id }),
+        body: JSON.stringify({ userId: user.id, testTypeId: testInfo.id }),
+        credentials: "include",
       });
 
       const data = await res.json();
@@ -170,24 +181,24 @@ const CPMIPage = () => {
   }, [showQuestions]);
 
   // -------------------------
-  // Save answer
+  // Select Answer
   // -------------------------
   const handleSelectAnswer = async (qid: number, choice: string) => {
     setAnswers((prev) => ({ ...prev, [qid]: choice }));
 
-    try {
-      const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-      if (!savedUser.id || !attemptId) return;
+    if (!user || !attemptId) return;
 
+    try {
       await fetch("/api/tes/save-answers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: savedUser.id,
+          userId: user.id,
           attemptId,
           questionCode: questions.find((q) => q.id === qid)?.code,
           choice,
         }),
+        credentials: "include",
       });
     } catch (err) {
       console.error("❌ Gagal simpan jawaban:", err);
@@ -195,13 +206,12 @@ const CPMIPage = () => {
   };
 
   // -------------------------
-  // Submit
+  // Submit Test
   // -------------------------
   const handleSubmit = async () => {
-    try {
-      const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-      if (!savedUser.id || !attemptId) return;
+    if (!user || !attemptId) return;
 
+    try {
       const payload: AnswerPayload[] = Object.entries(answers).map(([qid, choice]) => {
         const q = questions.find((q) => q.id === Number(qid));
         return { questionId: Number(qid), questionCode: q?.code, choice };
@@ -210,12 +220,12 @@ const CPMIPage = () => {
       const res = await fetch("/api/tes/submit-cpmi", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: savedUser.id, type: "CPMI", attemptId, answers: payload }),
+        body: JSON.stringify({ userId: user.id, type: "CPMI", attemptId, answers: payload }),
+        credentials: "include",
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal submit CPMI");
-      const aspekScores = data.aspek;
 
       localStorage.removeItem("attemptId");
       localStorage.removeItem("endTime");
@@ -231,23 +241,21 @@ const CPMIPage = () => {
     }
   };
 
-  const currentQuestion = questions[currentIndex];
-  const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
-
   // -------------------------
   // Restore attempt on refresh
   // -------------------------
   useEffect(() => {
     const restoreAttempt = async () => {
-      const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      if (!user) return;
+
       const savedAttemptId = localStorage.getItem("attemptId");
       const savedIndex = localStorage.getItem("currentIndex");
       const savedEnd = localStorage.getItem("endTime");
 
-      if (!savedUser.id || !savedAttemptId) return;
+      if (!savedAttemptId) return;
 
       try {
-        const res = await fetch(`/api/attempts/${savedAttemptId}`);
+        const res = await fetch(`/api/attempts/${savedAttemptId}`, { credentials: "include" });
         const data = await res.json();
 
         if (!res.ok || data.attempt?.isCompleted) {
@@ -286,9 +294,8 @@ const CPMIPage = () => {
         setHasAccess(false);
       }
     };
-
     restoreAttempt();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (attemptId && questions.length > 0) loadExistingAnswers(attemptId);
@@ -296,10 +303,13 @@ const CPMIPage = () => {
 
   useEffect(() => localStorage.setItem("currentIndex", currentIndex.toString()), [currentIndex]);
 
+  const currentQuestion = questions[currentIndex];
+  const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+
   // -------------------------
   // Render
   // -------------------------
-   if (showIntro) {
+  if (showIntro) {
     return (
       <CPMIIntro
         testInfo={testInfo}
@@ -310,7 +320,7 @@ const CPMIPage = () => {
           setShowIntro(false);
           setShowQuestions(true);
         }}
-        role={role} // ✅ kirim role ke intro
+        role={role}
       />
     );
   }

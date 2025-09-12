@@ -9,19 +9,34 @@ const Navbar = () => {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [role, setRole] = useState<string | null>(null);
+  const [role, setRole] = useState<string>("GUEST");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const user = localStorage.getItem("user");
-    if (token && user) {
-      setIsLoggedIn(true);
-      setRole(JSON.parse(user).role);
-    } else {
-      setIsLoggedIn(false);
-      setRole(null);
-    }
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("/api/auth/me", {
+          credentials: "include", // ⬅️ wajib biar cookie terkirim
+        });
+        if (!res.ok) {
+          setRole("GUEST");
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        if (data.user) {
+          setRole(data.user.role || "USER");
+        } else {
+          setRole("GUEST");
+        }
+      } catch (err) {
+        setRole("GUEST");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
   }, []);
 
   const handleLogin = () => router.push("/login");
@@ -58,43 +73,43 @@ const Navbar = () => {
     ],
   };
 
-  // Pilih menu berdasarkan role, fallback ke GUEST jika undefined
-  const currentMenu = isLoggedIn
-    ? menuConfig[role ?? "GUEST"] || menuConfig["GUEST"]
-    : menuConfig["GUEST"];
+  const currentMenu = menuConfig[role] || menuConfig["GUEST"];
 
   return (
-    <>
-      <header className="header">
-        <div className="left">
-          <div className="logo">
-            <Image src="/logoklinik.png" alt="Logo Klinik" width={80} height={40} />
-            <h1>Klinik Yuliarpan Medika</h1>
-          </div>
-          {!hideSearch && role !== "PSIKOLOG" && (
-            <div className="search">
-              <input type="text" placeholder="Cari tes..." />
-            </div>
-          )}
+    <header className="header">
+      <div className="left">
+        <div className="logo">
+          <Image src="/logoklinik.png" alt="Logo Klinik" width={80} height={40} />
+          <h1>Klinik Yuliarpan Medika</h1>
         </div>
+        {!hideSearch && role !== "PSIKOLOG" && (
+          <div className="search">
+            <input type="text" placeholder="Cari tes..." />
+          </div>
+        )}
+      </div>
 
-        <div className="right">
-          <nav className="nav-links">
-            {currentMenu?.map((item) => (
+      <div className="right">
+        <nav className="nav-links">
+          {!loading &&
+            currentMenu?.map((item) => (
               <Link key={item.href} href={item.href} legacyBehavior>
                 <a className={pathname === item.href ? "active" : ""}>{item.label}</a>
               </Link>
             ))}
 
-            {!isLoggedIn && (
-              <div className="auth">
-                <button className="login" onClick={handleLogin}>Login</button>
-                <button className="signup" onClick={handleSignup}>Sign Up</button>
-              </div>
-            )}
-          </nav>
-        </div>
-      </header>
+          {role === "GUEST" && !loading && (
+            <div className="auth">
+              <button className="login" onClick={handleLogin}>
+                Login
+              </button>
+              <button className="signup" onClick={handleSignup}>
+                Sign Up
+              </button>
+            </div>
+          )}
+        </nav>
+      </div>
 
       <style jsx>{`
         .header {
@@ -121,7 +136,7 @@ const Navbar = () => {
           display: flex;
           align-items: center;
           gap: 50px;
-          margin-right:70px;
+          margin-right: 70px;
         }
 
         .logo {
@@ -133,7 +148,7 @@ const Navbar = () => {
         .logo h1 {
           font-size: 17px;
           font-weight: bold;
-          font-family: 'Poppins', sans-serif;
+          font-family: "Poppins", sans-serif;
         }
 
         .search input {
@@ -149,7 +164,7 @@ const Navbar = () => {
           display: flex;
           gap: 40px;
           align-items: center;
-          font-size : 1.2rem;
+          font-size: 1.2rem;
         }
 
         .nav-links a {
@@ -210,7 +225,8 @@ const Navbar = () => {
             align-items: stretch;
           }
 
-          .left, .right {
+          .left,
+          .right {
             justify-content: center;
             width: 100%;
           }
@@ -228,7 +244,7 @@ const Navbar = () => {
           }
         }
       `}</style>
-    </>
+    </header>
   );
 };
 

@@ -1,124 +1,122 @@
 export const ISTQuestions = [
   {
-    content: "Menemukan : menghilangkan = Mengingat : ? ",
-      type : "single"  as const,
-    options: ["a) menghapal", "b) mengenai", "c) melupakan", "d) berpikir","e) memimpikan"],
-    answer: "c) melupakan"
+    content: "Menemukan : menghilangkan = Mengingat : ?",
+    type: "single" as const,
+    options: ["menghapal", "mengenai", "melupakan", "berpikir", "memimpikan"],
+    answer: "C"
   },
   {
     content: "Bunga : jambangan = Burung : ?",
-      type : "single"  as const,
-    options: ["a) sarang", "b) langit", "c) pagar", "d) pohon", "e) sangkar"],
-    answer: "e) sangkar"
+    type: "single" as const,
+    options: ["sarang", "langit", "pagar", "pohon", "sangkar"],
+    answer: "E"
   },
   {
     content: "Kereta api : rel = Otobis : ?",
-      type : "single"  as const,
-    options: ["a)	roda",	"b) poros",	"c) ban",	"d) jalan raya", "e) kecepatan"],
-    answer: "d) jalan raya"
+    type: "single" as const,
+    options: ["roda", "poros", "ban", "jalan raya", "kecepatan"],
+    answer: "D"
   },
   {
     content: "Perak : emas = Cincin : ?",
-      type : "single"  as const,
-    options: ["a) arloji", "b) berlian", "c) permata", "d) gelang","e) platina"],
-    answer: "d) gelang"
+    type: "single" as const,
+    options: ["arloji", "berlian", "permata", "gelang", "platina"],
+    answer: "D"
   },
   {
     content: "Lingkaran : bola = Bujur sangkar : ?",
-      type : "single"  as const,
-    options: ["a) bentuk", "b) gambar", "c) segi empat", "d) kubus", "e) piramida"],
-    answer: "d) kubus"
+    type: "single" as const,
+    options: ["bentuk", "gambar", "segi empat", "kubus", "piramida"],
+    answer: "D"
   },
   {
     content: "Saran : kepustakaan = Merundingkan : ?",
-      type : "single"  as const,
-    options: ["a) menawarkan", "b) menentukan", "c) menilai", "d) menimbang","e) merenungkan"],
-    answer: "b) menentukan"
+    type: "single" as const,
+    options: ["menawarkan", "menentukan", "menilai", "menimbang", "merenungkan"],
+    answer: "B"
   },
   {
     content: "Lidah : asam = Hidung : ?",
-      type : "single"  as const,
-    options: ["a) mencium", "b) bernapas", "c) mengecap", "d) tengik","e) asin"],
-    answer: "d) tengik"
+    type: "single" as const,
+    options: ["mencium", "bernapas", "mengecap", "tengik", "asin"],
+    answer: "D"
   },
   {
-    content: "Darah : pembuluh = Air : ? ",
-      type : "single"  as const,
-    options: ["a) pintu air", "b) sungai", "c) talang", "d) hujan","e) ember"],
-    answer: "a) pintu air"
+    content: "Darah : pembuluh = Air : ?",
+    type: "single" as const,
+    options: ["pintu air", "sungai", "talang", "hujan", "ember"],
+    answer: "A"
   },
   {
     content: "Saraf : penyalur = Pupil : ?",
-      type : "single"  as const,
-    options: ["a) penyinaran", "b) mata", "c) melihat", "d) cahaya","e) pelindung"],
-    answer: "e) pelindung"
+    type: "single" as const,
+    options: ["penyinaran", "mata", "melihat", "cahaya", "pelindung"],
+    answer: "E"
   },
   {
     content: "Pengantar surat : pengantar telegram = Pandai besi : ?",
-      type : "single"  as const,
-    options: ["a) palu godam", "b) pedagang besi", "c) api", "d) tukang emas","e) besi tempa"],
-    answer: "d) tukang emas"
+    type: "single" as const,
+    options: ["palugodam", "pedagang besi", "api", "tukang emas", "besi tempa"],
+    answer: "D"
   },
   {
     content: "Buta : warna = Tuli : ?",
-      type : "single"  as const,
-    options: ["a) pendengaran", "b) mendengar", "c) nada", "d) kata","e) telinga"],
-    answer: "c) nada"
+    type: "single" as const,
+    options: ["pendengaran", "mendengar", "nada", "kata", "telinga"],
+    answer: "C"
   },
   {
     content: "Makanan : bumbu = Ceramah : ?",
-      type : "single"  as const,
-    options: ["a) penghinaan", "b) pidato", "c) kelakar", "d) kesan","e) ayat"],
-    answer: "c) kelakar"
+    type: "single" as const,
+    options: ["penghinaan", "pidato", "kelakar", "kesan", "ayat"],
+    answer: "C"
   },
   {
     content: "Marah : emosi = Duka cita : ?",
-      type : "single"  as const,
-    options: ["a) suka cita", "b) sakit hati", "c) suasana hati", "d) sedih","e) rindu"],
-    answer: "c) suasana hati"
+    type: "single" as const,
+    options: ["suka cita", "sakit hati", "suasana hati", "sedih", "rindu"],
+    answer: "C"
   },
   {
     content: "Mantel : jubah = Wool : ?",
-      type : "single"  as const,
-    options: ["a) bahan sandang", "b) domba", "c) sutra", "d) jas","e) tekstil"],
-    answer: "c) sutra"
+    type: "single" as const,
+    options: ["bahan sandang", "domba", "sutra", "jas", "tekstil"],
+    answer: "C"
   },
   {
     content: "Ketinggian puncak : tekanan udara = ketinggian nada : ?",
-      type : "single"  as const,
-    options: ["a) garpu tala", "b) sopran", "c) nyanyian", "d) panjang senar","e) suara"],
-    answer: "d) panjang senar"
+    type: "single" as const,
+    options: ["garpu tala", "sopran", "nyanyian", "panjang senar", "suara"],
+    answer: "D"
   },
   {
     content: "Negara : revolusi = Hidup : ?",
-      type : "single"  as const,
-    options: ["a) biologi", "b) keturunan", "c) mutasi", "d) seleksi","e) ilmu hewan"],
-    answer: "c) mutasi"
+    type: "single" as const,
+    options: ["biologi", "keturunan", "mutasi", "seleksi", "ilmu hewan"],
+    answer: "C"
   },
   {
     content: "Kekurangan : penemuan = Panas : ?",
-      type : "single"  as const,
-    options: ["a) haus", "b) khatulistiwa", "c) es", "d) matahari","e) dingin"],
-    answer: "c) es"
+    type: "single" as const,
+    options: ["haus", "khatulistiwa", "es", "matahari", "dingin"],
+    answer: "C"
   },
   {
     content: "Kayu : diketam = Besi : ?",
-      type : "single"  as const,
-    options: ["a) dipalu", "b) digergaji", "c) dituang", "d) dikikir","e) ditempa"],
-    answer: "d) dikikir"
+    type: "single" as const,
+    options: ["dipalu", "digergaji", "dituang", "dikikir", "ditempa"],
+    answer: "D"
   },
   {
     content: "Olahragawan : lembing = Cendekiawan : ?",
-      type : "single"  as const,
-    options: ["a) perpustakaan", "b) penelitian", "c) karya", "d) studi","e) mikroskop"],
-    answer: "e) mikroskop"
+    type: "single" as const,
+    options: ["perpustakaan", "penelitian", "karya", "studi", "mikroskop"],
+    answer: "E"
   },
   {
     content: "Keledai : kuda pacuan = Pembakaran : ?",
-      type : "single"  as const,
-    options: ["a) pemadam api", "b) obor", "c) letupan", "d) korek api","e) lautan api"],
-    answer: "e) lautan api"
+    type: "single" as const,
+    options: ["pemadam api", "obor", "letupan", "korek api", "lautan api"],
+    answer: "E"
   },
-
- 
 ];

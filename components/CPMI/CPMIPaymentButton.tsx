@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styles from "../../app/tes/cpmi/cpmi.module.css";
 
 interface Props {
@@ -11,6 +11,12 @@ interface Props {
   role: "USER" | "PERUSAHAAN";
 }
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
 const CPMIPaymentButton: React.FC<Props> = ({
   hasAccess,
   setHasAccess,
@@ -19,34 +25,57 @@ const CPMIPaymentButton: React.FC<Props> = ({
   role,
 }) => {
   const [quantity, setQuantity] = useState(1);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Ambil user dari API (middleware)
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+        const data = await res.json();
+        if (res.ok) setUser(data.user);
+      } catch (err) {
+        console.error("Gagal fetch user:", err);
+      }
+    };
+    fetchUser();
+  }, []);
 
   const handlePayment = async () => {
-    const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    if (!savedUser.id || !testInfo?.id) return;
+    if (!user?.id || !testInfo?.id) return;
 
-    const payRes = await fetch("/api/payment/start", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: savedUser.id,
-        testTypeId: testInfo.id,
-        quantity: role === "PERUSAHAAN" ? quantity : 1,
-      }),
-    });
+    setLoading(true);
+    try {
+      const payRes = await fetch("/api/payment/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          testTypeId: testInfo.id,
+          quantity: role === "PERUSAHAAN" ? quantity : 1,
+        }),
+      });
 
-    const payData = await payRes.json();
-    if (!payRes.ok || !payData.success) {
-      alert("❌ Pembayaran gagal!");
-      return;
+      const payData = await payRes.json();
+      if (!payRes.ok || !payData.success) {
+        alert("❌ Pembayaran gagal!");
+        return;
+      }
+
+      alert("✅ Pembayaran berhasil! Silakan klik 'Mulai Tes' untuk memulai.");
+      setHasAccess(true);
+    } catch (err) {
+      console.error(err);
+      alert("❌ Terjadi kesalahan saat pembayaran.");
+    } finally {
+      setLoading(false);
     }
-
-    alert("✅ Pembayaran berhasil! Silakan klik 'Mulai Tes' untuk memulai.");
-    setHasAccess(true);
   };
 
   if (hasAccess) {
     return (
-      <button className={styles.btn} onClick={startAttempt}>
+      <button className={styles.btn} onClick={startAttempt} disabled={!user}>
         Mulai Tes
       </button>
     );
@@ -56,7 +85,9 @@ const CPMIPaymentButton: React.FC<Props> = ({
     <div>
       {role === "PERUSAHAAN" && (
         <div style={{ marginBottom: "12px" }}>
-          <label style={{ display: "block", marginBottom: "4px", fontWeight: "500" }}>
+          <label
+            style={{ display: "block", marginBottom: "4px", fontWeight: "500" }}
+          >
             Jumlah Kuantitas
           </label>
           <input
@@ -75,7 +106,7 @@ const CPMIPaymentButton: React.FC<Props> = ({
         </div>
       )}
 
-      <button className={styles.btn} onClick={handlePayment}>
+      <button className={styles.btn} onClick={handlePayment} disabled={!user || loading}>
         {role === "PERUSAHAAN" ? "Beli Tes (dengan Kuantitas)" : "Bayar untuk Ikut Tes"}
       </button>
     </div>

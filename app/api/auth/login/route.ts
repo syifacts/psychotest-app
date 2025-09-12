@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "../../../../lib/prisma";
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
@@ -7,43 +7,49 @@ const JWT_SECRET = process.env.JWT_SECRET || "secretkey";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { email, password } = body;
-
-    if (!email || !password) {
-      return NextResponse.json({ error: "Email dan password harus diisi" }, { status: 400 });
-    }
+    const { email, password } = await req.json();
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return NextResponse.json({ error: "Email atau password salah" }, { status: 401 });
+      return NextResponse.json({ error: "Email tidak ditemukan" }, { status: 401 });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return NextResponse.json({ error: "Email atau password salah" }, { status: 401 });
+      return NextResponse.json({ error: "Password salah" }, { status: 401 });
     }
 
-    const { password: _, ...userWithoutPassword } = user;
-
-    // 🔹 Tambahkan role ke JWT
+    // Buat token JWT
     const token = jwt.sign(
-      {
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role, // <= penting
-      },
+      { id: user.id, email: user.email, fullName: user.fullName, role: user.role, birthDate: user.birthDate?.toISOString(),
+    profileImage: user.profileImage },
       JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "1d" }
     );
 
-    return NextResponse.json(
-      { message: "Login berhasil", user: userWithoutPassword, token },
-      { status: 200 }
-    );
+    // Simpan di cookie HttpOnly
+    const res = NextResponse.json({
+      message: "Login berhasil",
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        birthDate: user.birthDate,
+        role: user.role,
+      },
+    });
+
+    res.cookies.set("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24, // 1 hari
+    });
+
+    return res;
   } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: "Terjadi kesalahan saat login" }, { status: 500 });
+    console.error("Login error:", err);
+    return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });
   }
 }
