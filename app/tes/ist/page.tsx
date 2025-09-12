@@ -254,43 +254,26 @@ setCheckReason(data.reason || "Sudah bayar sendiri");
     }
   };
 
-  const handleStartSubtest = async () => {
+ const handleStartSubtest = async () => {
   if (!currentSubtest || !user || !testInfo) return;
 
   try {
-    // 1️⃣ Buat attempt baru kalau belum ada
-    const attemptRes = await fetch("/api/attempts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: user.id,
-        testTypeId: testInfo.id,
-        // paymentId: ... ambil dari backend berdasarkan pembayaran terakhir
-      }),
-    });
+    // ⚠️ Jangan buat attempt baru, gunakan attempt yang sudah ada
+    await loadQuestions(currentSubtest.name, user.id); // load soal sesuai subtest
 
-    const attempt = await attemptRes.json();
-    if (!attempt.id) throw new Error("Gagal membuat attempt");
-    console.log("Attempt dibuat saat mulai:", attempt);
-
-    // 2️⃣ Jalankan timer & load soal
+    // Atur timer
     setTimeLeft(currentSubtest.durationMinutes * 60);
-    await loadQuestions(currentSubtest.name, user.id);
+
+    // Tampilkan soal
     setShowSubtestDetail(false);
     setShowQuestions(true);
 
-    // 3️⃣ Simpan progress start ke backend
-    const res = await fetch("/api/tes/start", {
+    // Simpan progress start ke backend (optional, untuk tracking waktu)
+    await fetch("/api/tes/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: user.id, subtest: currentSubtest.name }),
     });
-
-    const progress = await res.json();
-    const startTime = new Date(progress.startTime).getTime();
-    const endTime = startTime + currentSubtest.durationMinutes * 60 * 1000;
-    const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
-    setTimeLeft(remaining);
   } catch (err) {
     console.error("❌ handleStartSubtest error:", err);
   }
@@ -342,48 +325,62 @@ setCheckReason(data.reason || "Sudah bayar sendiri");
     }
   };
 
-  const handleSubmit = async () => {
-    if (!user || !currentSubtest) return;
+ const handleSubmit = async () => {
+  if (!user || !currentSubtest) return;
 
-    try {
-      const payload = Object.entries(answers).map(([qid, choice]) => ({
-        questionId: Number(qid),
-        choice: Array.isArray(choice) ? choice.join(",") : choice,
-      }));
+  try {
+    // 1️⃣ Kirim jawaban subtest saat ini
+    const payload = Object.entries(answers).map(([qid, choice]) => ({
+      questionId: Number(qid),
+      choice: Array.isArray(choice) ? choice.join(",") : choice,
+    }));
 
-      const res = await fetch("/api/tes/submit-subtest", {
+    const res = await fetch("/api/tes/submit-subtest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user.id,
+        type: "IST",
+        subtest: currentSubtest.name,
+        answers: payload,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Gagal submit jawaban");
+
+    alert(`✅ Subtest ${currentSubtest.name} selesai!`);
+    setAnswers({});
+    setCurrentIndex(0);
+
+    // 2️⃣ Ambil progress terbaru untuk tahu subtest berikutnya
+    const progressRes = await fetch(`/api/tes/progress?userId=${user.id}&type=IST`);
+    const progress = await progressRes.json();
+
+    if (progress.nextSubtest) {
+      // set subtest berikutnya
+      setCurrentSubtest({
+        name: progress.nextSubtest,
+        description: "Deskripsi subtest...",
+        durationMinutes: progress.durationMinutes || 6,
+      });
+      setShowSubtestDetail(true);
+      setShowQuestions(false);
+    } else {
+      // semua subtest selesai
+      await fetch("/api/tes/submit-finish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, type: "IST", subtest: currentSubtest.name, answers: payload }),
+        body: JSON.stringify({ userId: user.id, type: "IST" }),
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal submit jawaban");
-
-      alert(`✅ Subtest ${currentSubtest.name} selesai!`);
-      setAnswers({});
-      setCurrentIndex(0);
-
-      const progressRes = await fetch(`/api/tes/progress?userId=${user.id}&type=IST`);
-      const progress = await progressRes.json();
-
-      if (progress.nextSubtest) {
-        setCurrentSubtest({ name: progress.nextSubtest, description: "Deskripsi subtest...", durationMinutes: progress.durationMinutes || 6 });
-        setShowSubtestDetail(true);
-        setShowQuestions(false);
-      } else {
-        await fetch("/api/tes/submit-finish", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: user.id, type: "IST" }),
-        });
-        alert("🎉 Tes IST selesai! Hasil ada di Dashboard.");
-        router.push("/dashboard");
-      }
-    } catch (err: any) {
-      alert(err.message);
+      alert("🎉 Tes IST selesai! Hasil ada di Dashboard.");
+      router.push("/dashboard");
     }
-  };
+  } catch (err: any) {
+    alert(err.message);
+  }
+};
+
 
 // -------------------------
 // Render
