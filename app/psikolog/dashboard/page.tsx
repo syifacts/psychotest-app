@@ -20,27 +20,40 @@ export default function DashboardPsikolog() {
   const [userId, setUserId] = useState<number | null>(null);
   const router = useRouter();
 
-  // Ambil userId dari localStorage
+  // Ambil user dari server via cookie
   useEffect(() => {
-    const user = localStorage.getItem("user");
-    if (user) {
-      const parsed = JSON.parse(user);
-      setUserId(parsed.id);
-    } else {
-      console.error("User belum login");
-    }
-  }, []);
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+        if (!res.ok) {
+          router.push("/login");
+          return;
+        }
+        const data = await res.json();
+        if (data.user) {
+          setUserId(data.user.id);
+        } else {
+          router.push("/login");
+        }
+      } catch (err) {
+        console.error("Error fetching user:", err);
+        router.push("/login");
+      }
+    };
 
-  // Fetch reports
+    fetchUser();
+  }, [router]);
+
+  // Fetch reports ketika tab atau userId berubah
   useEffect(() => {
+    if (!userId) return;
+
     const fetchReports = async () => {
       setIsLoading(true);
       try {
-        const url =
-          tab === "pending"
-            ? "/api/reports/pending"
-            : "/api/reports/history";
-        const res = await axios.get(url);
+        const url = tab === "pending" ? "/api/reports/pending" : "/api/reports/history";
+        // Tidak perlu x-user-id jika backend bisa ambil dari token
+        const res = await axios.get(url, { withCredentials: true });
         setReports(res.data);
       } catch (err) {
         console.error("Error fetching reports:", err);
@@ -50,7 +63,7 @@ export default function DashboardPsikolog() {
     };
 
     fetchReports();
-  }, [tab]);
+  }, [tab, userId]);
 
   const handlePreviewPDF = (report: Report) => {
     const attemptId = report.Attempt?.id;
@@ -59,23 +72,17 @@ export default function DashboardPsikolog() {
   };
 
   const handleValidasi = async (reportId: number) => {
-    if (!userId) {
-      console.error("User belum login");
-      return;
-    }
+    if (!userId) return;
 
     try {
       await axios.post(
         `/api/reports/validate`,
         { reportId },
-        { headers: { "x-user-id": userId } }
+        { withCredentials: true }
       );
 
-      // Update state lokal
       setReports((prev) =>
-        prev.map((r) =>
-          r.id === reportId ? { ...r, validated: true } : r
-        )
+        prev.map((r) => (r.id === reportId ? { ...r, validated: true } : r))
       );
     } catch (err) {
       console.error("Error validating report:", err);
@@ -124,50 +131,48 @@ export default function DashboardPsikolog() {
               </tr>
             </thead>
             <tbody>
-              {reports.map((report) => (
-                <tr key={report.id} className="text-center">
-                  <td className="p-2 border">{report.User?.fullName || "—"}</td>
-                  <td className="p-2 border">{report.TestType?.name || "—"}</td>
-                  <td className="p-2 border">
-                    {report.Attempt?.startedAt
-                      ? new Date(report.Attempt.startedAt).toLocaleDateString()
-                      : "—"}
-                  </td>
-                  <td className="p-2 border">
-                    {report.validated ? "Sudah Validasi" : "Belum Validasi"}
-                  </td>
-
-                  {/* Preview PDF hanya muncul di tab pending */}
-                  {tab === "pending" && (
+              {reports.length > 0 ? (
+                reports.map((report) => (
+                  <tr key={report.id} className="text-center">
+                    <td className="p-2 border">{report.User?.fullName || "—"}</td>
+                    <td className="p-2 border">{report.TestType?.name || "—"}</td>
                     <td className="p-2 border">
-                      <button
-                        className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                        onClick={() => handlePreviewPDF(report)}
-                        disabled={!report.Attempt?.id}
-                      >
-                        Preview PDF
-                      </button>
+                      {report.Attempt?.startedAt
+                        ? new Date(report.Attempt.startedAt).toLocaleDateString()
+                        : "—"}
                     </td>
-                  )}
-
-                  {/* Validasi hanya muncul di tab pending */}
-                  {tab === "pending" && (
                     <td className="p-2 border">
-                      {!report.validated && report.Attempt?.id ? (
-                        <button
-                          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                          onClick={() => handleValidasi(report.id)}
-                        >
-                          Validasi
-                        </button>
-                      ) : (
-                        "—"
-                      )}
+                      {report.validated ? "Sudah Validasi" : "Belum Validasi"}
                     </td>
-                  )}
-                </tr>
-              ))}
-              {reports.length === 0 && (
+
+                    {tab === "pending" && (
+                      <>
+                        <td className="p-2 border">
+                          <button
+                            className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                            onClick={() => handlePreviewPDF(report)}
+                            disabled={!report.Attempt?.id}
+                          >
+                            Preview PDF
+                          </button>
+                        </td>
+                        <td className="p-2 border">
+                          {!report.validated && report.Attempt?.id ? (
+                            <button
+                              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                              onClick={() => handleValidasi(report.id)}
+                            >
+                              Validasi
+                            </button>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))
+              ) : (
                 <tr>
                   <td
                     colSpan={tab === "pending" ? 6 : 4}

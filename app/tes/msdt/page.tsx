@@ -27,7 +27,7 @@ const TesMSDTPage = () => {
   const [showQuestions, setShowQuestions] = useState(false);
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(30 * 60); // ⏳ FIX 30 menit = 1800 detik
+  const [timeLeft, setTimeLeft] = useState(30 * 60);
 
   const [testInfo, setTestInfo] = useState<{
     id: number;
@@ -38,50 +38,53 @@ const TesMSDTPage = () => {
   const [hasAccess, setHasAccess] = useState(false);
 
   const [attemptId, setAttemptId] = useState<number | null>(null);
+  const [user, setUser] = useState<{ id: number } | null>(null);
 
   const router = useRouter();
 
   // -------------------------
-  // Fetch test info MSDT
+  // Ambil user & test info
   // -------------------------
   useEffect(() => {
-    const fetchInfo = async () => {
+    const fetchUserAndTest = async () => {
       try {
-        const res = await fetch("/api/tes/info?type=MSDT");
-        const data = await res.json();
-        setTestInfo(data);
+        // ambil user
+        const userRes = await fetch("/api/auth/me", { credentials: "include" });
+        if (!userRes.ok) return router.push("/login");
+        const userData = await userRes.json();
+        if (!userData.user) return router.push("/login");
+        setUser(userData.user);
 
-        const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-        if (savedUser.id) {
-          const accessRes = await fetch(
-            `/api/tes/check-access?userId=${savedUser.id}&type=MSDT`
-          );
-          const accessData = await accessRes.json();
-          setHasAccess(accessData.access);
-        }
+        // ambil test info
+        const testRes = await fetch("/api/tes/info?type=MSDT");
+        const testData = await testRes.json();
+        setTestInfo(testData);
+
+        // cek akses
+        const accessRes = await fetch(`/api/tes/check-access?userId=${userData.user.id}&type=MSDT`);
+        const accessData = await accessRes.json();
+        setHasAccess(accessData.access);
+
       } catch (err) {
-        console.error("Gagal fetch info MSDT:", err);
+        console.error(err);
       }
     };
-    fetchInfo();
-  }, []);
+    fetchUserAndTest();
+  }, [router]);
 
   // -------------------------
-  // Load soal MSDT
+  // Load soal
   // -------------------------
   const loadQuestions = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/tes?type=MSDT`);
+      const res = await fetch(`/api/tes?type=MSDT`, { credentials: "include" });
       const data = await res.json();
-
       const qList: Question[] = Array.isArray(data) ? data : data.questions;
       setQuestions(qList || []);
-
-      // ⏳ Set timer ke 30 menit (override)
-      setTimeLeft(30 * 60);
+      setTimeLeft(testInfo?.duration ? testInfo.duration * 60 : 30 * 60);
     } catch (err) {
-      console.error("Gagal load soal MSDT:", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -91,89 +94,177 @@ const TesMSDTPage = () => {
   // Start Attempt
   // -------------------------
   const startAttempt = async () => {
-    const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    if (!savedUser.id || !testInfo?.id) return;
+    if (!user?.id || !testInfo?.id) return;
+
+    localStorage.removeItem("attemptId");
+    localStorage.removeItem("endTime");
+    localStorage.removeItem("currentIndex");
+
+    setAttemptId(null);
+    setAnswers({});
+    setCurrentIndex(0);
+    setTimeLeft(testInfo.duration ? testInfo.duration * 60 : 30 * 60);
 
     try {
       const res = await fetch("/api/attempts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: savedUser.id,
-          testTypeId: testInfo.id,
-        }),
+        body: JSON.stringify({ userId: user.id, testTypeId: testInfo.id }),
+        credentials: "include",
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal memulai attempt");
 
       setAttemptId(data.id);
+      localStorage.setItem("attemptId", data.id.toString());
+
+      const endTime = new Date();
+      endTime.setMinutes(endTime.getMinutes() + (testInfo.duration || 30));
+      localStorage.setItem("endTime", endTime.toISOString());
+
+      localStorage.setItem("currentIndex", "0");
+      await loadQuestions();
     } catch (err) {
-      console.error("Gagal memulai attempt:", err);
+      console.error(err);
     }
   };
+
+  // -------------------------
+  // Restore attempt
+  // -------------------------
+  useEffect(() => {
+    const restoreAttempt = async () => {
+      if (!user) return;
+
+      const savedAttemptId = localStorage.getItem("attemptId");
+      const savedIndex = localStorage.getItem("currentIndex");
+      const savedEnd = localStorage.getItem("endTime");
+
+      if (!savedAttemptId) return;
+
+      try {
+        const res = await fetch(`/api/attempts/${savedAttemptId}`, { credentials: "include" });
+        const data = await res.json();
+
+        if (!res.ok || data.attempt?.isCompleted) {
+          localStorage.removeItem("attemptId");
+          localStorage.removeItem("endTime");
+          localStorage.removeItem("currentIndex");
+          setAttemptId(null);
+          setShowIntro(true);
+          setShowQuestions(false);
+          setHasAccess(false);
+          return;
+        }
+
+        setAttemptId(Number(savedAttemptId));
+        setCurrentIndex(savedIndex ? Number(savedIndex) : 0);
+
+        if (savedEnd) {
+          const endTime = new Date(savedEnd);
+          const diff = Math.max(0, Math.floor((endTime.getTime() - Date.now()) / 1000));
+          setTimeLeft(diff);
+        }
+
+        await loadQuestions();
+        if (data.attempt?.answers) {
+          const mapped: Record<number, string> = {};
+          data.attempt.answers.forEach((a: any) => {
+            const q = questions.find((q) => q.code === a.questionCode);
+            if (q) mapped[q.id] = a.choice;
+          });
+          setAnswers(mapped);
+        }
+
+        setShowIntro(false);
+        setShowQuestions(true);
+      } catch (err) {
+        console.error(err);
+        localStorage.removeItem("attemptId");
+        localStorage.removeItem("endTime");
+        localStorage.removeItem("currentIndex");
+        setAttemptId(null);
+        setShowIntro(true);
+        setShowQuestions(false);
+        setHasAccess(false);
+      }
+    };
+    restoreAttempt();
+  }, [user, questions]);
 
   // -------------------------
   // Timer
   // -------------------------
   useEffect(() => {
     if (!showQuestions) return;
+    const savedEnd = localStorage.getItem("endTime");
+    if (!savedEnd) return;
+
+    const endTime = new Date(savedEnd);
+
     const timer = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) {
-          handleSubmit();
-          clearInterval(timer);
-          return 0;
-        }
-        return t - 1;
-      });
+      const diff = Math.max(0, Math.floor((endTime.getTime() - Date.now()) / 1000));
+      setTimeLeft(diff);
+
+      if (diff <= 0) {
+        handleSubmit();
+        clearInterval(timer);
+      }
     }, 1000);
+
     return () => clearInterval(timer);
   }, [showQuestions]);
 
   // -------------------------
   // Save answer
   // -------------------------
-  const handleSelectAnswer = (qid: number, choice: string) => {
-    setAnswers((prev) => {
-      const newAnswers = { ...prev };
-      if (prev[qid] === choice) {
-        delete newAnswers[qid];
-      } else {
-        newAnswers[qid] = choice;
-      }
-      return newAnswers;
-    });
+  const handleSelectAnswer = async (qid: number, choice: string) => {
+    setAnswers((prev) => ({ ...prev, [qid]: choice }));
+    localStorage.setItem("answers", JSON.stringify({ ...answers, [qid]: choice }));
+
+    if (!user?.id || !attemptId) return;
+    try {
+      await fetch("/api/tes/save-answers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          attemptId,
+          questionCode: questions.find((q) => q.id === qid)?.code,
+          choice,
+        }),
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // -------------------------
-  // Submit
+  // Submit test
   // -------------------------
   const handleSubmit = async () => {
-    try {
-      const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-      if (!savedUser.id || !attemptId) return;
+    if (!user?.id || !attemptId) return;
 
-      const payload: AnswerPayload[] = Object.entries(answers).map(
-        ([qid, choice]) => ({
-          questionId: Number(qid),
-          choice,
-        })
-      );
+    try {
+      const payload: AnswerPayload[] = Object.entries(answers).map(([qid, choice]) => ({
+        questionId: Number(qid),
+        choice,
+      }));
 
       const res = await fetch("/api/tes/submit-msdt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: savedUser.id,
-          type: "MSDT",
-          attemptId,
-          answers: payload,
-        }),
+        body: JSON.stringify({ userId: user.id, type: "MSDT", attemptId, answers: payload }),
+        credentials: "include",
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal submit MSDT");
+
+      localStorage.removeItem("attemptId");
+      localStorage.removeItem("endTime");
+      localStorage.removeItem("currentIndex");
+      localStorage.removeItem("answers");
 
       alert("🎉 Tes MSDT selesai! Hasil bisa dilihat di Dashboard.");
       router.push("/dashboard");
@@ -182,11 +273,11 @@ const TesMSDTPage = () => {
     }
   };
 
+  useEffect(() => localStorage.setItem("currentIndex", currentIndex.toString()), [currentIndex]);
+
   const currentQuestion = questions[currentIndex];
   const formatTime = (s: number) =>
-    `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60)
-      .toString()
-      .padStart(2, "0")}`;
+    `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
   // -------------------------
   // Render
@@ -194,89 +285,23 @@ const TesMSDTPage = () => {
   if (showIntro) {
     return (
       <div className={styles.introContainer}>
-        <h1 className={styles.title}>
-          Tes MSDT (Minnesota Supervisor Diagnostic Test)
-        </h1>
-        <p className={styles.description}>
-          Tes ini terdiri dari 64 soal, masing-masing dengan dua pilihan A atau
-          B.
-        </p>
-        <p>
-          <b>⏳ Durasi:</b> 30 menit
-        </p>
+        <h1 className={styles.title}>Tes MSDT (Minnesota Supervisor Diagnostic Test)</h1>
+        <p className={styles.description}>Tes ini terdiri dari 64 soal, masing-masing dengan dua pilihan A atau B.</p>
+        <p><b>⏳ Durasi:</b> 30 menit</p>
 
         {!hasAccess ? (
-          <button
-            className={styles.btn}
-            onClick={async () => {
-              const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-              if (!savedUser.id || !testInfo?.id) return;
-
-            const payRes = await fetch("/api/payment/start", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    userId: savedUser.id,
-    testTypeId: testInfo.id,
-  }),
-});
-const payData = await payRes.json();
-if (!payRes.ok || !payData.success) {
-  alert("❌ Pembayaran gagal!");
-  return;
-}
-
-// ✅ Kirim paymentId ke attempt
-const attemptRes = await fetch("/api/attempts", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    userId: savedUser.id,
-    testTypeId: testInfo.id,
-    paymentId: payData.payment.id, // <--- ini harus ada
-  }),
-});
-const attemptData = await attemptRes.json();
-setAttemptId(attemptData.id);
-
-
-              alert("✅ Pembayaran berhasil! Anda bisa mengikuti tes.");
-              setHasAccess(true);
-
-              await startAttempt();
-              await loadQuestions();
-              setShowIntro(false);
-              setShowQuestions(true);
-            }}
-          >
-            Bayar untuk Ikut Tes
-          </button>
+          <button className={styles.btn} onClick={startAttempt}>Mulai Tes</button>
         ) : (
-          <button
-            className={styles.btn}
-            onClick={async () => {
-              await startAttempt();
-              await loadQuestions();
-              setShowIntro(false);
-              setShowQuestions(true);
-            }}
-          >
-            Mulai Tes
-          </button>
+          <button className={styles.btn} onClick={() => { setShowIntro(false); setShowQuestions(true); }}>Lanjut Tes</button>
         )}
 
         <div className={styles.backWrapper}>
-          <Link href="/dashboard">
-            <button className={styles.backBtn}>← Kembali</button>
-          </Link>
+          <Link href="/dashboard"><button className={styles.backBtn}>← Kembali</button></Link>
         </div>
       </div>
     );
   }
 
-  // -------------------------
-  // Question View
-  // -------------------------
   if (showQuestions && currentQuestion) {
     return (
       <div className={styles.container}>
@@ -287,11 +312,7 @@ setAttemptId(attemptData.id);
 
         <div className={styles.mainContent}>
           <div className={styles.questionSection}>
-            <p>
-              <b>{currentIndex + 1}. </b>
-              {currentQuestion.content}
-            </p>
-
+            <p><b>{currentIndex + 1}. </b>{currentQuestion.content}</p>
             <ul className={styles.optionsList}>
               {currentQuestion.options.map((opt, idx) => (
                 <li key={idx}>
@@ -301,9 +322,7 @@ setAttemptId(attemptData.id);
                       name={`q-${currentQuestion.id}`}
                       value={opt}
                       checked={answers[currentQuestion.id] === opt}
-                      onChange={() =>
-                        handleSelectAnswer(currentQuestion.id, opt)
-                      }
+                      onChange={() => handleSelectAnswer(currentQuestion.id, opt)}
                     />
                     <span>{opt}</span>
                   </label>
@@ -312,24 +331,11 @@ setAttemptId(attemptData.id);
             </ul>
 
             <div className={styles.navButtons}>
-              <button
-                className={styles.backBtn}
-                onClick={() => setCurrentIndex((i) => i - 1)}
-                disabled={currentIndex === 0}
-              >
-                ← Back
-              </button>
+              <button className={styles.backBtn} onClick={() => setCurrentIndex(i => i - 1)} disabled={currentIndex === 0}>← Back</button>
               {currentIndex < questions.length - 1 ? (
-                <button
-                  className={styles.btn}
-                  onClick={() => setCurrentIndex((i) => i + 1)}
-                >
-                  Next →
-                </button>
+                <button className={styles.btn} onClick={() => setCurrentIndex(i => i + 1)}>Next →</button>
               ) : (
-                <button className={styles.btn} onClick={handleSubmit}>
-                  Submit Tes
-                </button>
+                <button className={styles.btn} onClick={handleSubmit}>Submit Tes</button>
               )}
             </div>
           </div>
@@ -338,15 +344,7 @@ setAttemptId(attemptData.id);
             <h3>Ringkasan Jawaban</h3>
             <div className={styles.answerGrid}>
               {questions.map((q, idx) => (
-                <button
-                  key={q.id}
-                  className={`${styles.answerNumber} ${
-                    answers[q.id] ? styles.answered : styles.unanswered
-                  } ${currentIndex === idx ? styles.current : ""}`}
-                  onClick={() => setCurrentIndex(idx)}
-                >
-                  {idx + 1}
-                </button>
+                <button key={q.id} className={`${styles.answerNumber} ${answers[q.id] ? styles.answered : styles.unanswered} ${currentIndex === idx ? styles.current : ""}`} onClick={() => setCurrentIndex(idx)}>{idx + 1}</button>
               ))}
             </div>
           </div>

@@ -251,3 +251,20 @@
   margin-right: 8px;
   cursor: pointer;
 }
+/* Essay textarea */
+.textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  resize: vertical; /* bisa diubah ukurannya vertikal saja */
+  outline: none;
+  transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 5px rgba(37, 99, 235, 0.3);
+}

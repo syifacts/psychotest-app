@@ -47,6 +47,14 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     flexWrap: 'wrap',
   },
+  validation: { 
+  fontSize: 10, 
+  color: "gray", 
+  marginTop: 3, 
+  flexWrap: "wrap",  // penting supaya teks panjang membungkus
+  width: 120         // sesuaikan lebar container QR Code
+},
+
   headerCenter: { textAlign: "center", marginBottom: 10 },
   title: { fontSize: 16, fontWeight: "bold" },
   subtitle: { fontSize: 14, marginBottom: 5 },
@@ -57,7 +65,6 @@ const styles = StyleSheet.create({
   text: { lineHeight: 1.5 },
   ttd: { width: 90, height: 90 },
   qr: { width: 100, height: 100, marginTop: 10 },
-  validation: { fontSize: 10, color: "gray", marginTop: 3 },
 });
 
 export default function ReportCPMIDocument({ attempt, result, kesimpulan, ttd, barcode, expiresAt, validationNotes }: Props) {
@@ -65,7 +72,7 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, ttd, b
 
   useEffect(() => {
     if (barcode) {
-      const url = `${process.env.NEXT_PUBLIC_BASE_URL}/report/view/${barcode}`;
+      const url = ` ${process.env.NEXT_PUBLIC_BASE_URL}/validate/${barcode}`;
       QRCode.toDataURL(url)
         .then(setQrCodeBase64)
         .catch((err) => console.error("QR generation error:", err));
@@ -215,7 +222,12 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, ttd, b
       <Text style={styles.text}>Scan untuk verifikasi dokumen</Text>
       <Image src={qrCodeBase64} style={styles.qr} />
       {expiresAt && <Text style={styles.validation}>Berlaku sampai: {new Date(expiresAt).toLocaleDateString("id-ID")}</Text>}
-      {validationNotes && <Text style={styles.validation}>{validationNotes}</Text>}
+      {validationNotes && (
+  <View style={{ width: 120, marginTop: 3 }}>
+    <Text style={[styles.validation, { flexWrap: "wrap" }]}>{validationNotes}</Text>
+  </View>
+)}
+
     </View>
   )}
 </View>

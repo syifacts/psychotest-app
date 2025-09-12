@@ -1,4 +1,3 @@
-// app/api/user/update-profile/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import jwt from "jsonwebtoken";
@@ -7,21 +6,23 @@ const JWT_SECRET = process.env.JWT_SECRET || "secretkey";
 
 export async function POST(req: Request) {
   try {
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Token tidak ditemukan" },
-        { status: 401 }
-      );
+    // Ambil token dari cookie
+    const cookie = req.headers.get("cookie");
+    const token = cookie
+      ?.split("; ")
+      .find((c) => c.startsWith("token="))
+      ?.split("=")[1];
+
+    if (!token) {
+      return NextResponse.json({ error: "Token tidak ditemukan" }, { status: 401 });
     }
 
-    const token = authHeader.split(" ")[1];
+    // Verifikasi token
     const decoded: any = jwt.verify(token, JWT_SECRET);
 
     const body = await req.json();
     const { fullName, birthDate } = body;
 
-    // Validasi wajib diisi
     if (!fullName || !birthDate) {
       return NextResponse.json(
         { error: "Nama lengkap dan tanggal lahir wajib diisi" },

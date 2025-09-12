@@ -1,124 +1,122 @@
 export const ISTQuestions = [
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) lingkungan", "b) panah", "c) elips", "d) busur","e) lengkungan"],
-    answer: "a) lingkungan"
+    type: "single" as const,
+    options: ["lingkungan", "panah", "elips", "busur", "lengkungan"],
+    answer: "A"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) mengetuk", "b) memaki", "c) menjahit", "d) menggergaji","e) memukul"],
-    answer: "a) mengetuk"
+    type: "single" as const,
+    options: ["mengetuk", "memaki", "menjahit", "menggergaji", "memukul"],
+    answer: "A"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) lebar", "b) keliling", "c) luas", "d) isi","e) panjang"],
-    answer: "d) isi"
+    type: "single" as const,
+    options: ["lebar", "keliling", "luas", "isi", "panjang"],
+    answer: "D"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) mengikat", "b) menyatukan", "c) melepaskan", "d) mengaitkan","e) melekatkan"],
-    answer: "c) melepaskan"
+    type: "single" as const,
+    options: ["mengikat", "menyatukan", "melepaskan", "mengaitkan", "melekatkan"],
+    answer: "C"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) arah", "b) timur", "c) perjalanan", "d) tujuan","e) selatan"],
-    answer: "c) perjalanan"
+    type: "single" as const,
+    options: ["arah", "timur", "perjalanan", "tujuan", "selatan"],
+    answer: "C"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) jarak", "b) perpisahan", "c) tugas", "d) batas","e) perceraian"],
-    answer: "c) tugas"
+    type: "single" as const,
+    options: ["jarak", "perpisahan", "tugas", "batas", "perceraian"],
+    answer: "C"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) saringan", "b) kelambu", "c) payung", "d) tapisan","e) jala"],
-    answer: "c) payung"
+    type: "single" as const,
+    options: ["saringan", "kelambu", "payung", "tapisan", "jala"],
+    answer: "C"
   },
   {
     content: " ",
-      type : "single"  as const,
-    options: ["a) putih", "b) pucat", "c) buram", "d) kasar","e) berkilauan"],
-    answer: "d) kasar"
+    type: "single" as const,
+    options: ["putih", "pucat", "buram", "kasar", "berkilauan"],
+    answer: "D"
   },
   {
     content: " ",
-      type : "single"  as const,
-    options: ["a) otobis", "b) pesawat terbang", "c) sepeda motor", "d) sepeda","e) kapal api"],
-    answer: "d) sepeda"
+    type: "single" as const,
+    options: ["otobis", "pesawat terbang", "sepeda motor", "sepeda", "kapal api"],
+    answer: "D"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) biola", "b) seruling", "c) klarinet", "d) terompet","e) saxophon"],
-    answer: "a) biola"
+    type: "single" as const,
+    options: ["biola", "seruling", "klarinet", "terompet", "saxophon"],
+    answer: "A"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) bergelombang", "b) kasar", "c) berduri", "d) licin","e) lurus"],
-    answer: "c) berduri"
+    type: "single" as const,
+    options: ["bergelombang", "kasar", "berduri", "licin", "lurus"],
+    answer: "C"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) jam", "b) kompas", "c) penunjuk jalan", "d) bintang pari","e) arah"],
-    answer: "a) jam"
+    type: "single" as const,
+    options: ["jam", "kompas", "penunjuk jalan", "bintang pari", "arah"],
+    answer: "A"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) kebijaksanaan", "b) pendidikan", "c) perencanaan", "d) penempatan","e) pengerahan"],
-    answer: "a) kebijaksanaan"
+    type: "single" as const,
+    options: ["kebijaksanaan", "pendidikan", "perencanaan", "penempatan", "pengerahan"],
+    answer: "A"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) bermotor", "b) berjalan ", "c) berlayar", "d) bersepeda","e) berkuda"],
-    answer: "b) berjalan "
+    type: "single" as const,
+    options: ["bermotor", "berjalan", "berlayar", "bersepeda", "berkuda"],
+    answer: "B"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) gambar", "b) lukisan", "c) potret", "d) patung","e) ukiran"],
-    answer: "c) potret"
+    type: "single" as const,
+    options: ["gambar", "lukisan", "potret", "patung", "ukiran"],
+    answer: "C"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) panjang", "b) lonjong", "c) runcing", "d) bulat","e) bersudut"],
-    answer: "a) panjang"
+    type: "single" as const,
+    options: ["panjang", "lonjong", "runcing", "bulat", "bersudut"],
+    answer: "A"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) kunci", "b) palang pintu", "c) gerendel", "d) gunting","e) obeng"],
-    answer: "d) gunting"
+    type: "single" as const,
+    options: ["kunci", "palang pintu", "gerendel", "gunting", "obeng"],
+    answer: "D"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) jembatan", "b) batas", "c) perkawinan", "d) pagar","e) masyarakat"],
-    answer: "e) masyarakat"
+    type: "single" as const,
+    options: ["jembatan", "batas", "perkawinan", "pagar", "masyarakat"],
+    answer: "E"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) mengetam", "b) menasehati", "c) mengasah", "d) melicinkan ","e) menggosok"],
-    answer: "b) menasehati"
+    type: "single" as const,
+    options: ["mengetam", "menasehati", "mengasah", "melicinkan", "menggosok"],
+    answer: "B"
   },
   {
     content: "",
-      type : "single"  as const,
-    options: ["a) batu", "b) baja", "c) bulu", "d) karet","e) kayu"],
-    answer: "c) bulu"
-  },
-
- 
+    type: "single" as const,
+    options: ["batu", "baja", "bulu", "karet", "kayu"],
+    answer: "C"
+  }
 ];

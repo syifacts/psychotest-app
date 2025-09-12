@@ -62,6 +62,7 @@ model User {
   purchasedPackagesAsUser      PackagePurchase[] @relation("UserPackagePurchase")
   validatedResults             Result[]          @relation("ValidatedResults")
   personalityResults           PersonalityResult[] // Relasi ke hasil personality
+   companyPayments Payment[] @relation("CompanyPayments") 
 }
 
 
@@ -133,7 +134,8 @@ model TestAttempt {
   paymentId          Int?
   startedAt          DateTime            @default(now())
   finishedAt         DateTime?
-  isCompleted        Boolean             @default(false)
+  isCompleted        Boolean @default(false)
+  packagePurchaseId Int?          
   User               User                @relation(fields: [userId], references: [id])
   TestType           TestType            @relation(fields: [testTypeId], references: [id])
   Payment            Payment?            @relation(fields: [paymentId], references: [id])
@@ -141,6 +143,8 @@ model TestAttempt {
   subtestResults     SubtestResult[]
   results            Result[]
   personalityResults PersonalityResult[]
+  PackagePurchase PackagePurchase? @relation(fields: [packagePurchaseId], references: [id])
+  
 }
 
 
@@ -301,15 +305,19 @@ model NormaIq {
 // ------------------
 model Payment {
   id         Int           @id @default(autoincrement())
-  userId     Int
+  userId     Int?
   testTypeId Int
   amount     Int
+  quantity   Int           @default(1)
+  companyId  Int?
   status     PaymentStatus @default(PENDING)
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
-  User       User          @relation(fields: [userId], references: [id])
+  User       User?          @relation(fields: [userId], references: [id])
   TestType   TestType      @relation(fields: [testTypeId], references: [id])
   attempts   TestAttempt[]
+  company    User?         @relation("CompanyPayments", fields: [companyId], references: [id])
+
 }
 
 // ------------------
@@ -395,11 +403,13 @@ model PackagePurchase {
   companyId    Int? // perusahaan yang beli
   userId       Int? // user yang beli sendiri
   packageId    Int
+  quantity     Int           @default(1)
   purchasedAt  DateTime      @default(now())
   company      User?         @relation("CompanyPackagePurchase", fields: [companyId], references: [id])
   user         User?         @relation("UserPackagePurchase", fields: [userId], references: [id])
   package      Package       @relation(fields: [packageId], references: [id])
   userPackages UserPackage[]
+    attempts   TestAttempt[]
 }
 
 model UserPackage {

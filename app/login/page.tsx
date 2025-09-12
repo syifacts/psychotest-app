@@ -16,65 +16,45 @@ export default function LoginPage() {
   const router = useRouter();
 
 // 🔹 Cek login saat mount
-useEffect(() => {
-  const token = localStorage.getItem('token');
-  const user = localStorage.getItem('user');
-  if (token && user) {
-    const parsedUser = JSON.parse(user);
-    if (parsedUser.role === 'SUPERADMIN') {
-      router.replace('/admin');
-    } else if (parsedUser.role === 'PSIKOLOG') {
-      router.replace('/psikolog/dashboard');
-    } else {
-      router.replace('/');
-    }
-  }
-}, [router]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsLoading(true);
-    setError(null);
+  event.preventDefault();
+  setIsLoading(true);
+  setError(null);
 
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+  try {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+      credentials: "include", // ⬅️ WAJIB supaya cookie tersimpan
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (!response.ok) {
-        setError(data.error || 'Gagal melakukan login.');
-        setIsLoading(false);
-        return;
-      }
-
-      if (data.token) localStorage.setItem('token', data.token);
-      if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
-
-      setSuccess('Login berhasil! Mengarahkan ke halaman utama...');
+    if (!response.ok) {
+      setError(data.error || "Gagal login.");
       setIsLoading(false);
-
-setTimeout(() => {
-  if (data.user.role === 'SUPERADMIN') {
-    router.push('/admin');
-  } else if (data.user.role === 'PSIKOLOG') {
-    router.push('/psikolog/dashboard');
-  } else {
-    router.push('/'); // user biasa
-  }
-}, 2000);
-
-
-
-    } catch (err) {
-      console.error(err);
-      setError('Terjadi kesalahan saat menghubungi server');
-      setIsLoading(false);
+      return;
     }
-  };
+
+    setSuccess("Login berhasil! Mengarahkan...");
+    setIsLoading(false);
+
+    setTimeout(() => {
+      if (data.user.role === "SUPERADMIN") router.push("/admin");
+      else if (data.user.role === "PSIKOLOG") router.push("/psikolog/dashboard");
+      else if (data.user.role === "PERUSAHAAN") router.push("/company/dashboard");
+      else router.push("/");
+    }, 1500);
+
+  } catch (err) {
+    console.error(err);
+    setError("Terjadi kesalahan server");
+    setIsLoading(false);
+  }
+};
+
 
   return (
     <main className="flex flex-col min-h-screen bg-gray-100">

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { jwtDecode } from 'jwt-decode';
 import EditProfile from '@/components/account/editprofile';
 
 interface User {
@@ -16,64 +15,52 @@ interface User {
   profileImage?: string; 
 }
 
-interface TokenPayload {
-  id: number;
-  email: string;
-  fullName: string; 
-  iat: number;
-  exp: number;
-}
-
 export default function AccountPage() {
   const [user, setUser] = useState<User | null>(null);
   const [testHistory, setTestHistory] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const router = useRouter();
 
-  // Ambil user dari localStorage / token
+  // 🔹 Ambil user via API middleware
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-      return;
-    }
+    const fetchUser = async () => {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (!res.ok) {
+          router.push('/login');
+          return;
+        }
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/login');
-      return;
-    }
-
-    try {
-      const decoded = jwtDecode<TokenPayload>(token);
-      const currentTime = Math.floor(Date.now() / 1000);
-
-      if (decoded.exp < currentTime) {
-        localStorage.removeItem('token');
+        const data = await res.json();
+        if (!data.user) {
+          router.push('/login');
+        } else {
+          setUser(data.user);
+        }
+      } catch (err) {
+        console.error(err);
         router.push('/login');
-        return;
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      setUser({ id: decoded.id, email: decoded.email, fullName: decoded.fullName });
-    } catch (err) {
-      console.error('Token decode error:', err);
-      localStorage.removeItem('token');
-      router.push('/login');
-    }
+    fetchUser();
   }, [router]);
 
-  // Fetch riwayat tes user
+  // 🔹 Ambil riwayat tes user
   useEffect(() => {
     if (user) {
       const fetchTestHistory = async () => {
         setIsLoadingHistory(true);
         try {
-          const res = await fetch(`/api/user/${user.id}/attempts`);
-          if (!res.ok) throw new Error("Gagal mengambil riwayat tes");
+          const res = await fetch(`/api/user/${user.id}/attempts`, { credentials: 'include' });
+          if (!res.ok) throw new Error('Gagal mengambil riwayat tes');
 
           const data = await res.json();
-          setTestHistory(data.attempts); // langsung pakai dari API
+          setTestHistory(data.attempts || []);
         } catch (err) {
           console.error(err);
           setTestHistory([]);
@@ -86,21 +73,18 @@ export default function AccountPage() {
     }
   }, [user]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     setUser(null);
     router.push('/login');
   };
 
   const handleSaveSuccess = (updatedUser: User) => {
-    const newUserState = { ...user, ...updatedUser };
-    setUser(newUserState as User);
-    localStorage.setItem('user', JSON.stringify(newUserState));
+    setUser((prev) => prev ? { ...prev, ...updatedUser } : updatedUser);
     setIsEditing(false);
   };
 
-  if (!user) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <p className="text-lg font-medium text-gray-700">Loading profil...</p>
@@ -108,7 +92,9 @@ export default function AccountPage() {
     );
   }
 
-  return (
+  if (!user) return null;
+
+ return (
     <main className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-8">My Profile</h1>
