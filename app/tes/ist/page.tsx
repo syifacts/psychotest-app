@@ -50,6 +50,8 @@ const TesISTPage = () => {
   const [fullName, setFullName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [testDate, setTestDate] = useState("");
+  const [checkReason, setCheckReason] = useState(""); // ✅
+
 
   // ------------------------- UTIL -------------------------
   const calculateAge = (dob: string) => {
@@ -97,6 +99,7 @@ useEffect(() => {
         const accessRes = await fetch(`/api/tes/check-access?userId=${userData.user.id}&type=IST`);
         const accessData = await accessRes.json();
         setHasAccess(accessData.access);
+        setCheckReason(accessData.reason || ""); // ✅
 
         // fetch progress
         if (accessData.access) {
@@ -145,7 +148,9 @@ useEffect(() => {
     fetchUserAndTest();
   }, [router]);
 
-  const handlePayAndFollow = async () => {
+ const [quantity, setQuantity] = useState(1); // default 1
+
+const handlePayAndFollow = async () => {
   if (!user || !testInfo) return;
 
   try {
@@ -156,7 +161,7 @@ useEffect(() => {
       body: JSON.stringify({
         userId: user.id,
         testTypeId: testInfo.id,
-        quantity: 1,
+        quantity: user.role === "PERUSAHAAN" ? quantity : 1,
       }),
     });
 
@@ -168,26 +173,11 @@ useEffect(() => {
     console.log("Payment berhasil:", data.payment);
     alert("✅ Pembayaran berhasil!");
 
-    // 2️⃣ Buat test attempt baru
-    const attemptRes = await fetch("/api/attempts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: user.id,
-        testTypeId: testInfo.id,
-        paymentId: data.payment?.id || null,
-      }),
-    });
-
-    const attempt = await attemptRes.json();
-    if (!attempt.id) throw new Error("Gagal membuat test attempt");
-
-    console.log("Test attempt dibuat:", attempt);
-
-    // ✅ Simpan attemptId di state (opsional)
-    // setAttemptId(attempt.id);
-
-    // 3️⃣ Lanjut ke form tes
+    // ⚠️ Jangan buat attempt di sini!
+    // cukup arahkan user ke form/profile untuk lanjut
+    setHasAccess(true);
+setAlreadyTaken(false);
+setCheckReason(data.reason || "Sudah bayar sendiri");
     handleFollowTest();
   } catch (err: any) {
     console.error(err);
@@ -265,27 +255,46 @@ useEffect(() => {
   };
 
   const handleStartSubtest = async () => {
-    if (!currentSubtest || !user) return;
+  if (!currentSubtest || !user || !testInfo) return;
+
+  try {
+    // 1️⃣ Buat attempt baru kalau belum ada
+    const attemptRes = await fetch("/api/attempts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user.id,
+        testTypeId: testInfo.id,
+        // paymentId: ... ambil dari backend berdasarkan pembayaran terakhir
+      }),
+    });
+
+    const attempt = await attemptRes.json();
+    if (!attempt.id) throw new Error("Gagal membuat attempt");
+    console.log("Attempt dibuat saat mulai:", attempt);
+
+    // 2️⃣ Jalankan timer & load soal
     setTimeLeft(currentSubtest.durationMinutes * 60);
     await loadQuestions(currentSubtest.name, user.id);
     setShowSubtestDetail(false);
     setShowQuestions(true);
 
-    try {
-      const res = await fetch("/api/tes/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, subtest: currentSubtest.name }),
-      });
-      const progress = await res.json();
-      const startTime = new Date(progress.startTime).getTime();
-      const endTime = startTime + currentSubtest.durationMinutes * 60 * 1000;
-      const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
-      setTimeLeft(remaining);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+    // 3️⃣ Simpan progress start ke backend
+    const res = await fetch("/api/tes/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, subtest: currentSubtest.name }),
+    });
+
+    const progress = await res.json();
+    const startTime = new Date(progress.startTime).getTime();
+    const endTime = startTime + currentSubtest.durationMinutes * 60 * 1000;
+    const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+    setTimeLeft(remaining);
+  } catch (err) {
+    console.error("❌ handleStartSubtest error:", err);
+  }
+};
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -376,48 +385,89 @@ useEffect(() => {
     }
   };
 
-  // -------------------------
-  // Render
-  // -------------------------
-  if (showIntro) return <TestIntro testInfo={testInfo} hasAccess={hasAccess} alreadyTaken={alreadyTaken} onFollowTest={handleFollowTest} onPayAndFollow={handlePayAndFollow} />;
+// -------------------------
+// Render
+// -------------------------
+if (showIntro)
+  return (
+    <TestIntro
+      testInfo={testInfo}
+      hasAccess={hasAccess}
+      alreadyTaken={alreadyTaken}
+      onFollowTest={handleFollowTest}
+      onPayAndFollow={handlePayAndFollow} // callback menerima quantity
+        role={user?.role === "PERUSAHAAN" ? "PERUSAHAAN" : "USER"}
+  quantity={quantity}            // ✅ dikirim
+  setQuantity={setQuantity}      // ✅ dikirim
+  checkReason={checkReason} // ✅
+    />
+  );
 
-  if (showForm) return <UserProfileForm fullName={fullName} birthDate={birthDate} testDate={testDate} calculateAge={calculateAge} onSave={handleSaveProfile} />;
+if (showForm)
+  return (
+    <UserProfileForm
+      fullName={fullName}
+      birthDate={birthDate}
+      testDate={testDate}
+      calculateAge={calculateAge}
+      onSave={handleSaveProfile}
+    />
+  );
 
-  if (showSubtestDetail && currentSubtest) return <SubtestDetail subtest={currentSubtest} onStart={handleStartSubtest} />;
+if (showSubtestDetail && currentSubtest)
+  return <SubtestDetail subtest={currentSubtest} onStart={handleStartSubtest} />;
 
-  if (showQuestions && currentSubtest) {
-    const currentQuestion = questions[currentIndex];
-    return (
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>Soal IST - {currentSubtest.name}</h1>
-          <div className={styles.timer}>⏳ {formatTime(timeLeft)}</div>
+if (showQuestions && currentSubtest) {
+  const currentQuestion = questions[currentIndex];
+  return (
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Soal IST - {currentSubtest.name}</h1>
+        <div className={styles.timer}>⏳ {formatTime(timeLeft)}</div>
+      </div>
+
+      <div className={styles.mainContent}>
+        <div style={{ flex: 3, display: "flex", flexDirection: "column", gap: "20px" }}>
+          {currentQuestion && (
+            <QuestionCard
+              question={currentQuestion}
+              answer={answers[currentQuestion.id]}
+              onAnswer={handleSelectAnswer}
+            />
+          )}
+
+          <div className={styles.navButtons}>
+            <button
+              className={styles.backBtn}
+              onClick={() => setCurrentIndex((i) => i - 1)}
+              disabled={currentIndex === 0}
+            >
+              ← Back
+            </button>
+            {currentIndex < questions.length - 1 ? (
+              <button className={styles.btn} onClick={() => setCurrentIndex((i) => i + 1)}>
+                Next →
+              </button>
+            ) : (
+              <button className={styles.btn} onClick={handleSubmit}>
+                Submit Subtest
+              </button>
+            )}
+          </div>
         </div>
 
-       <div className={styles.mainContent}>
-  <div style={{ flex: 3, display: "flex", flexDirection: "column", gap: "20px" }}>
-    {currentQuestion && <QuestionCard question={currentQuestion} answer={answers[currentQuestion.id]} onAnswer={handleSelectAnswer} />}
-
-    <div className={styles.navButtons}>
-      <button className={styles.backBtn} onClick={() => setCurrentIndex(i => i - 1)} disabled={currentIndex === 0}>
-        ← Back
-      </button>
-      {currentIndex < questions.length - 1 ? (
-        <button className={styles.btn} onClick={() => setCurrentIndex(i => i + 1)}>Next →</button>
-      ) : (
-        <button className={styles.btn} onClick={handleSubmit}>Submit Subtest</button>
-      )}
-    </div>
-  </div>
-
-  <AnswerSummary questions={questions} answers={answers} currentIndex={currentIndex} onSelect={setCurrentIndex} />
-</div>
-
+        <AnswerSummary
+          questions={questions}
+          answers={answers}
+          currentIndex={currentIndex}
+          onSelect={setCurrentIndex}
+        />
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  return null;
+return null;
 };
 
 export default TesISTPage;
