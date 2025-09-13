@@ -1,0 +1,253 @@
+/* bfi.module.css */
+.introContainer {
+  max-width: 800px;
+  margin: 60px auto;
+  padding: 30px;
+  font-family: "Poppins", sans-serif;
+  line-height: 1.8;
+  color: #333;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a237e;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.description {
+  font-size: 1rem;
+  margin-bottom: 15px;
+  text-align: justify;
+}
+
+.list {
+  margin: 15px 0 25px 20px;
+  padding-left: 15px;
+}
+
+.list li {
+  margin-bottom: 8px;
+}
+
+.infoBox {
+  margin-top: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f7f9fc, #e3f2fd);
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  text-align: center;
+}
+
+.infoBox p {
+  margin: 8px 0;
+  font-size: 1.1rem;
+}
+
+.btn {
+  margin-top: 20px;
+  padding: 12px 25px;
+  font-size: 1rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #0070f3, #0057c2);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  background: linear-gradient(135deg, #0057c2, #003f8c);
+  transform: scale(1.05);
+}
+
+.backWrapper {
+  margin-top: 20px;
+}
+
+.backBtn {
+  padding: 10px 20px;
+  background-color: #e5e7eb; /* abu soft */
+  color: #111;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.3s ease;
+}
+
+.backBtn:hover {
+  background-color: #d1d5db;
+}
+
+/* 🔹 Tampilan Saat Soal Dimulai */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: "Inter", sans-serif;
+  color: #111827;
+}
+
+/* Header dengan timer */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.timer {
+  font-size: 18px;
+  font-weight: 600;
+  color: #dc2626;
+  background: #fee2e2;
+  padding: 6px 14px;
+  border-radius: 8px;
+}
+
+/* Layout soal dan ringkasan */
+.mainContent {
+  display: flex;
+  gap: 20px;
+}
+
+/* Bagian soal */
+.questionSection {
+  flex: 3;
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.questionSection p {
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+.optionsList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px 0;
+}
+
+.optionsList li {
+  margin-bottom: 10px;
+}
+
+.optionsList input[type="radio"] {
+  margin-right: 8px;
+}
+
+/* Tombol navigasi soal */
+.navButtons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+/* Card ringkasan jawaban */
+.answerCard {
+  flex: 1;
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  height: fit-content;
+  position: sticky;
+  top: 80px;
+}
+
+.answerCard h3 {
+  font-size: 16px;
+  margin-bottom: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.answerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 8px;
+}
+
+.answerNumber {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.unanswered {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.answered {
+  background: #2563eb;
+  color: #fff;
+}
+
+.current {
+  outline: 3px solid #f59e0b;
+}
+/* Input umum */
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  margin-top: 6px;
+  margin-bottom: 14px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.input:focus {
+  border-color: #0070f3;
+  box-shadow: 0 0 5px rgba(0, 112, 243, 0.3);
+}
+
+/* Label supaya lebih rapi */
+.infoBox label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+/* Tambahan spacing antar field */
+.infoBox {
+  padding: 20px;
+  border-radius: 16px;
+  background: #f9f9f9;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  margin: 20px 0;
+}
+.optionLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* jarak radio button dan teks/gambar */
+  cursor: pointer;
+}
+
+.optionContent img {
+  max-width: 150px;
+  height: auto;
+}
+/* Pastikan radio button terlihat */
+.optionsList input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb; /* warna biru saat dipilih */
+  margin-right: 8px;
+  cursor: pointer;
+}
