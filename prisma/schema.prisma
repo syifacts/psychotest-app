@@ -48,7 +48,6 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-
   // khusus psikolog
   lembagalayanan String? // nama lembaga psikologi
 
@@ -62,9 +61,9 @@ model User {
   purchasedPackagesAsUser      PackagePurchase[] @relation("UserPackagePurchase")
   validatedResults             Result[]          @relation("ValidatedResults")
   personalityResults           PersonalityResult[] // Relasi ke hasil personality
-   companyPayments Payment[] @relation("CompanyPayments") 
+  validatedPersonalityResults  PersonalityResult[] @relation("PersonalityValidatedResults")
+  companyPayments              Payment[] @relation("CompanyPayments") 
 }
-
 
 // ------------------
 // Jenis Tes (IST, Pauli, dll.)
@@ -113,7 +112,7 @@ model Question {
   subTestId    Int?
   testTypeId   Int
   code         String   @unique
-  content String? @db.Text
+  content      String? @db.Text
   options      Json?
   type         String
   answer       Json?
@@ -135,19 +134,18 @@ model TestAttempt {
   startedAt          DateTime            @default(now())
   finishedAt         DateTime?
   isCompleted        Boolean @default(false)
-  packagePurchaseId Int?          
+  packagePurchaseId  Int?          
   User               User                @relation(fields: [userId], references: [id])
   TestType           TestType            @relation(fields: [testTypeId], references: [id])
   Payment            Payment?            @relation(fields: [paymentId], references: [id])
+  reservedAt  DateTime  @default(now())
+  status      String    @default("RESERVED") // RESERVED | STARTED | FINISHED | EXPIRED
   answers            Answer[]
   subtestResults     SubtestResult[]
   results            Result[]
   personalityResults PersonalityResult[]
-  PackagePurchase PackagePurchase? @relation(fields: [packagePurchaseId], references: [id])
-  
+  PackagePurchase    PackagePurchase? @relation(fields: [packagePurchaseId], references: [id])
 }
-
-
 
 // ------------------
 // Jawaban Peserta
@@ -166,7 +164,6 @@ model Answer {
 
   @@unique([attemptId, questionCode]) // unik per attempt
   @@unique([attemptId, preferenceQuestionCode])
-
 }
 
 // ------------------
@@ -196,9 +193,9 @@ model Result {
   attemptId     Int
   testTypeId    Int
   totalRw       Int?
-  totalSw       Int? // hasil konversi RW → SW total
-  swIq          Int? // nilai SW yang dipakai untuk mapping IQ
-  iq            Float? // hasil IQ dari mapping NormaIq
+  totalSw       Int?
+  swIq          Int?
+  iq            Float?
   keteranganiq  String?
   dominasi      String?
   kategoriiq    String?
@@ -207,19 +204,18 @@ model Result {
   keteranganiqCPMI String?
   aspekSTK         Json?
   url           String? @db.Text 
-  kesimpulan  String? @db.Text
-  ttd         String? @db.Text
+  kesimpulan    String? @db.Text
+  ttd           String? @db.Text
   summaryTemplateId Int?
-  // jumlah jawaban
-  jumlahA       Int? // jumlah jawaban A
-  jumlahB       Int? // jumlah jawaban B
 
-  // koreksi
-  jumlahAkor    Int? // jumlah A setelah koreksi
-  jumlahBkor    Int? // jumlah B setelah koreksi
+  // jumlah jawaban
+  jumlahA       Int?
+  jumlahB       Int?
+  jumlahAkor    Int?
+  jumlahBkor    Int?
 
   // hasil per subskala
-  Ds            Int? // jumlah akhir subskala Ds
+  Ds            Int?
   Mi            Int?
   Au            Int?
   Co            Int?
@@ -251,12 +247,11 @@ model Result {
   hasilE        String?
 
   // Validasi psikolog
-  barcode String? @unique @db.VarChar(30)
+  barcode       String? @unique @db.VarChar(30)
   validated     Boolean  @default(false)
   validatedById Int?
   validatedAt   DateTime?
   expiresAt     DateTime?
-  //validationNotes?  String? @db.Text
   isCompleted   Boolean  @default(false)
   createdAt     DateTime @default(now())
   User          User     @relation(fields: [userId], references: [id])
@@ -265,23 +260,20 @@ model Result {
   ValidatedBy   User?    @relation("ValidatedResults", fields: [validatedById], references: [id])
   summaryTemplate   SummaryTemplate? @relation(fields: [summaryTemplateId], references: [id])
 
-
   @@unique([attemptId, testTypeId])
 }
 
 model SummaryTemplate {
   id         Int      @id @default(autoincrement())
-  testTypeId Int      // hubung ke tipe tes (misal CPMI, Tes IQ lain)
-  minScore   Int?      // skor minimal untuk template ini
-  maxScore   Int?      // skor maksimal untuk template ini
-  template String  @db.Text   // teks kesimpulan
+  testTypeId Int
+  minScore   Int?
+  maxScore   Int?
+  template   String  @db.Text
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  // Relasi ke Result
   results Result[]
 }
-
 
 model NormaResult {
   id  Int @id @default(autoincrement())
@@ -297,7 +289,7 @@ model NormaIq {
   sw Int
   iq Float
 
-  @@map("Norma_Iq") // nama tabel di MySQL jadi "Norma_Iq"
+  @@map("Norma_Iq")
 }
 
 // ------------------
@@ -313,11 +305,10 @@ model Payment {
   status     PaymentStatus @default(PENDING)
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
-  User       User?          @relation(fields: [userId], references: [id])
+  User       User?         @relation(fields: [userId], references: [id])
   TestType   TestType      @relation(fields: [testTypeId], references: [id])
   attempts   TestAttempt[]
   company    User?         @relation("CompanyPayments", fields: [companyId], references: [id])
-
 }
 
 // ------------------
@@ -350,15 +341,15 @@ model UserProgress {
 }
 
 // ------------------
-// Soal tes kepribadian/preferensi (MBTI, DISC, EPPS, 16PF, HOLLAND, PAPIKOSTICK)
+// Soal tes kepribadian/preferensi
 // ------------------
 model PreferenceQuestion {
   id         Int    @id @default(autoincrement())
   testTypeId Int
   code       String @unique
-  dimension  String? // MBTI: 'EI', DISC: 'D', dll.
+  dimension  String?
   content    String
-  options    Json // Objek: { "a": "Teks A", "b": "Teks B" }
+  options    Json
   TestType   TestType @relation(fields: [testTypeId], references: [id])
 }
 
@@ -370,12 +361,31 @@ model PersonalityResult {
   userId     Int
   testTypeId Int
   attemptId  Int       @unique
-  resultType String // "ENFP", "High D", "Type 5"
+  resultType String
   summary    String    @db.Text
-  scores     Json // { "E": 7, "I": 3, "S": 2, "N": 8 }
-  User       User        @relation(fields: [userId], references: [id])
-  TestType   TestType    @relation(fields: [testTypeId], references: [id])
-  Attempt    TestAttempt @relation(fields: [attemptId], references: [id])
+  scores     Json
+  url        String?   @db.Text 
+  kesimpulan String?   @db.Text
+  ttd        String?   @db.Text
+  personalityDescriptionId Int?
+  editDescription String? @db.Text
+  editSuggestion  String? @db.Text
+  editProfession  String? @db.Text
+
+  // validasi psikolog
+  barcode    String? @unique @db.VarChar(30)
+  validated  Boolean  @default(false)
+  validatedById Int?
+  validatedAt DateTime?
+  expiresAt  DateTime?
+  isCompleted Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  User         User        @relation(fields: [userId], references: [id])
+  TestType     TestType    @relation(fields: [testTypeId], references: [id])
+  Attempt      TestAttempt @relation(fields: [attemptId], references: [id])
+  ValidatedBy User? @relation("PersonalityValidatedResults", fields: [validatedById], references: [id])
+  PersonalityDescription PersonalityDescription? @relation(fields: [personalityDescriptionId], references: [id])
 }
 
 model Package {
@@ -391,17 +401,17 @@ model Package {
 }
 
 model PackageTest {
-  id        Int    @id @default(autoincrement())
-  packageId Int
+  id         Int    @id @default(autoincrement())
+  packageId  Int
   testTypeId Int
-  package   Package  @relation(fields: [packageId], references: [id])
-  testType  TestType @relation(fields: [testTypeId], references: [id])
+  package    Package  @relation(fields: [packageId], references: [id])
+  testType   TestType @relation(fields: [testTypeId], references: [id])
 }
 
 model PackagePurchase {
   id           Int           @id @default(autoincrement())
-  companyId    Int? // perusahaan yang beli
-  userId       Int? // user yang beli sendiri
+  companyId    Int?
+  userId       Int?
   packageId    Int
   quantity     Int           @default(1)
   purchasedAt  DateTime      @default(now())
@@ -409,7 +419,7 @@ model PackagePurchase {
   user         User?         @relation("UserPackagePurchase", fields: [userId], references: [id])
   package      Package       @relation(fields: [packageId], references: [id])
   userPackages UserPackage[]
-    attempts   TestAttempt[]
+  attempts     TestAttempt[]
 }
 
 model UserPackage {
@@ -423,18 +433,18 @@ model UserPackage {
 }
 
 // ------------------
-// DESKRIPSI HASIL PERSONALITY (MODEL BARU)
+// DESKRIPSI HASIL PERSONALITY
 // ------------------
 model PersonalityDescription {
   id          Int      @id @default(autoincrement())
   testTypeId  Int
-  type        String // "INFP", "High D", dll.
-  description String   @db.Text // Diubah dari String[] menjadi String dengan tipe data TEXT
-  suggestions String   @db.Text // Diubah dari String[] menjadi String dengan tipe data TEXT
-  professions String   @db.Text // Diubah dari String[] menjadi String dengan tipe data TEXT
+  type        String
+  description String   @db.Text
+  suggestions String   @db.Text
+  professions String   @db.Text
 
   TestType    TestType @relation(fields: [testTypeId], references: [id])
+  PersonalityResults PersonalityResult[]
 
-  @@unique([testTypeId, type]) // Tipe harus unik untuk setiap jenis tes
+  @@unique([testTypeId, type])
 }
-

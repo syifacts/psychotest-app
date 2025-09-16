@@ -7,7 +7,7 @@ interface Props {
   hasAccess: boolean;
   setHasAccess: (val: boolean) => void;
   startAttempt: () => Promise<void>;
-  testInfo: { id: number; duration: number | null } | null;
+  testInfo: { id: number; duration: number | null; price?: number | null } | null;
   role: "USER" | "PERUSAHAAN";
 }
 
@@ -27,84 +27,63 @@ const CPMIPaymentButton: React.FC<Props> = ({
   const [quantity, setQuantity] = useState(1);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
-  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
-  const [checkReason, setCheckReason] = useState("");
-
 
   useEffect(() => {
-  const fetchUser = async () => {
-    try {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
-      const data = await res.json();
-      if (res.ok) setUser(data.user);
-
-      if (data.user && testInfo) {
-        const checkRes = await fetch(`/api/tes/check-access?userId=${data.user.id}&type=CPMI`);
-        const checkData = await checkRes.json();
-
-        if (checkData.access) {
-          setAlreadyRegistered(true);
-          setCheckReason(checkData.reason); // ✅ tambahkan ini
-        }
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+        const data = await res.json();
+        if (res.ok) setUser(data.user);
+      } catch (err) {
+        console.error("Gagal fetch user:", err);
       }
-    } catch (err) {
-      console.error("Gagal fetch user:", err);
-    }
-  };
-  fetchUser();
-}, [testInfo]);
-
+    };
+    fetchUser();
+  }, []);
 
   const handlePayment = async () => {
-  if (!user?.id || !testInfo?.id) return;
+    if (!user?.id || !testInfo?.id) return;
 
-  setLoading(true);
-  try {
-    const payRes = await fetch("/api/payment/start", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: user.id,
-        testTypeId: testInfo.id,
-        quantity: role === "PERUSAHAAN" ? quantity : 1,
-      }),
-    });
+    setLoading(true);
+    try {
+      const payRes = await fetch("/api/payment/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          testTypeId: testInfo.id,
+          quantity: role === "PERUSAHAAN" ? quantity : 1,
+        }),
+      });
 
-    const payData = await payRes.json();
-    if (!payRes.ok || !payData.success) {
-      alert("❌ Pembayaran gagal!");
-      return;
+      const payData = await payRes.json();
+      if (!payRes.ok || !payData.success) {
+        alert("❌ Pembayaran gagal!");
+        return;
+      }
+
+      alert("✅ Pembayaran berhasil! Silakan klik 'Mulai Tes' untuk memulai.");
+      setHasAccess(true);
+    } catch (err) {
+      console.error(err);
+      alert("❌ Terjadi kesalahan saat pembayaran.");
+    } finally {
+      setLoading(false);
     }
+  };
 
-   alert("✅ Pembayaran berhasil! Silakan klik 'Mulai Tes' untuk memulai.");
-setHasAccess(true);
-setAlreadyRegistered(true);
-setCheckReason(payData.reason || "Sudah bayar sendiri"); // ⬅️ ambil dari API
-
-  } catch (err) {
-    console.error(err);
-    alert("❌ Terjadi kesalahan saat pembayaran.");
-  } finally {
-    setLoading(false);
+  // === Kalau sudah punya akses, tampilkan tombol Mulai Tes ===
+  if (hasAccess) {
+    return (
+      <div>
+        <button className={styles.btn} onClick={startAttempt} disabled={!user}>
+          Mulai Tes
+        </button>
+      </div>
+    );
   }
-};
 
-if (hasAccess || alreadyRegistered) {
-  return (
-    <div>
-      {alreadyRegistered && (
-        <p style={{ color: "green", marginBottom: "8px" }}>
-          ✅ {checkReason}
-        </p>
-      )}
-      <button className={styles.btn} onClick={startAttempt} disabled={!user}>
-        Mulai Tes
-      </button>
-    </div>
-  );
-}
-
-
+  // === Kalau belum punya akses, tampilkan tombol Bayar / Beli Lagi ===
   return (
     <div>
       {role === "PERUSAHAAN" && (
@@ -118,7 +97,12 @@ if (hasAccess || alreadyRegistered) {
             value={quantity}
             onChange={(e) => setQuantity(Number(e.target.value))}
             className={styles.input}
-            style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "6px", width: "120px" }}
+            style={{
+              padding: "8px",
+              border: "1px solid #ccc",
+              borderRadius: "6px",
+              width: "120px",
+            }}
           />
         </div>
       )}
@@ -126,6 +110,8 @@ if (hasAccess || alreadyRegistered) {
       <button className={styles.btn} onClick={handlePayment} disabled={!user || loading}>
         {role === "PERUSAHAAN" ? "Beli Tes (dengan Kuantitas)" : "Bayar untuk Ikut Tes"}
       </button>
+
+
     </div>
   );
 };

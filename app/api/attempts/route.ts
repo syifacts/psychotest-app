@@ -11,6 +11,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "userId & testTypeId wajib diisi" }, { status: 400 });
     }
 
+    // 🔎 Cek apakah user sudah punya attempt aktif untuk testType ini
+    const existingAttempt = await prisma.testAttempt.findFirst({
+      where: { userId, testTypeId, finishedAt: null },
+    });
+
+    if (existingAttempt) {
+      return NextResponse.json(existingAttempt); // balikin yg lama, bukan bikin baru
+    }
+
+    // === Cek TestType valid ===
     const testType = await prisma.testType.findUnique({ where: { id: testTypeId } });
     if (!testType) {
       return NextResponse.json({ error: "TestType tidak ditemukan" }, { status: 404 });
@@ -29,7 +39,6 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Buat attempt dan kurangi quantity
       const attempt = await prisma.$transaction(async (tx) => {
         const newAttempt = await tx.testAttempt.create({
           data: { userId, testTypeId, packagePurchaseId },
@@ -73,9 +82,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(attempt);
     }
 
-    // === Default (USER biasa) ===
+    // === Default (USER biasa tanpa payment/paket) ===
     const attempt = await prisma.testAttempt.create({
-      data: { userId, testTypeId, paymentId },
+      data: { userId, testTypeId },
     });
 
     return NextResponse.json(attempt);
@@ -84,7 +93,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Gagal membuat attempt" }, { status: 500 });
   }
 }
-
 // === GET: daftar attempt user ===
 export async function GET(req: NextRequest) {
   try {
