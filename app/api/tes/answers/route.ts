@@ -86,14 +86,17 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const attemptId = Number(url.searchParams.get("attemptId"));
+    const subtest = url.searchParams.get("subtest"); // ✅ ambil subtest
 
     if (!attemptId) {
       return NextResponse.json({ error: "attemptId wajib diisi" }, { status: 400 });
     }
 
-    // Ambil semua jawaban untuk attempt ini
     const answers = await prisma.answer.findMany({
-      where: { attemptId },
+      where: {
+        attemptId,
+        ...(subtest ? { subtest } : {}), // ✅ filter subtest kalau dikirim
+      },
       select: { questionCode: true, preferenceQuestionCode: true, choice: true },
       orderBy: [{ questionCode: "asc" }, { preferenceQuestionCode: "asc" }],
     });

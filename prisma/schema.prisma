@@ -145,6 +145,7 @@ model TestAttempt {
   results            Result[]
   personalityResults PersonalityResult[]
   PackagePurchase    PackagePurchase? @relation(fields: [packagePurchaseId], references: [id])
+    progress    UserProgress[] // setiap attempt bisa punya banyak subtest progress
 }
 
 // ------------------
@@ -331,14 +332,17 @@ model NormaIst {
 model UserProgress {
   id          Int      @id @default(autoincrement())
   userId      Int
+  attemptId   Int?       // ⚡ baru, mengikat progress ke attempt
   subtest     String
   currentIdx  Int      @default(0)
   startTime   DateTime
   isCompleted Boolean  @default(false)
   User        User     @relation(fields: [userId], references: [id])
+  TestAttempt TestAttempt? @relation(fields: [attemptId], references: [id])
 
-  @@unique([userId, subtest])
+  @@unique([userId, subtest, attemptId]) // ⚡ kombinasi unik baru
 }
+
 
 // ------------------
 // Soal tes kepribadian/preferensi

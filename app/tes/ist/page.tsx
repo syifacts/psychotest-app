@@ -51,6 +51,8 @@ const TesISTPage = () => {
   const [birthDate, setBirthDate] = useState("");
   const [testDate, setTestDate] = useState("");
   const [checkReason, setCheckReason] = useState(""); // ✅
+  const [attemptId, setAttemptId] = useState<number | null>(null);
+
 
 
   // ------------------------- UTIL -------------------------
@@ -74,79 +76,79 @@ useEffect(() => {
     try {
       const userRes = await fetch("/api/auth/me", { credentials: "include" });
       if (!userRes.ok) return router.push("/login");
-
       const userData = await userRes.json();
       if (!userData.user) return router.push("/login");
-      console.log("userData", userData);
 
       setUser(userData.user);
       setFullName(userData.user.fullName || "");
-      if (userData.user.birthDate) {
-  const dateObj = new Date(userData.user.birthDate);
-  setBirthDate(dateObj.toISOString().split("T")[0]);
-} else {
-  setBirthDate("");
-}
+      setBirthDate(userData.user.birthDate ? new Date(userData.user.birthDate).toISOString().split("T")[0] : "");
+      setTestDate(new Date().toLocaleDateString("id-ID"));
 
-      setTestDate(new Date().toLocaleDateString("id-ID")); // ← bisa pakai tanggal sekarang
+      // fetch test info
+      const testRes = await fetch("/api/tes/info?type=IST");
+      const testData = await testRes.json();
+      setTestInfo(testData);
 
-        // fetch test info
-        const testRes = await fetch("/api/tes/info?type=IST");
-        const testData = await testRes.json();
-        setTestInfo(testData);
+      // check access
+      const accessRes = await fetch(`/api/tes/check-access?userId=${userData.user.id}&type=IST`);
+      const accessData = await accessRes.json();
+      setHasAccess(accessData.access);
+      setCheckReason(accessData.reason || "");
 
-        // check access
-        const accessRes = await fetch(`/api/tes/check-access?userId=${userData.user.id}&type=IST`);
-        const accessData = await accessRes.json();
-        setHasAccess(accessData.access);
-        setCheckReason(accessData.reason || ""); // ✅
+      if (!accessData.access) return;
 
-        // fetch progress
-        if (accessData.access) {
-          const progressRes = await fetch(`/api/tes/progress?userId=${userData.user.id}&type=IST`);
-          const progress = await progressRes.json();
+      // ambil attempt terakhir
+      const attemptRes = await fetch(`/api/attempts?userId=${userData.user.id}&testTypeId=${testData.id}`);
+      const attempts = await attemptRes.json();
+      const activeAttempt = attempts.find((a: any) => !a.isCompleted); // pilih attempt yg belum selesai
+      if (activeAttempt) {
+        setAttemptId(activeAttempt.id); // simpan attempt aktif
 
-          if (progress.isCompleted) {
-            setAlreadyTaken(true);
-            return;
+        // ambil progress
+        const progressRes = await fetch(`/api/tes/progress?userId=${userData.user.id}&type=IST`);
+        const progress = await progressRes.json();
+
+        if (progress.isCompleted) {
+          setAlreadyTaken(true);
+          return;
+        }
+
+        if (progress.nextSubtest) {
+          setCurrentSubtest({
+            name: progress.nextSubtest,
+            description: "Deskripsi subtest...",
+            durationMinutes: progress.durationMinutes || 6,
+          });
+
+          // load soal & jawaban lama
+          await loadQuestions(progress.nextSubtest, userData.user.id, activeAttempt.id);
+
+          // atur timer
+          if (progress.startTime) {
+            const endTime = new Date(progress.startTime);
+            endTime.setMinutes(endTime.getMinutes() + (progress.durationMinutes || 6));
+            const secondsLeft = Math.floor((endTime.getTime() - Date.now()) / 1000);
+            setTimeLeft(secondsLeft > 0 ? secondsLeft : 0);
           }
 
-          if (progress.nextSubtest) {
-  setCurrentSubtest({
-    name: progress.nextSubtest,
-    description: "Deskripsi subtest...",
-    durationMinutes: progress.durationMinutes || 6,
-  });
+          // set index soal terakhir
+          setCurrentIndex(progress.nextQuestionIndex || 0);
 
-  if (progress.startTime && !progress.isCompleted) {
-    // ⚠️ Pastikan await agar questions ter-load dulu
-    await loadQuestions(progress.nextSubtest, userData.user.id);
-
-    // Hitung sisa waktu
-    const endTime = new Date(progress.startTime);
-    endTime.setMinutes(endTime.getMinutes() + (progress.durationMinutes || 6));
-    const secondsLeft = Math.floor((endTime.getTime() - Date.now()) / 1000);
-    setTimeLeft(secondsLeft > 0 ? secondsLeft : 0);
-
-    // Atur index soal terakhir
-    setCurrentIndex(progress.nextQuestionIndex || 0);
-
-    // Langsung tampilkan soal
-    setShowIntro(false);
-    setShowForm(false);
-    setShowSubtestDetail(false);
-    setShowQuestions(true);
-  }
-}
-
+          // tampilkan soal
+          setShowIntro(false);
+          setShowForm(false);
+          setShowSubtestDetail(false);
+          setShowQuestions(true);
         }
-      } catch (err) {
-        console.error(err);
       }
-    };
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-    fetchUserAndTest();
-  }, [router]);
+  fetchUserAndTest();
+}, [router]);
+
 
  const [quantity, setQuantity] = useState(1); // default 1
 
@@ -189,35 +191,33 @@ setCheckReason(data.reason || "Sudah bayar sendiri");
   // -------------------------
   // Load Questions
   // -------------------------
-  const loadQuestions = async (subtestName: string, userId: number) => {
-    try {
-      const res = await fetch(`/api/tes?type=IST&sub=${subtestName}`);
-      const data: { questions: Question[] } = await res.json();
-      setQuestions(data.questions || []);
+  const loadQuestions = async (subtestName: string, userId: number, attemptId?: number) => {
+  try {
+    const res = await fetch(`/api/tes?type=IST&sub=${subtestName}`);
+    const data: { questions: Question[] } = await res.json();
+    setQuestions(data.questions || []);
 
-      const attemptRes = await fetch(`/api/attempts?userId=${userId}&testTypeId=${testInfo?.id}`);
-      const attempts = await attemptRes.json();
-      const attemptId = attempts[0]?.id;
+    if (attemptId) {
+      const answerRes = await fetch(`/api/tes/answers?attemptId=${attemptId}&type=IST&sub=${subtestName}`);
+      const savedAnswersData: { answers: Record<string, string> } = await answerRes.json();
 
-      if (attemptId) {
-        const answerRes = await fetch(`/api/tes/answers?attemptId=${attemptId}&type=IST&sub=${subtestName}`);
-        const savedAnswersData: { answers: Record<string, string> } = await answerRes.json();
-
-        const answersMap: AnswerMap = {};
-        if (savedAnswersData.answers) {
-          Object.entries(savedAnswersData.answers).forEach(([questionCode, choice]) => {
-            const q = data.questions.find(q => q.code === questionCode);
-            if (!q) return;
-            const parsedChoice: string | string[] = choice.includes(",") ? choice.split(",") : choice;
-            answersMap[q.id] = parsedChoice;
-          });
-        }
-        setAnswers(answersMap);
+      const answersMap: AnswerMap = {};
+      if (savedAnswersData.answers) {
+        Object.entries(savedAnswersData.answers).forEach(([questionCode, choice]) => {
+          const q = data.questions.find(q => q.code === questionCode);
+          if (!q) return;
+          const parsedChoice: string | string[] = choice.includes(",") ? choice.split(",") : choice;
+          answersMap[q.id] = parsedChoice;
+        });
       }
-    } catch (err) {
-      console.error("Gagal load questions:", err);
+      setAnswers(answersMap);
+    } else {
+      setAnswers({}); // jika attempt baru, kosongkan jawaban lama
     }
-  };
+  } catch (err) {
+    console.error("Gagal load questions:", err);
+  }
+};
 
   // -------------------------
   // Timer
@@ -254,30 +254,47 @@ setCheckReason(data.reason || "Sudah bayar sendiri");
     }
   };
 
- const handleStartSubtest = async () => {
+const handleStartSubtest = async () => {
   if (!currentSubtest || !user || !testInfo) return;
 
   try {
-    // ⚠️ Jangan buat attempt baru, gunakan attempt yang sudah ada
-    await loadQuestions(currentSubtest.name, user.id); // load soal sesuai subtest
+    // 1️⃣ Buat attempt baru
+    const attemptRes = await fetch("/api/attempts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user.id,
+        testTypeId: testInfo.id,
+      }),
+    });
 
-    // Atur timer
+    const newAttempt = await attemptRes.json();
+    if (!attemptRes.ok || !newAttempt.id) throw new Error("Gagal buat attempt baru");
+
+    setAttemptId(newAttempt.id); // simpan attempt baru di state
+
+    // 2️⃣ Load soal
+    await loadQuestions(currentSubtest.name, user.id, newAttempt.id);
+
+    // 3️⃣ Atur timer
     setTimeLeft(currentSubtest.durationMinutes * 60);
 
-    // Tampilkan soal
+    // 4️⃣ Tampilkan soal
     setShowSubtestDetail(false);
     setShowQuestions(true);
 
-    // Simpan progress start ke backend (optional, untuk tracking waktu)
+    // 5️⃣ Simpan start time di backend
     await fetch("/api/tes/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, subtest: currentSubtest.name }),
+      body: JSON.stringify({ userId: user.id, attemptId: newAttempt.id, subtest: currentSubtest.name }),
     });
+
   } catch (err) {
-    console.error("❌ handleStartSubtest error:", err);
+    console.error(err);
   }
 };
+
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -303,27 +320,23 @@ setCheckReason(data.reason || "Sudah bayar sendiri");
     saveAnswerToBackend(qid, choice);
   };
 
-  const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
-    if (!user) return;
-    try {
-      const attemptRes = await fetch(`/api/attempts?userId=${user.id}&testTypeId=${testInfo?.id}`);
-      const attempts = await attemptRes.json();
-      const attemptId = attempts[0]?.id;
-      if (!attemptId) return;
+const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
+  if (!user || !attemptId) return;
 
-      await fetch("/api/tes/answers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.id,
-          attemptId,
-          answers: [{ questionId: qid, choice: Array.isArray(choice) ? choice.join(",") : choice }],
-        }),
-      });
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  try {
+    await fetch("/api/tes/answers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user.id,
+        attemptId, // pakai state
+        answers: [{ questionId: qid, choice: Array.isArray(choice) ? choice.join(",") : choice }],
+      }),
+    });
+  } catch (err) {
+    console.error(err);
+  }
+};
 
  const handleSubmit = async () => {
   if (!user || !currentSubtest) return;

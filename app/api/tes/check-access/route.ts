@@ -14,64 +14,37 @@ export async function GET(req: NextRequest) {
     }
 
     const test = await prisma.testType.findUnique({ where: { name: type } });
-    if (!test) return NextResponse.json({ error: "Tes tidak ditemukan" }, { status: 404 });
+    if (!test) {
+      return NextResponse.json({ error: "Tes tidak ditemukan" }, { status: 404 });
+    }
 
+    // -----------------------------
+    // 🚀 Early check: ada attempt aktif (unfinished) apapun sumbernya
+    // -----------------------------
+    const activeAttempt = await prisma.testAttempt.findFirst({
+      where: { userId, testTypeId: test.id, isCompleted: false },
+      include: { Payment: { include: { company: true } } },
+      orderBy: { id: "desc" },
+    });
+
+    if (activeAttempt) {
+      return NextResponse.json({
+        access: true,
+        reason: activeAttempt.Payment?.company
+          ? `Sudah didaftarkan oleh perusahaan (${activeAttempt.Payment.company.fullName})`
+          : "Masih ada attempt berjalan",
+      });
+    }
+
+    // -----------------------------
     // Gratis → langsung akses
+    // -----------------------------
     if (!test.price || test.price === 0) {
       return NextResponse.json({ access: true, reason: "Gratis" });
     }
 
     // -----------------------------
-    // 1️⃣ Cek apakah user didaftarkan oleh perusahaan
-    // -----------------------------
-    const companyAttempt = await prisma.testAttempt.findFirst({
-      where: {
-        userId,
-        testTypeId: test.id,
-        Payment: { status: PaymentStatus.SUCCESS, companyId: { not: null } },
-      },
-      include: { Payment: { include: { company: true } } },
-      orderBy: { id: "desc" },
-    });
-
-    if (companyAttempt && companyAttempt.Payment?.company) {
-      if (!companyAttempt.isCompleted) {
-        // Attempt perusahaan masih berjalan
-        return NextResponse.json({
-          access: true,
-          reason: `Sudah didaftarkan oleh perusahaan (${companyAttempt.Payment.company.fullName})`,
-        });
-      } else {
-        // Attempt perusahaan sudah selesai → harus bayar / mulai attempt baru
-        return NextResponse.json({
-          access: false,
-          reason: `Sudah selesai sebelumnya. Bisa memulai attempt baru / beli lagi`,
-        });
-      }
-    }
-
-    // -----------------------------
-    // 2️⃣ Cek apakah ada attempt pribadi belum selesai (bukan perusahaan)
-    // -----------------------------
-    const unfinishedPersonalAttempt = await prisma.testAttempt.findFirst({
-      where: { 
-        userId, 
-        testTypeId: test.id, 
-        isCompleted: false,
-        Payment: { companyId: null } // pastikan bukan attempt perusahaan
-      },
-      include: { Payment: true },
-    });
-
-    if (unfinishedPersonalAttempt) {
-      return NextResponse.json({
-        access: true,
-        reason: "Masih ada attempt berjalan",
-      });
-    }
-
-    // -----------------------------
-    // 3️⃣ Cek payment sukses terbaru untuk user pribadi
+    // Cek payment sukses terbaru untuk user pribadi
     // -----------------------------
     const lastPayment = await prisma.payment.findFirst({
       where: { userId, testTypeId: test.id, status: PaymentStatus.SUCCESS, companyId: null },
@@ -93,7 +66,7 @@ export async function GET(req: NextRequest) {
     }
 
     // -----------------------------
-    // 4️⃣ Default → belum bayar
+    // Default → belum bayar
     // -----------------------------
     return NextResponse.json({
       access: false,
