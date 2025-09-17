@@ -10,7 +10,9 @@ CREATE TABLE `User` (
     `education` VARCHAR(191) NULL,
     `phone` VARCHAR(191) NULL,
     `address` VARCHAR(191) NULL,
+    `ttd` TEXT NULL,
     `profileImage` VARCHAR(191) NULL,
+    `tujuan` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
     `lembagalayanan` VARCHAR(191) NULL,
@@ -52,7 +54,7 @@ CREATE TABLE `Question` (
     `subTestId` INTEGER NULL,
     `testTypeId` INTEGER NOT NULL,
     `code` VARCHAR(191) NOT NULL,
-    `content` VARCHAR(191) NULL,
+    `content` TEXT NULL,
     `options` JSON NULL,
     `type` VARCHAR(191) NOT NULL,
     `answer` JSON NULL,
@@ -72,6 +74,9 @@ CREATE TABLE `TestAttempt` (
     `startedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `finishedAt` DATETIME(3) NULL,
     `isCompleted` BOOLEAN NOT NULL DEFAULT false,
+    `packagePurchaseId` INTEGER NULL,
+    `reservedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `status` VARCHAR(191) NOT NULL DEFAULT 'RESERVED',
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -122,7 +127,11 @@ CREATE TABLE `Result` (
     `jumlahbenar` INTEGER NULL,
     `scoreiq` INTEGER NULL,
     `keteranganiqCPMI` VARCHAR(191) NULL,
-    `url` VARCHAR(191) NULL,
+    `aspekSTK` JSON NULL,
+    `url` TEXT NULL,
+    `kesimpulan` TEXT NULL,
+    `ttd` TEXT NULL,
+    `summaryTemplateId` INTEGER NULL,
     `jumlahA` INTEGER NULL,
     `jumlahB` INTEGER NULL,
     `jumlahAkor` INTEGER NULL,
@@ -151,7 +160,7 @@ CREATE TABLE `Result` (
     `hasilDV` VARCHAR(191) NULL,
     `hasilBA` VARCHAR(191) NULL,
     `hasilE` VARCHAR(191) NULL,
-    `barcode` VARCHAR(191) NULL,
+    `barcode` VARCHAR(30) NULL,
     `validated` BOOLEAN NOT NULL DEFAULT false,
     `validatedById` INTEGER NULL,
     `validatedAt` DATETIME(3) NULL,
@@ -159,7 +168,21 @@ CREATE TABLE `Result` (
     `isCompleted` BOOLEAN NOT NULL DEFAULT false,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
+    UNIQUE INDEX `Result_barcode_key`(`barcode`),
     UNIQUE INDEX `Result_attemptId_testTypeId_key`(`attemptId`, `testTypeId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `SummaryTemplate` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `testTypeId` INTEGER NOT NULL,
+    `minScore` INTEGER NULL,
+    `maxScore` INTEGER NULL,
+    `template` TEXT NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -185,9 +208,11 @@ CREATE TABLE `Norma_Iq` (
 -- CreateTable
 CREATE TABLE `Payment` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `userId` INTEGER NOT NULL,
+    `userId` INTEGER NULL,
     `testTypeId` INTEGER NOT NULL,
     `amount` INTEGER NOT NULL,
+    `quantity` INTEGER NOT NULL DEFAULT 1,
+    `companyId` INTEGER NULL,
     `status` ENUM('PENDING', 'SUCCESS', 'FAILED') NOT NULL DEFAULT 'PENDING',
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -211,12 +236,13 @@ CREATE TABLE `Norma_Ist` (
 CREATE TABLE `UserProgress` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `userId` INTEGER NOT NULL,
+    `attemptId` INTEGER NULL,
     `subtest` VARCHAR(191) NOT NULL,
     `currentIdx` INTEGER NOT NULL DEFAULT 0,
     `startTime` DATETIME(3) NOT NULL,
     `isCompleted` BOOLEAN NOT NULL DEFAULT false,
 
-    UNIQUE INDEX `UserProgress_userId_subtest_key`(`userId`, `subtest`),
+    UNIQUE INDEX `UserProgress_userId_subtest_attemptId_key`(`userId`, `subtest`, `attemptId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -242,8 +268,23 @@ CREATE TABLE `PersonalityResult` (
     `resultType` VARCHAR(191) NOT NULL,
     `summary` TEXT NOT NULL,
     `scores` JSON NOT NULL,
+    `url` TEXT NULL,
+    `kesimpulan` TEXT NULL,
+    `ttd` TEXT NULL,
+    `personalityDescriptionId` INTEGER NULL,
+    `editDescription` TEXT NULL,
+    `editSuggestion` TEXT NULL,
+    `editProfession` TEXT NULL,
+    `barcode` VARCHAR(30) NULL,
+    `validated` BOOLEAN NOT NULL DEFAULT false,
+    `validatedById` INTEGER NULL,
+    `validatedAt` DATETIME(3) NULL,
+    `expiresAt` DATETIME(3) NULL,
+    `isCompleted` BOOLEAN NOT NULL DEFAULT false,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     UNIQUE INDEX `PersonalityResult_attemptId_key`(`attemptId`),
+    UNIQUE INDEX `PersonalityResult_barcode_key`(`barcode`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -275,6 +316,7 @@ CREATE TABLE `PackagePurchase` (
     `companyId` INTEGER NULL,
     `userId` INTEGER NULL,
     `packageId` INTEGER NOT NULL,
+    `quantity` INTEGER NOT NULL DEFAULT 1,
     `purchasedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     PRIMARY KEY (`id`)
@@ -322,6 +364,9 @@ ALTER TABLE `TestAttempt` ADD CONSTRAINT `TestAttempt_testTypeId_fkey` FOREIGN K
 ALTER TABLE `TestAttempt` ADD CONSTRAINT `TestAttempt_paymentId_fkey` FOREIGN KEY (`paymentId`) REFERENCES `Payment`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `TestAttempt` ADD CONSTRAINT `TestAttempt_packagePurchaseId_fkey` FOREIGN KEY (`packagePurchaseId`) REFERENCES `PackagePurchase`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `Answer` ADD CONSTRAINT `Answer_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -349,13 +394,22 @@ ALTER TABLE `Result` ADD CONSTRAINT `Result_testTypeId_fkey` FOREIGN KEY (`testT
 ALTER TABLE `Result` ADD CONSTRAINT `Result_validatedById_fkey` FOREIGN KEY (`validatedById`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Payment` ADD CONSTRAINT `Payment_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Result` ADD CONSTRAINT `Result_summaryTemplateId_fkey` FOREIGN KEY (`summaryTemplateId`) REFERENCES `SummaryTemplate`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Payment` ADD CONSTRAINT `Payment_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Payment` ADD CONSTRAINT `Payment_testTypeId_fkey` FOREIGN KEY (`testTypeId`) REFERENCES `TestType`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `Payment` ADD CONSTRAINT `Payment_companyId_fkey` FOREIGN KEY (`companyId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `UserProgress` ADD CONSTRAINT `UserProgress_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `UserProgress` ADD CONSTRAINT `UserProgress_attemptId_fkey` FOREIGN KEY (`attemptId`) REFERENCES `TestAttempt`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `PreferenceQuestion` ADD CONSTRAINT `PreferenceQuestion_testTypeId_fkey` FOREIGN KEY (`testTypeId`) REFERENCES `TestType`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -368,6 +422,12 @@ ALTER TABLE `PersonalityResult` ADD CONSTRAINT `PersonalityResult_testTypeId_fke
 
 -- AddForeignKey
 ALTER TABLE `PersonalityResult` ADD CONSTRAINT `PersonalityResult_attemptId_fkey` FOREIGN KEY (`attemptId`) REFERENCES `TestAttempt`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `PersonalityResult` ADD CONSTRAINT `PersonalityResult_validatedById_fkey` FOREIGN KEY (`validatedById`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `PersonalityResult` ADD CONSTRAINT `PersonalityResult_personalityDescriptionId_fkey` FOREIGN KEY (`personalityDescriptionId`) REFERENCES `PersonalityDescription`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `PackageTest` ADD CONSTRAINT `PackageTest_packageId_fkey` FOREIGN KEY (`packageId`) REFERENCES `Package`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
