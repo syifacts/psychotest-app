@@ -19,16 +19,19 @@ interface Props {
     keteranganiqCPMI?: string;
     kesimpulan: string;
     aspekSTK: string | AspekScore[];
+    barcodettd?: string; // ✅ tambahkan
     ValidatedBy?: {
       fullName: string;
       lembagalayanan?: string;
+      ttdUrl?: string;  // ✅ tambahkan
+      ttdHash?: string; // opsional, kalau mau ditampilkan
     };
   };
   kesimpulan?: string;
   ttd?: string;
-  barcode?: string;           // ✅ barcode ID
-  expiresAt?: string;         // ✅ tanggal expired
-  validationNotes?: string;   // ✅ optional catatan validasi
+  barcode?: string;
+  expiresAt?: string;
+  validationNotes?: string;
 }
 
 const styles = StyleSheet.create({
@@ -72,7 +75,7 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, ttd, b
 
   useEffect(() => {
     if (barcode) {
-      const url = ` ${process.env.NEXT_PUBLIC_BASE_URL}/validate/${barcode}`;
+      const url = `https://04945151e09f.ngrok-free.app/validate/${barcode}`;
       QRCode.toDataURL(url)
         .then(setQrCodeBase64)
         .catch((err) => console.error("QR generation error:", err));
@@ -207,14 +210,37 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, ttd, b
           </View>
         </View>
 
-     {/* Footer TTD & QR */}
-<View style={{ marginTop: 90, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-  {/* TTD Psikolog */}
-  <View style={{ alignItems: "center" }}>
-    <Text style={styles.text}>Psikolog,</Text>
-    {ttd && <Image src={ttd} style={styles.ttd} />}
-    <Text style={styles.text}>{result?.ValidatedBy?.fullName || "____________________"}</Text>
-  </View>
+{/* Footer TTD & QR */}
+<View
+  style={{
+    marginTop: 90,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  }}
+>
+ {/* TTD Psikolog + Nama + QR TTD */}  
+<View style={{ alignItems: "center" }}>
+  <Text style={styles.text}>Psikolog,</Text>
+  
+  {/* TTD Image */}
+  {result?.ValidatedBy?.ttdUrl && (
+    <Image src={result.ValidatedBy.ttdUrl} style={styles.ttd} />
+  )}
+  
+  {/* Nama Psikolog */}
+  <Text style={styles.text}>
+    {result?.ValidatedBy?.fullName || "____________________"}
+  </Text>
+
+  {/* QR TTD tepat di bawah nama */}
+  {result?.barcodettd && (
+    <View style={{ alignItems: "center", marginTop: 5 }}>
+      <Image src={result.barcodettd} style={styles.qr} />
+    </View>
+  )}
+</View>
+
 
   {/* QR Code Validasi di kanan bawah */}
   {qrCodeBase64 && (
@@ -229,9 +255,8 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, ttd, b
 )}
 
     </View>
-  )}
+)}
 </View>
-
       </Page>
     </Document>
   );

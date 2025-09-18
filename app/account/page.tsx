@@ -13,6 +13,7 @@ interface User {
   createdAt?: string;
   updatedAt?: string;
   profileImage?: string; 
+  ttd?: string; // ✅ TTD base64
 }
 
 export default function AccountPage() {
@@ -21,7 +22,15 @@ export default function AccountPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [ttdPreview, setTtdPreview] = useState<string>("");
   const router = useRouter();
+
+  const getTtdSrc = (ttd?: string) => {
+  if (!ttd) return "";
+  // Jika sudah ada prefix, kembalikan apa adanya
+  if (ttd.startsWith("data:image")) return ttd;
+  return `data:image/png;base64,${ttd}`;
+};
 
   // 🔹 Ambil user via API middleware
   useEffect(() => {
@@ -32,12 +41,14 @@ export default function AccountPage() {
           router.push('/login');
           return;
         }
-
         const data = await res.json();
-        if (!data.user) {
-          router.push('/login');
-        } else {
+        if (!data.user) router.push('/login');
+        else {
           setUser(data.user);
+          // ✅ Tambahkan prefix image/png
+        setTtdPreview(getTtdSrc(data.user.ttd));
+
+      
         }
       } catch (err) {
         console.error(err);
@@ -46,7 +57,6 @@ export default function AccountPage() {
         setIsLoading(false);
       }
     };
-
     fetchUser();
   }, [router]);
 
@@ -58,7 +68,6 @@ export default function AccountPage() {
         try {
           const res = await fetch(`/api/user/${user.id}/attempts`, { credentials: 'include' });
           if (!res.ok) throw new Error('Gagal mengambil riwayat tes');
-
           const data = await res.json();
           setTestHistory(data.attempts || []);
         } catch (err) {
@@ -68,7 +77,6 @@ export default function AccountPage() {
           setIsLoadingHistory(false);
         }
       };
-
       fetchTestHistory();
     }
   }, [user]);
@@ -80,9 +88,57 @@ export default function AccountPage() {
   };
 
   const handleSaveSuccess = (updatedUser: User) => {
-    setUser((prev) => prev ? { ...prev, ...updatedUser } : updatedUser);
+    setUser((prev) => (prev ? { ...prev, ...updatedUser } : updatedUser));
+    setTtdPreview(updatedUser.ttd || "");
     setIsEditing(false);
   };
+
+//   // 🔹 Handle TTD upload
+// const handleUploadTTD = async (file: File, userId: number) => {
+//   const formData = new FormData();
+//   formData.append("ttd", file);         // <input type="file" /> atau canvas.toBlob()
+//   formData.append("userId", userId.toString());
+
+//   const res = await fetch("/api/update-ttd", {
+//     method: "POST",
+//     body: formData, // ⬅️ tidak perlu set Content-Type manual
+//   });
+
+//   const data = await res.json();
+//   console.log("Upload response:", data);
+// };
+
+const handleSaveTTD = async () => {
+  if (!ttdPreview) return alert("TTD masih kosong!");
+
+  try {
+    // Ambil base64 murni (tanpa prefix)
+    const base64 = ttdPreview.split(",")[1];
+
+    const res = await fetch("/api/update-ttd", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include", 
+      body: JSON.stringify({ ttd: base64, userId: user?.id }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Gagal menyimpan TTD");
+
+    // update state langsung
+    setUser((prev) => (prev ? { ...prev, ttdUrl: base64 } : prev));
+    setTtdPreview(`data:image/png;base64,${base64}`);
+    setIsEditing(false);
+
+    alert("TTD berhasil disimpan!");
+  } catch (err: any) {
+    console.error(err);
+    alert("Gagal menyimpan TTD: " + err.message);
+  }
+};
+
+
+
 
   if (isLoading) {
     return (
@@ -94,7 +150,7 @@ export default function AccountPage() {
 
   if (!user) return null;
 
- return (
+  return (
     <main className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-8">My Profile</h1>
@@ -127,6 +183,66 @@ export default function AccountPage() {
             </button>
           </div>
         </div>
+
+{user.role === "PSIKOLOG" && (
+  <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+    <h3 className="text-lg font-semibold text-gray-900 mb-4">TTD Psikolog</h3>
+
+    {/* Preview TTD yang tersimpan atau kosong */}
+    {ttdPreview ? (
+      <img 
+        src={ttdPreview} 
+        alt="TTD Psikolog" 
+        className="w-32 h-32 border mb-2 object-contain" 
+      />
+    ) : (
+      <p className="text-sm text-gray-500 mb-2">Belum ada TTD.</p>
+    )}
+
+    {/* Upload TTD baru */}
+    <input
+      type="file"
+      accept="image/*"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => setTtdPreview(reader.result as string); // update preview
+        reader.readAsDataURL(file);
+      }}
+      className="mb-2"
+    />
+
+    {/* Simpan TTD */}
+    <button
+      onClick={async () => {
+        if (!ttdPreview || ttdPreview.trim() === "") return alert("TTD masih kosong!");
+
+        try {
+          const res = await fetch("/api/update-ttd", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ userId: user.id, ttd: ttdPreview }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message || "Gagal menyimpan TTD");
+
+          alert("TTD berhasil disimpan!");
+        } catch (err: any) {
+          console.error(err);
+          alert("Gagal menyimpan TTD: " + err.message);
+        }
+      }}
+      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+    >
+      Simpan TTD
+    </button>
+  </div>
+)}
+
+
 
         {/* Informasi Pribadi */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
@@ -197,9 +313,7 @@ export default function AccountPage() {
                           >
                             Lihat Hasil
                           </a>
-                        ) : (
-                          "-"
-                        )}
+                        ) : "-"}
                       </td>
                     </tr>
                   ))}

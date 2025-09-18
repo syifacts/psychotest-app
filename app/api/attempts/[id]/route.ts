@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         results: {
           include: { 
             summaryTemplate: true,
-            ValidatedBy: true,   // ✅ ambil data psikolog yang validasi
+            ValidatedBy: true,
           },
           orderBy: { id: "desc" },
         },
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
     }
 
-    // SubtestResults
+    // --- SubtestResults
     const subtestResults = attempt.subtestResults.map((s) => ({
       ...s,
       rw: s.rw ?? 0,
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       kategori: s.kategori ?? "-",
     }));
 
-    // Ambil IST result terbaru (selain CPMI)
+    // --- IST result (selain CPMI)
     const istResultRaw = attempt.results.find(r => r.testTypeId !== 30);
     const totalResult = istResultRaw
       ? {
@@ -50,7 +50,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           kesimpulan: istResultRaw.kesimpulan 
             ?? istResultRaw.summaryTemplate?.template 
             ?? "-",
-          ttd: istResultRaw.ttd ?? null,
+          // 🔹 pakai TTD asli dari User
+          ttdUrl: attempt.User?.ttdUrl || null,
+          ttdHash: attempt.User?.ttdHash || null,
           ValidatedBy: istResultRaw.ValidatedBy 
             ? {
                 fullName: istResultRaw.ValidatedBy.fullName,
@@ -60,11 +62,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         }
       : null;
 
-    // Ambil CPMI result terbaru (testTypeId = 30)
+    // --- CPMI result (testTypeId = 30)
     const cpmiResultRaw = attempt.results.find(r => r.testTypeId === 30);
     let cpmiResult = null;
     if (cpmiResultRaw) {
-      // Parse aspekSTK
       let aspekSTK: any[] = [];
       try {
         if (Array.isArray(cpmiResultRaw.aspekSTK)) {
@@ -77,7 +78,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         aspekSTK = [];
       }
 
-      // Kesimpulan (pakai template + replace nama user)
       let kesimpulan = cpmiResultRaw.kesimpulan 
         ?? cpmiResultRaw.summaryTemplate?.template 
         ?? "-";
@@ -85,28 +85,34 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         kesimpulan = kesimpulan.replace(/{name}/g, attempt.User.fullName);
       }
 
-     cpmiResult = {
-  id: cpmiResultRaw.id,
-  jumlahbenar: cpmiResultRaw.jumlahbenar ?? 0,
-  scoreiq: cpmiResultRaw.scoreiq ?? 0,
-  kategoriiq: cpmiResultRaw.kategoriiq ?? "-",
-  keteranganiqCPMI: cpmiResultRaw.keteranganiqCPMI ?? "-",
-  kesimpulan,
-  ttd: cpmiResultRaw.ttd ?? null,
-  barcode: cpmiResultRaw.barcode ?? null,       // ✅ tambahkan
-  expiresAt: cpmiResultRaw.expiresAt ?? null,   // ✅ tambahkan
-  aspekSTK,
-  ValidatedBy: cpmiResultRaw.ValidatedBy 
-    ? {
-        fullName: cpmiResultRaw.ValidatedBy.fullName,
-        lembagalayanan: cpmiResultRaw.ValidatedBy.lembagalayanan,
-      }
-    : null,
-};
-
+      cpmiResult = {
+        id: cpmiResultRaw.id,
+        jumlahbenar: cpmiResultRaw.jumlahbenar ?? 0,
+        scoreiq: cpmiResultRaw.scoreiq ?? 0,
+        kategoriiq: cpmiResultRaw.kategoriiq ?? "-",
+        keteranganiqCPMI: cpmiResultRaw.keteranganiqCPMI ?? "-",
+        kesimpulan,
+        // 🔹 pakai TTD asli dari User
+        ttdUrl: attempt.User?.ttdUrl || null,
+        ttdHash: attempt.User?.ttdHash || null,
+        // 🔹 barcodeTTD tetap dari result
+        barcode: cpmiResultRaw.barcode ?? null,
+        barcodettd: cpmiResultRaw.barcodettd ?? null,
+        expiresAt: cpmiResultRaw.expiresAt ?? null,
+        aspekSTK,
+        ValidatedBy: cpmiResultRaw.ValidatedBy
+          ? {
+              fullName: cpmiResultRaw.ValidatedBy.fullName,
+              lembagalayanan: cpmiResultRaw.ValidatedBy.lembagalayanan,
+            }
+          : null,
+      };
     }
 
-    // TestType fallback
+    const psikologTTD = attempt.results?.[0]?.ValidatedBy
+      ? attempt.results[0].ValidatedBy.ttdUrl
+      : attempt.User?.ttdUrl || null;
+
     const testTypeData = {
       id: attempt.TestType?.id,
       name: attempt.TestType?.name || `TEST_${attempt.TestType?.id}`,
@@ -118,6 +124,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       subtestResults,
       result: totalResult,
       cpmiResult,
+      ttd: psikologTTD,
     });
   } catch (err: any) {
     console.error("Error in attempts API:", err);

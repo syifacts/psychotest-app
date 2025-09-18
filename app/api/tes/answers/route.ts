@@ -93,13 +93,11 @@ export async function GET(req: NextRequest) {
     }
 
     const answers = await prisma.answer.findMany({
-      where: {
-        attemptId,
-        ...(subtest ? { subtest } : {}), // ✅ filter subtest kalau dikirim
-      },
-      select: { questionCode: true, preferenceQuestionCode: true, choice: true },
-      orderBy: [{ questionCode: "asc" }, { preferenceQuestionCode: "asc" }],
-    });
+  where: { attemptId }, // hapus filter subtest
+  select: { questionCode: true, preferenceQuestionCode: true, choice: true },
+  orderBy: [{ questionCode: "asc" }, { preferenceQuestionCode: "asc" }],
+});
+
 
     const formatted: Record<string, string> = {};
     answers.forEach((a) => {

@@ -43,7 +43,8 @@ model User {
   education String?
   phone     String?
   address   String?
-  ttd       String? @db.Text
+ ttdUrl   String?     
+  ttdHash  String? @db.Text // simpan hash SHA256 dari file untuk validasi
   profileImage String?
   tujuan      String?
   createdAt DateTime @default(now())
@@ -250,6 +251,7 @@ model Result {
 
   // Validasi psikolog
   barcode       String? @unique @db.VarChar(30)
+  barcodettd String? @db.Text
   validated     Boolean  @default(false)
   validatedById Int?
   validatedAt   DateTime?

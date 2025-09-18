@@ -17,40 +17,40 @@ export default function HasilPage() {
   const [cpmiResult, setCpmiResult] = useState<any | null>(null);
   const [subtestResults, setSubtestResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [ttd, setTtd] = useState<string | null>(null);
 
-  // State untuk edit kesimpulan & ttd
+  // State untuk edit kesimpulan
   const [kesimpulan, setKesimpulan] = useState('');
-  const [ttd, setTtd] = useState('');
 
-  useEffect(() => {
-    if (!id) return;
+useEffect(() => {
+  if (!id) return;
 
-    const fetchReport = async () => {
-      try {
-        const res = await fetch(`/api/attempts/${id}`);
-        const data = await res.json();
-        setAttempt(data.attempt);
-        setResult(data.result);
-        setCpmiResult(data.cpmiResult);
-        setSubtestResults(data.subtestResults || []);
+  const fetchReport = async () => {
+    try {
+      const res = await fetch(`/api/attempts/${id}`);
+      const data = await res.json();
 
-        // Ambil kesimpulan & ttd
-        if (data.cpmiResult) {
-          setKesimpulan(data.cpmiResult.kesimpulan || '');
-          setTtd(data.cpmiResult.ttd || '');
-        } else if (data.result) {
-          setKesimpulan(data.result.kesimpulan || '');
-          setTtd(data.result.ttd || '');
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      setAttempt(data.attempt || null);
+      setResult(data.result || null);
+      setCpmiResult(data.cpmiResult || null);
+      setSubtestResults(data.subtestResults || []);
 
-    fetchReport();
-  }, [id]);
+      // Ambil kesimpulan dari CPMI / IST
+      const source = data.cpmiResult || data.result || {};
+      setKesimpulan(source.kesimpulan || '');
+
+      // Ambil TTD psikolog dari user
+      setTtd(data.ttd || null);
+
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchReport();
+}, [id]);
 
   if (isLoading) return <p>Memuat laporan...</p>;
   if (!attempt) return <p>Data laporan tidak ditemukan.</p>;
@@ -58,30 +58,30 @@ export default function HasilPage() {
   const testType = (attempt.TestType?.name || 'IST').toUpperCase();
   const PDFTemplate = PDFComponents[testType] || ReportISTDocument;
 
-  const pdfProps =
-    testType === 'CPMI' && cpmiResult
-      ? { attempt, result: cpmiResult, kesimpulan, ttd }
-      : { attempt, result, subtestResults, kesimpulan, ttd };
+  // props untuk PDF
+ const pdfProps =
+  testType === 'CPMI'
+    ? { 
+        attempt, 
+        result: cpmiResult, 
+        kesimpulan, 
+        ttd,
+        barcode: cpmiResult?.barcode,       // ✅ tambahkan
+        barcodettd: cpmiResult?.barcodettd,
+        expiresAt: cpmiResult?.expiresAt    // ✅ tambahkan
+      }
+    : { attempt, result, subtestResults, kesimpulan, ttd };
+
+
 
   const fileName = `${attempt.TestType?.name}_${attempt.User?.fullName}.pdf`.replace(/\s+/g, '_');
-
-  const handleTTDChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setTtd(reader.result as string); // simpan base64
-    };
-    reader.readAsDataURL(file);
-  };
 
   const handleSave = async () => {
     try {
       await fetch('/api/reports/update-summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attemptId: id, kesimpulan, ttd }),
+        body: JSON.stringify({ attemptId: id, kesimpulan }),
       });
       alert('Berhasil disimpan!');
     } catch (err) {
@@ -89,9 +89,42 @@ export default function HasilPage() {
       alert('Gagal menyimpan!');
     }
   };
+  const handleValidate = async () => {
+  if (!cpmiResult) return;
 
-  // Key unik untuk re-render PDF saat kesimpulan/ttd berubah
-  const pdfKey = JSON.stringify({ kesimpulan, ttd, result, cpmiResult, subtestResults });
+  try {
+    const res = await fetch('/api/reports/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        reportId: cpmiResult.id, 
+        kesimpulan,
+        ttd // optional, kalau ada TTD baru
+      }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      alert('Berhasil validasi!');
+
+      // Re-fetch report supaya dapat barcode & TTD terbaru
+      const updated = await fetch(`/api/attempts/${id}`);
+      const updatedData = await updated.json();
+
+      setCpmiResult(updatedData.cpmiResult);  // ✅ update cpmiResult
+      setTtd(updatedData.ttd);                // ✅ update TTD
+    } else {
+      alert('Validasi gagal!');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Terjadi kesalahan!');
+  }
+};
+
+
+  // Key unik untuk re-render PDF saat kesimpulan berubah
+  const pdfKey = JSON.stringify({ kesimpulan, result, cpmiResult, subtestResults });
 
   return (
     <div className="h-screen flex flex-col">
@@ -105,13 +138,20 @@ export default function HasilPage() {
             </button>
           )}
         </PDFDownloadLink>
+        <button
+  onClick={handleValidate}
+  className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 mt-2"
+>
+  Validasi & Perbarui PDF
+</button>
+
       </div>
 
       {/* Content 2 kolom */}
       <div className="flex flex-grow gap-4 p-4">
         {/* Form kiri */}
         <div className="w-1/3 bg-white rounded shadow p-4 flex flex-col">
-          <h2 className="text-lg font-bold mb-4">Kesimpulan & TTD</h2>
+          <h2 className="text-lg font-bold mb-4">Kesimpulan</h2>
 
           <label className="font-semibold mb-1">Kesimpulan:</label>
           <textarea
@@ -119,12 +159,6 @@ export default function HasilPage() {
             value={kesimpulan}
             onChange={(e) => setKesimpulan(e.target.value)}
           />
-
-          <label className="font-semibold mb-1">TTD:</label>
-          {ttd ? (
-            <img src={ttd} alt="TTD Barcode" className="mb-2 w-32 h-32 border" />
-          ) : null}
-          <input type="file" onChange={handleTTDChange} className="mb-4" />
 
           <button
             onClick={handleSave}

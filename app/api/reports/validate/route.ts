@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
+import QRCode from "qrcode";
+import crypto from "crypto";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -25,42 +27,40 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const companyId = url.searchParams.get("companyId");
     const testTypeId = url.searchParams.get("testTypeId");
-    const status = url.searchParams.get("status"); // pending / selesai
-    const validatedAt = url.searchParams.get("validatedAt"); // filter tanggal pemeriksaan
+    const status = url.searchParams.get("status");
+    const validatedAt = url.searchParams.get("validatedAt");
 
     const whereClause: any = { AND: [] };
 
-   // Filter Perusahaan / Sendiri
-// === Filter Perusahaan / Sendiri ===
-if (companyId && companyId !== "all") {
-  if (companyId === "self") {
-    whereClause.AND.push({
-      User: { role: "USER" },
-      OR: [
-        { Attempt: { PackagePurchase: { is: null }, Payment: { is: null } } },
-        { Attempt: { PackagePurchase: { companyId: null } } },
-        { Attempt: { Payment: { companyId: null } } },
-      ],
-    });
-  } else {
-    const numericCompanyId = Number(companyId);
-    if (!isNaN(numericCompanyId)) {
-      whereClause.AND.push({
-        OR: [
-          { Attempt: { PackagePurchase: { companyId: numericCompanyId } } },
-          { Attempt: { Payment: { companyId: numericCompanyId } } },
-          {
-            User: {
-              id: { equals: numericCompanyId },
-              role: "PERUSAHAAN",
-            },
-          },
-        ],
-      });
+    // === Filter Perusahaan / Sendiri ===
+    if (companyId && companyId !== "all") {
+      if (companyId === "self") {
+        whereClause.AND.push({
+          User: { role: "USER" },
+          OR: [
+            { Attempt: { PackagePurchase: { is: null }, Payment: { is: null } } },
+            { Attempt: { PackagePurchase: { companyId: null } } },
+            { Attempt: { Payment: { companyId: null } } },
+          ],
+        });
+      } else {
+        const numericCompanyId = Number(companyId);
+        if (!isNaN(numericCompanyId)) {
+          whereClause.AND.push({
+            OR: [
+              { Attempt: { PackagePurchase: { companyId: numericCompanyId } } },
+              { Attempt: { Payment: { companyId: numericCompanyId } } },
+              {
+                User: {
+                  id: { equals: numericCompanyId },
+                  role: "PERUSAHAAN",
+                },
+              },
+            ],
+          });
+        }
+      }
     }
-  }
-}
-
 
     // Filter Jenis Tes
     if (testTypeId && testTypeId !== "all") {
@@ -88,22 +88,31 @@ if (companyId && companyId !== "all") {
     }
 
     // Ambil data dari DB
-    const results = await prisma.result.findMany({
-      where: whereClause.AND.length > 0 ? whereClause : undefined,
-      include: {
-        User: { select: { id: true, fullName: true, role: true } },
-        TestType: { select: { id: true, name: true } },
-        Attempt: {
-          select: {
-            id: true,
-            startedAt: true,
-            PackagePurchase: { select: { company: true } },
-            Payment: { select: { company: true } },
-          },
-        },
+   const results = await prisma.result.findMany({
+  where: whereClause.AND.length > 0 ? whereClause : undefined,
+  include: {
+    User: { select: { id: true, fullName: true, role: true } }, // peserta tes
+    TestType: { select: { id: true, name: true } },
+    Attempt: {
+      select: {
+        id: true,
+        startedAt: true,
+        PackagePurchase: { select: { company: true } },
+        Payment: { select: { company: true } },
       },
-      orderBy: { createdAt: "desc" },
-    });
+    },
+    ValidatedBy: { // 🔹 ambil psikolog validator
+      select: {
+        id: true,
+        fullName: true,
+        ttdUrl: true,
+        ttdHash: true,
+      },
+    },
+  },
+  orderBy: { createdAt: "desc" },
+});
+
 
     // Mapping company fallback ke User jika role PERUSAHAAN
     const mapped = results.map((r) => {
@@ -131,9 +140,10 @@ if (companyId && companyId !== "all") {
 }
 
 // === POST untuk validasi laporan ===
+
 export async function POST(req: NextRequest) {
   try {
-    const { reportId, kesimpulan, ttd } = await req.json();
+    const { reportId, kesimpulan } = await req.json();
     const userId = await getLoggedUserId(req);
 
     if (!reportId || !userId) {
@@ -142,11 +152,15 @@ export async function POST(req: NextRequest) {
 
     const result = await prisma.result.findUnique({
       where: { id: reportId },
-      include: { ValidatedBy: true },
+      include: {
+        User: { select: { id: true, fullName: true, ttdUrl: true, ttdHash: true } }, // ✅ ambil TTD asli + hash
+        ValidatedBy: true,
+      },
     });
 
     if (!result) return NextResponse.json({ error: "Result tidak ditemukan" }, { status: 404 });
 
+    // Generate barcode ID report
     let barcodeId = result.barcode;
     let barcodeURL = barcodeId
       ? `${process.env.NEXT_PUBLIC_BASE_URL}/report/view/${barcodeId}`
@@ -159,20 +173,33 @@ export async function POST(req: NextRequest) {
 
     const expiry = new Date();
     expiry.setFullYear(expiry.getFullYear() + 1);
+console.log("🔥 validator ttdHash:", result?.ValidatedBy?.ttdHash);
+console.log("🔥 validator ttdUrl:", result?.ValidatedBy?.ttdUrl);
 
-    await prisma.result.update({
-      where: { id: reportId },
-      data: {
-        validated: true,
-        validatedById: result.validated ? result.validatedById : userId,
-        validatedAt: result.validated ? result.validatedAt : new Date(),
-        kesimpulan: kesimpulan ?? result.kesimpulan,
-        ttd: ttd ?? result.ttd,
-        barcode: barcodeId,
-        expiresAt: expiry,
-        isCompleted: true,
-      },
-    });
+// === Generate QR dari ttdHash psikolog ===
+let barcodettd: string | null = null;
+if (result?.ValidatedBy?.ttdHash) {
+  barcodettd = await QRCode.toDataURL(result.ValidatedBy.ttdHash.toString());
+  console.log("✅ Generated barcodettd:", barcodettd.substring(0, 50));
+}
+
+    // Update result
+    const updated = await prisma.result.update({
+  where: { id: reportId },
+  data: {
+    validated: true,
+    validatedById: result.validated ? result.validatedById : userId,
+    validatedAt: result.validated ? result.validatedAt : new Date(),
+    kesimpulan: kesimpulan ?? result.kesimpulan,
+    barcode: barcodeId,
+    barcodettd,
+    expiresAt: expiry,
+    isCompleted: true,
+  },
+});
+
+console.log("✅ saved barcodettd:", updated.barcodettd?.substring(0, 50));
+    
 
     return NextResponse.json({
       success: true,
