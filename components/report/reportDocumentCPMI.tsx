@@ -122,48 +122,103 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, ttd, b
   return (
     <Document>
       {/* Halaman 1 */}
-      <Page size="A4" style={styles.page}>
-        <View style={styles.headerCenter}>
-          <Text style={styles.title}>Laporan Hasil Pemeriksaan Psikologi</Text>
-          <Text style={styles.subtitle}>Psychological Assessment Report CPMI</Text>
-          <Text style={styles.text}>Nomor Dokumen: {nomorDokumen}</Text>
-        </View>
-        <View style={{ marginTop: 20 }}>
-          <Text style={styles.text}>Nama: {attempt?.User?.fullName || "-"}</Text>
-          <Text style={styles.text}>Usia: {calculateAge(attempt?.User?.birthDate)} Tahun</Text>
-          <Text style={styles.text}>Pendidikan: {attempt?.User?.education || "-"}</Text>
-          <Text style={styles.text}>Tujuan: Bekerja ke Luar Negeri</Text>
-        </View>
-        <View style={{ marginTop: 30 }}>
-          <Text style={styles.text}>
-            Tanggal Pemeriksaan: {new Date(attempt?.createdAt || Date.now()).toLocaleDateString('id-ID', {
-              day: 'numeric', month: 'long', year: 'numeric'
-            })}
-          </Text>
-        </View>
-      </Page>
+     // Halaman 1
+<Page size="A4" style={styles.page}>
+  {/* HEADER dengan logo kiri & kanan */}
+  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 40 }}>
+    <Image src="/logoetp.png" style={{ width: 100, height: 40 }} />
+    <Image src="/logoklinik.png" style={{ width: 100, height: 40 }} />
+  </View>
+
+  {/* JUDUL */}
+  <View style={{ marginTop:30, marginBottom: 30 }}>
+    <Text style={{ fontSize: 18, fontWeight: "bold", color: "#0A3D91" }}>
+      Laporan Hasil
+    </Text>
+    <Text style={{ fontSize: 18, fontWeight: "bold", color: "#0A3D91", marginBottom: 6 }}>
+      Pemeriksaan Psikologi
+    </Text>
+    <Text style={{ fontSize: 11, fontStyle: "italic", color: "gray", marginBottom: 4 }}>
+      Psychological Assessment Report CPMI
+    </Text>
+    <Text style={{ fontSize: 11, color: "gray" }}>
+      {nomorDokumen}
+    </Text>
+  </View>
+
+  {/* IDENTITAS */}
+  <View style={{ marginTop: 40 }}>
+    <Text style={{ fontSize: 12, marginBottom: 6, color: "#0A3D91" }}>
+      Nama : {attempt?.User?.fullName || "-"}
+    </Text>
+    <Text style={{ fontSize: 12, marginBottom: 6, color: "#0A3D91" }}>
+      Usia : {calculateAge(attempt?.User?.birthDate)} Tahun
+    </Text>
+    <Text style={{ fontSize: 12, marginBottom: 6, color: "#0A3D91" }}>
+      Pendidikan : {attempt?.User?.education || "-"}
+    </Text>
+    <Text style={{ fontSize: 12, marginBottom: 6, color: "#0A3D91" }}>
+      Tujuan : Bekerja Ke Luar Negeri
+    </Text>
+  </View>
+</Page>
+
 
       {/* Halaman 2 */}
-      <Page size="A4" style={styles.page}>
-        <View style={styles.headerCenter}>
-          <Text style={styles.sectionTitle}>RINGKASAN HASIL PEMERIKSAAN PSIKOLOGI</Text>
-          <Text style={styles.text}>(Resume of Psychological Assessment)</Text>
-        </View>
+    {/* Halaman 2 */}
+<Page size="A4" style={styles.page}>
+  {/* HEADER dengan logo kiri & kanan */}
+  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 30 }}>
+    <Image src="/logoetp.png" style={{ width: 100, height: 40 }} />
+    <Image src="/logoklinik.png" style={{ width: 100, height: 40 }} />
+  </View>
 
-        {/* Identitas Psikolog */}
-        <View style={{ marginTop: 20, marginBottom: 20 }}>
-          <Text style={[styles.bold, styles.text]}>Identitas Psikolog / Psychologist's Identity</Text>
-          <Text style={styles.text}>Nama Psikolog: {result?.ValidatedBy?.fullName || "-"}</Text>
-          <Text style={styles.text}>Lembaga Layanan Psikologi: {result?.ValidatedBy?.lembagalayanan || "-"}</Text>
-          <Text style={styles.text}>
-            Tanggal Pemeriksaan: {new Date().toLocaleDateString("id-ID", { day:"numeric", month:"long", year:"numeric" })}
-          </Text>
-        </View>
+  {/* JUDUL */}
+  <View style={{ alignItems: "center", marginBottom: 20 }}>
+    <Text style={{ fontSize: 14, fontWeight: "bold", color: "#0A3D91" }}>
+      RINGKASAN
+    </Text>
+    <Text style={{ fontSize: 14, fontWeight: "bold", color: "#0A3D91" }}>
+      HASIL PEMERIKSAAN PSIKOLOGI
+    </Text>
+    <Text style={{ fontSize: 11, fontStyle: "italic", color: "gray" }}>
+      (Resume of Psychological Assessment)
+    </Text>
+  </View>
+
+  {/* Identitas Psikolog */}
+  <View style={{ marginBottom: 20 }}>
+    <Text style={[styles.bold, { marginBottom: 4 }]}>Identitas Psikolog</Text>
+    <Text style={{ fontSize: 9, color: "gray", marginBottom: 6 }}>
+      Psychologist’s Identity
+    </Text>
+
+    {/* Nama Psikolog */}
+    <View style={{ flexDirection: "row", borderBottomWidth: 1, borderColor: "#000", paddingVertical: 4 }}>
+      <Text style={{ width: 180, fontFamily: "Times-Bold" }}>Nama Psikolog</Text>
+      <Text style={{ flex: 1 }}> : {result?.ValidatedBy?.fullName || "-"}</Text>
+    </View>
+    <Text style={{ fontSize: 9, color: "gray", marginBottom: 4 }}>Psychologist’s Name</Text>
+
+    {/* Lembaga */}
+    <View style={{ flexDirection: "row", borderBottomWidth: 1, borderColor: "#000", paddingVertical: 4 }}>
+      <Text style={{ width: 180, fontFamily: "Times-Bold" }}>Nama Fasyankes/Lembaga Layanan Psikologi</Text>
+      <Text style={{ flex: 1 }}> : {result?.ValidatedBy?.lembagalayanan || "-"}</Text>
+    </View>
+    <Text style={{ fontSize: 9, color: "gray", marginBottom: 4 }}>Clinic/Hospital</Text>
+
+    {/* Tanggal */}
+    <View style={{ flexDirection: "row", borderBottomWidth: 1, borderColor: "#000", paddingVertical: 4 }}>
+      <Text style={{ width: 180, fontFamily: "Times-Bold" }}>Tanggal Pemeriksaan</Text>
+      <Text style={{ flex: 1 }}> : {new Date(attempt?.createdAt || Date.now()).toLocaleDateString("id-ID", { day:"numeric", month:"long", year:"numeric" })}</Text>
+    </View>
+    <Text style={{ fontSize: 9, color: "gray" }}>Date of Assessment</Text>
+  </View>
 
 {/* Tabel CPMI */}
 <View style={{ marginTop: 10, borderWidth: 1, borderColor: "#000" }}>
   {/* Header */}
-  <View style={[styles.tableRow, { backgroundColor: "#f0f0f0", borderBottomWidth: 1, borderColor: "#000" }]}>
+  <View style={[styles.tableRow, { backgroundColor: "#d8b6d8", borderBottomWidth: 1, borderColor: "#000" }]}>
     <Text style={[styles.cell, { width: 30, textAlign: "center", fontWeight: "bold", fontSize: 13 }]}>No.</Text>
     <Text style={[styles.cell, { width: 150, textAlign: "center", fontWeight: "bold", fontSize: 13, borderLeftWidth: 1 }]}>Aspek yang dinilai</Text>
     <Text style={[styles.cell, { width: 250, textAlign: "center", fontWeight: "bold", fontSize: 13, borderLeftWidth: 1 }]}>Uraian</Text>
@@ -189,27 +244,34 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, ttd, b
   })}
 
 
-          {/* Footer Tabel / Legend */}
-          <View style={{ marginTop: 10, borderBottomWidth:1, flexDirection: "row", alignItems: "center" }}>
-            <Text style={[styles.bold, {marginLeft:30, marginRight: 10 }]}>Keterangan:</Text>
-            <Text style={[styles.text, {marginLeft:30, marginTop: 14, marginRight: 15 }]}>T = Tinggi</Text>
-            <Text style={[styles.text, {marginLeft:30, marginTop: 14, marginRight: 15 }]}>S = Sedang</Text>
-            <Text style={[styles.text, {marginLeft:30, marginTop: 14 }]}>R = Rendah</Text>
-          </View>
+  </View>
 
-          {/* Status */}
-          <View style={[styles.tableRow, { marginTop: 10, paddingTop: 5,alignItems: "center" ,borderBottomWidth:1, }]}>
-            <Text style={{marginLeft:30, marginTop: 10,width: 180, fontFamily: "Times-Bold" }}>Status</Text>
-            <Text style={{ marginTop: 10, width: 200 }}>{result?.keteranganiqCPMI ?? "-"}</Text>
-          </View>
+{/* Legend / Keterangan dalam tabel */}
+<View style={{ marginTop: 8, borderWidth: 1, borderColor: "#000" }}>
+  <View style={[styles.tableRow, { backgroundColor: "#d8b6d8", borderBottomWidth: 1, borderColor: "#000" }]}>
+    <Text style={[styles.cell, { fontWeight: "bold", fontSize: 10, textAlign: "center" }]}>Keterangan</Text>
+    <Text style={[styles.cell, { fontSize: 10, textAlign: "center", borderLeftWidth: 1 }]}>R: Rendah</Text>
+    <Text style={[styles.cell, { fontSize: 10, textAlign: "center", borderLeftWidth: 1 }]}>S: Sedang</Text>
+    <Text style={[styles.cell, { fontSize: 10, textAlign: "center", borderLeftWidth: 1 }]}>T: Tinggi</Text>
+  </View>
+</View>
 
-          {/* Kesimpulan */}
-          <View style={{ marginTop: 15, marginBottom:15 }}>
-            <Text style={[styles.bold, { marginLeft:30, marginBottom: 10 }]}>Kesimpulan Umum:</Text>
-            <Text style={[styles.text, {marginLeft:30, marginRight:30, textAlign: "justify" }]}>{kesimpulanPDF || "Tidak ada kesimpulan tersedia"}</Text>
-          </View>
-        </View>
+{/* Kesimpulan dalam tabel */}
+<View style={{ marginTop: 10, borderWidth: 1, borderColor: "#000" }}>
+  <View style={[styles.tableRow, { backgroundColor: "#d8b6d8", borderBottomWidth: 1, borderColor: "#000" }]}>
+    <Text style={[styles.cell, { fontWeight: "bold", fontSize: 11 }]}>Kesimpulan</Text>
+  </View>
+  <View style={[styles.tableRow]}>
+    <Text style={[styles.cell, { fontSize: 11, paddingVertical: 4, textAlign: "justify" }]}>
+      {kesimpulanPDF || "Tidak ada kesimpulan tersedia"}
+    </Text>
+  </View>
+</View>
 
+{/* Footer TTD & QR */}
+<View style={{ marginTop: 30, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+  
+</View>
 {/* Footer TTD & QR */}
 <View
   style={{
