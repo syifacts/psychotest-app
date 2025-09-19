@@ -13,13 +13,32 @@ export async function GET(req: NextRequest) {
   try {
     const attempts = await prisma.testAttempt.findMany({
       where: { userId },
-      include: { TestType: true, results: true },
+      include: { 
+        TestType: true, 
+        results: true, 
+        personalityResults: true 
+      },
       orderBy: { startedAt: "desc" },
     });
 
     const mappedAttempts = attempts.map((a) => {
+      // --- Pilih result ---
       const result = a.results?.[0];
-      const status = result ? (result.validated ? "Selesai" : "Sedang diverifikasi psikolog") : (a.isCompleted ? "Belum divalidasi" : "Belum selesai");
+      const personalityResult = a.personalityResults?.[0];
+
+      // --- Tentukan status ---
+      let status: string;
+      if (personalityResult) {
+        status = personalityResult.validated
+          ? "Selesai"
+          : "Sedang diverifikasi psikolog";
+      } else if (result) {
+        status = result.validated
+          ? "Selesai"
+          : "Sedang diverifikasi psikolog";
+      } else {
+        status = a.isCompleted ? "Belum divalidasi" : "Belum selesai";
+      }
 
       return {
         id: a.id,
