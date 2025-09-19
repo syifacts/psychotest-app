@@ -1,5 +1,4 @@
-// File: /api/tes/mbti/scoring/route.ts
-
+// app/api/tes/mbti/scoring/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -10,18 +9,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "attemptId wajib dikirim" }, { status: 400 });
     }
 
-    // --- Gunakan Transaction untuk keamanan data ---
     const finalResult = await prisma.$transaction(async (tx) => {
+      // 1. Ambil attempt
       const attempt = await tx.testAttempt.findUnique({ where: { id: attemptId } });
-      if (!attempt) {
-        throw new Error("Attempt tidak ditemukan");
-      }
+      if (!attempt) throw new Error("Attempt tidak ditemukan");
+
       const { userId, testTypeId } = attempt;
 
+      // 2. Ambil semua jawaban
       const answers = await tx.answer.findMany({ where: { attemptId } });
-      if (!answers.length) {
-        throw new Error("Belum ada jawaban untuk attempt ini");
-      }
+      if (!answers.length) throw new Error("Belum ada jawaban untuk attempt ini");
 
       const questionCodes = answers.map(a => a.preferenceQuestionCode).filter(Boolean) as string[];
       const questions = await tx.preferenceQuestion.findMany({
@@ -34,9 +31,19 @@ export async function POST(req: NextRequest) {
         question: questions.find(q => q.code === a.preferenceQuestionCode) || null,
       }));
 
-      // ... (Logika scoring Anda tetap sama) ...
-      const dimensionMap: Record<string, [string, string]> = { EI: ["E", "I"], SN: ["S", "N"], TF: ["T", "F"], JP: ["J", "P"] };
-      const valueMap: Record<string, number> = { EI: 10, SN: 5, TF: 5, JP: 5 };
+      // 3. Hitung skor per dimensi
+      const dimensionMap: Record<string, [string, string]> = {
+        EI: ["E", "I"],
+        SN: ["S", "N"],
+        TF: ["T", "F"],
+        JP: ["J", "P"],
+      };
+      const valueMap: Record<string, number> = {
+        EI: 10,
+        SN: 5,
+        TF: 5,
+        JP: 5,
+      };
       const scores: Record<string, number> = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
 
       for (const ans of answersWithQuestion) {
@@ -50,7 +57,8 @@ export async function POST(req: NextRequest) {
           scores[second] += valueToAdd;
         }
       }
-      
+
+      // 4. Tentukan tipe MBTI
       const defaultType = { EI: "I", SN: "N", TF: "F", JP: "P" };
       const letterEI = (scores.E > 0 || scores.I > 0) ? (scores.E >= scores.I ? "E" : "I") : defaultType.EI;
       const letterSN = (scores.S > 0 || scores.N > 0) ? (scores.S >= scores.N ? "S" : "N") : defaultType.SN;
@@ -58,22 +66,33 @@ export async function POST(req: NextRequest) {
       const letterJP = (scores.J > 0 || scores.P > 0) ? (scores.J >= scores.P ? "J" : "P") : defaultType.JP;
       const resultType = `${letterEI}${letterSN}${letterTF}${letterJP}`;
 
-      // Simpan hasil scoring ke database
+      // 5. Simpan PersonalityResult (status validasi default: false)
       const personalityResult = await tx.personalityResult.upsert({
         where: { attemptId },
-        update: { resultType, scores, summary: `Hasil tes MBTI: ${resultType}` },
-        create: { 
+        update: {
+          resultType,
+          scores,
+          summary: `Hasil tes MBTI: ${resultType}`,
+          isCompleted: false,   // belum divalidasi psikolog
+          validated: false,
+          validatedById: null,
+          validatedAt: null,
+        },
+        create: {
           attemptId,
           userId,
           testTypeId,
-          resultType, 
-          scores, 
-          summary: `Hasil tes MBTI: ${resultType}` 
+          resultType,
+          scores,
+          summary: `Hasil tes MBTI: ${resultType}`,
+          isCompleted: false,   // default false
+          validated: false,
+          validatedById: null,
+          validatedAt: null,
         },
       });
 
-      // ---> INI BAGIAN YANG DITAMBAHKAN <---
-      // Setelah semua berhasil, update attempt menjadi selesai
+      // 6. Tandai attempt selesai dikerjakan user
       await tx.testAttempt.update({
         where: { id: attemptId },
         data: {
@@ -81,17 +100,17 @@ export async function POST(req: NextRequest) {
           finishedAt: new Date(),
         },
       });
-      // ------------------------------------
 
+      // 7. Ambil detail deskripsi tipe kepribadian
       const descriptionDetails = await tx.personalityDescription.findUnique({
         where: {
           testTypeId_type: {
-            testTypeId: testTypeId,
+            testTypeId,
             type: resultType,
           },
         },
       });
-      
+
       return {
         message: "Scoring berhasil",
         result: personalityResult,
@@ -100,7 +119,6 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(finalResult);
-
   } catch (err: any) {
     console.error("❌ Error scoring MBTI:", err);
     return NextResponse.json({ error: "Gagal melakukan scoring", details: err.message }, { status: 500 });

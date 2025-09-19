@@ -3,11 +3,15 @@
 import React, { useState, useEffect } from "react";
 import styles from "./Mbti.module.css";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 // =======================
-// Tipe Data
+// Tipe Data (ditambah User)
 // =======================
+interface User {
+  id: number;
+  fullName: string;
+}
+
 interface Question {
   id: number;
   code: string;
@@ -20,6 +24,20 @@ interface TestResult {
   scores: Record<string, number>;
 }
 
+// ==========================================
+// Custom Hook untuk Mendapatkan Data Pengguna
+// ==========================================
+const useUser = (): User | null => {
+    const [user, setUser] = useState<User | null>(null);
+    useEffect(() => {
+        fetch('/api/auth/me')
+            .then(res => res.ok ? res.json() : null)
+            .then(data => setUser(data?.user));
+    }, []);
+    return user;
+};
+
+
 // =======================
 // Component Tes MBTI
 // =======================
@@ -28,7 +46,7 @@ const TesMBTIPage = () => {
   const [stage, setStage] = useState<"intro" | "test" | "result">("intro");
   const [testInfo, setTestInfo] = useState<{ id: number; name: string; price: number | null } | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
-  const [paymentSuccessful, setPaymentSuccessful] = useState(false); // State baru
+  const [paymentSuccessful, setPaymentSuccessful] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<TestResult | null>(null);
@@ -36,17 +54,16 @@ const TesMBTIPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attemptId, setAttemptId] = useState<number | null>(null);
   const [isPaying, setIsPaying] = useState(false);
-  const router = useRouter();
+
+  const user = useUser();
 
   // ==================================
   // Inisialisasi & Restore Attempt
   // ==================================
   useEffect(() => {
     const initializeOrRestore = async () => {
-      const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-      if (!savedUser.id) {
-        alert("Anda harus login terlebih dahulu untuk mengikuti tes.");
-        router.push('/login');
+      // Menunggu data user dari hook. Middleware sudah menjaga halaman ini.
+      if (!user) {
         return;
       }
 
@@ -56,7 +73,7 @@ const TesMBTIPage = () => {
         const infoData = await infoRes.json();
         setTestInfo(infoData);
         
-        const accessRes = await fetch(`/api/tes/check-access?userId=${savedUser.id}&type=MBTI`);
+        const accessRes = await fetch(`/api/tes/check-access?userId=${user.id}&type=MBTI`);
         const accessData = await accessRes.json();
         setHasAccess(accessData.access);
 
@@ -81,7 +98,7 @@ const TesMBTIPage = () => {
       }
     };
     initializeOrRestore();
-  }, [router]);
+  }, [user]);
   
   const loadQuestionsAndAnswers = async (currentAttemptId: number) => {
     try {
@@ -106,8 +123,7 @@ const TesMBTIPage = () => {
 
   const startAttempt = async () => {
     setLoading(true);
-    const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    if (!savedUser.id || !testInfo?.id) {
+    if (!user?.id || !testInfo?.id) {
       alert("Sesi pengguna tidak valid."); setLoading(false); return;
     }
 
@@ -117,7 +133,7 @@ const TesMBTIPage = () => {
       const res = await fetch("/api/attempts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: savedUser.id, testTypeId: testInfo.id }),
+        body: JSON.stringify({ userId: user.id, testTypeId: testInfo.id }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal membuat sesi tes baru.");
@@ -134,28 +150,28 @@ const TesMBTIPage = () => {
     }
   };
   
-  // FUNGSI HANDLEPAYMENT DIUBAH
   const handlePayment = async () => {
     setIsPaying(true);
     try {
-      const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-      if (!savedUser.id || !testInfo?.id) { throw new Error("Sesi pengguna tidak valid."); }
+      if (!user?.id || !testInfo?.id) { throw new Error("Sesi pengguna tidak valid."); }
       
       const response = await fetch('/api/payment/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: savedUser.id,
+          userId: user.id,
           testTypeId: testInfo.id,
         }),
       });
 
       const data = await response.json();
+      console.log("Respons dari API Pembayaran:", data); // Untuk debugging
+
       if (!response.ok) { throw new Error(data.error || 'Gagal memproses pembayaran.'); }
       
       if (data.success) {
+        console.log("Pembayaran sukses! Mengubah state..."); // Untuk debugging
         alert("Pembayaran berhasil!");
-        // Update state, jangan langsung mulai tes
         setHasAccess(true);
         setPaymentSuccessful(true);
       } else {
@@ -171,15 +187,14 @@ const TesMBTIPage = () => {
 
   const handleAnswerChange = async (questionCode: string, choice: "a" | "b") => {
     setAnswers((prev) => ({ ...prev, [questionCode]: choice }));
-    if (!attemptId) return;
-    const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    if (!savedUser.id) return;
+    if (!attemptId || !user?.id) return;
+    
     try {
       await fetch("/api/tes/mbti/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: savedUser.id,
+          userId: user.id,
           attemptId,
           answers: [{ preferenceQuestionCode: questionCode, choice }],
         }),
@@ -222,7 +237,6 @@ const TesMBTIPage = () => {
     return <div className={styles.container}>Memuat...</div>;
   }
 
-  // Tampilan Intro dengan Logika BARU
   if (stage === "intro") {
     return (
       <div className={styles.container}>
@@ -231,13 +245,11 @@ const TesMBTIPage = () => {
         <div className={styles.infoBox}>
           <p><b>💰 Harga:</b> {testInfo?.price ? `Rp ${testInfo.price.toLocaleString("id-ID")}` : "Gratis"}</p>
           
-          {paymentSuccessful ? (
-            // Jika pembayaran BARU SAJA berhasil, tampilkan tombol Mulai Tes
+          {hasAccess || paymentSuccessful ? (
             <button className={styles.btn} onClick={startAttempt}>
               Mulai Tes
             </button>
           ) : (
-            // Jika belum bayar (atau sudah bayar di sesi lama), tampilkan tombol Bayar
             <button 
               className={styles.btn} 
               onClick={handlePayment} 
@@ -253,7 +265,6 @@ const TesMBTIPage = () => {
     );
   }
 
-  // Sisa render (stage 'test' dan 'result' tidak berubah)
   if (stage === "test") {
     return (
         <div className={styles.container}>
