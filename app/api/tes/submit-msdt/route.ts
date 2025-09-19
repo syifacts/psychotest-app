@@ -248,6 +248,10 @@ const result = await prisma.result.upsert({
     ...dataResult,
   },
 });
+await prisma.testAttempt.update({
+  where: { id: attemptId },
+  data: { isCompleted: true },
+});
 
     return NextResponse.json({ success: true, result });
   } catch (err) {
