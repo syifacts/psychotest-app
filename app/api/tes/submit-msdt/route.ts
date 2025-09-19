@@ -250,8 +250,12 @@ const result = await prisma.result.upsert({
 });
 await prisma.testAttempt.update({
   where: { id: attemptId },
-  data: { isCompleted: true },
+  data: { 
+    isCompleted: true,
+    finishedAt: new Date(), // <-- catat timestamp selesai
+  },
 });
+
 
     return NextResponse.json({ success: true, result });
   } catch (err) {
