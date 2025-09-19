@@ -108,6 +108,49 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           : null,
       };
     }
+    const msdtResultRaw = attempt.results.find(r => r.testTypeId !== 30); // sama seperti istResultRaw
+
+const msdtResult = msdtResultRaw
+  ? {
+      // Nilai MSDT per tipe
+      Ds: msdtResultRaw.Ds ?? 0,
+      Mi: msdtResultRaw.Mi ?? 0,
+      Au: msdtResultRaw.Au ?? 0,
+      Co: msdtResultRaw.Co ?? 0,
+      Bu: msdtResultRaw.Bu ?? 0,
+      Dv: msdtResultRaw.Dv ?? 0,
+      Ba: msdtResultRaw.Ba ?? 0,
+      E: msdtResultRaw.E ?? 0,
+
+      // Total Skala
+      totalSkalaTO: msdtResultRaw.totalSkalaTO ?? 0,
+      totalSkalaRO: msdtResultRaw.totalSkalaRO ?? 0,
+      totalSkalaE: msdtResultRaw.totalSkalaE ?? 0,
+      totalSkalaO: msdtResultRaw.totalSkalaO ?? 0,
+
+      konversiTO: msdtResultRaw.konversiTO ?? 0,
+      konversiE: msdtResultRaw.konversiE ?? 0,
+      konversiRO: msdtResultRaw.konversiRO ?? 0,
+      konversiO: msdtResultRaw.konversiO ?? 0,
+
+      // Hasil Akhir
+      hasilAkhir: msdtResultRaw.hasilAkhir ?? "",
+
+      // Barcode & validasi
+      barcodettd: msdtResultRaw.barcodettd ?? "",
+
+      // Bisa juga bawa info tambahan jika perlu
+      kesimpulan: msdtResultRaw.kesimpulan ?? msdtResultRaw.summaryTemplate?.template ?? "-",
+      ValidatedBy: msdtResultRaw.ValidatedBy
+        ? {
+            fullName: msdtResultRaw.ValidatedBy.fullName,
+            lembagalayanan: msdtResultRaw.ValidatedBy.lembagalayanan,
+          }
+        : null,
+      ttdUrl: attempt.User?.ttdUrl || null,
+      ttdHash: attempt.User?.ttdHash || null,
+    }
+  : null;
 
     const psikologTTD = attempt.results?.[0]?.ValidatedBy
       ? attempt.results[0].ValidatedBy.ttdUrl
@@ -124,6 +167,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       subtestResults,
       result: totalResult,
       cpmiResult,
+      msdtResult,
       ttd: psikologTTD,
     });
   } catch (err: any) {

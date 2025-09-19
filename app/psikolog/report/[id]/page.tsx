@@ -2,12 +2,14 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer';
-import ReportISTDocument from '../../../../components/report/reportDocument';
-import ReportCPMIDocument from '../../../../components/report/reportDocumentCPMI';
+import ReportISTDocument from '@/components/report/reportDocument';
+import ReportCPMIDocument from '@/components/report/reportDocumentCPMI';
+import ReportMSDTDocument from '@/components/report/reportDocumentMSDT';
 
 const PDFComponents: Record<string, any> = {
   IST: ReportISTDocument,
   CPMI: ReportCPMIDocument,
+  MSDT: ReportMSDTDocument,
 };
 
 export default function HasilPage() {
@@ -18,39 +20,38 @@ export default function HasilPage() {
   const [subtestResults, setSubtestResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [ttd, setTtd] = useState<string | null>(null);
-
-  // State untuk edit kesimpulan
   const [kesimpulan, setKesimpulan] = useState('');
+  const [msdtResult, setmsdtResult] = useState<any | null>(null);
 
-useEffect(() => {
-  if (!id) return;
+  useEffect(() => {
+    if (!id) return;
 
-  const fetchReport = async () => {
-    try {
-      const res = await fetch(`/api/attempts/${id}`);
-      const data = await res.json();
+    const fetchReport = async () => {
+      try {
+        const res = await fetch(`/api/attempts/${id}`);
+        const data = await res.json();
 
-      setAttempt(data.attempt || null);
-      setResult(data.result || null);
-      setCpmiResult(data.cpmiResult || null);
-      setSubtestResults(data.subtestResults || []);
+        setAttempt(data.attempt || null);
+        setResult(data.result || null);
+        setCpmiResult(data.cpmiResult || null);
+        setmsdtResult(data.msdtResult || null);
+        setSubtestResults(data.subtestResults || []);
 
-      // Ambil kesimpulan dari CPMI / IST
-      const source = data.cpmiResult || data.result || {};
-      setKesimpulan(source.kesimpulan || '');
+        // Ambil kesimpulan default
+        const source = data.cpmiResult || data.result || {};
+        setKesimpulan(source.kesimpulan || '');
 
-      // Ambil TTD psikolog dari user
-      setTtd(data.ttd || null);
+        // Ambil TTD psikolog
+        setTtd(data.ttd || null);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  fetchReport();
-}, [id]);
+    fetchReport();
+  }, [id]);
 
   if (isLoading) return <p>Memuat laporan...</p>;
   if (!attempt) return <p>Data laporan tidak ditemukan.</p>;
@@ -59,20 +60,28 @@ useEffect(() => {
   const PDFTemplate = PDFComponents[testType] || ReportISTDocument;
 
   // props untuk PDF
- const pdfProps =
-  testType === 'CPMI'
-    ? { 
-        attempt, 
-        result: cpmiResult, 
-        kesimpulan, 
-        ttd,
-        barcode: cpmiResult?.barcode,       // ✅ tambahkan
-        barcodettd: cpmiResult?.barcodettd,
-        expiresAt: cpmiResult?.expiresAt    // ✅ tambahkan
-      }
-    : { attempt, result, subtestResults, kesimpulan, ttd };
-
-
+  const pdfProps =
+    testType === 'CPMI'
+      ? { 
+          attempt, 
+          result: cpmiResult, 
+          kesimpulan, 
+          ttd,
+          barcode: cpmiResult?.barcode,
+          barcodettd: cpmiResult?.barcodettd,
+          expiresAt: cpmiResult?.expiresAt
+        }
+      : testType === 'MSDT'
+      ? {
+          attempt,
+           result: msdtResult,       // MSDT pakai result utama
+          kesimpulan: msdtResult?.kesimpulan || kesimpulan,
+          ttd,
+  barcode: msdtResult?.barcode,
+    barcodettd: msdtResult?.barcodettd,
+    expiresAt: msdtResult?.expiresAt
+        }
+      : { attempt, result, subtestResults, kesimpulan, ttd };
 
   const fileName = `${attempt.TestType?.name}_${attempt.User?.fullName}.pdf`.replace(/\s+/g, '_');
 
@@ -89,39 +98,44 @@ useEffect(() => {
       alert('Gagal menyimpan!');
     }
   };
+
   const handleValidate = async () => {
-  if (!cpmiResult) return;
+    if (!result && !cpmiResult) return;
 
-  try {
-    const res = await fetch('/api/reports/validate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        reportId: cpmiResult.id, 
-        kesimpulan,
-        ttd // optional, kalau ada TTD baru
-      }),
-    });
-    const data = await res.json();
+    try {
+      const reportId = testType === 'CPMI' ? cpmiResult?.id : result?.id;
+      const res = await fetch('/api/reports/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          reportId, 
+          kesimpulan,
+          ttd 
+        }),
+      });
+      const data = await res.json();
 
-    if (data.success) {
-      alert('Berhasil validasi!');
+      if (data.success) {
+        alert('Berhasil validasi!');
 
-      // Re-fetch report supaya dapat barcode & TTD terbaru
-      const updated = await fetch(`/api/attempts/${id}`);
-      const updatedData = await updated.json();
+        // Re-fetch report supaya dapat barcode & TTD terbaru
+        const updated = await fetch(`/api/attempts/${id}`);
+        const updatedData = await updated.json();
 
-      setCpmiResult(updatedData.cpmiResult);  // ✅ update cpmiResult
-      setTtd(updatedData.ttd);                // ✅ update TTD
-    } else {
-      alert('Validasi gagal!');
+        if (testType === 'CPMI') {
+          setCpmiResult(updatedData.cpmiResult);
+        } else if (testType === 'MSDT') {
+          setResult(updatedData.result);
+        }
+        setTtd(updatedData.ttd);
+      } else {
+        alert('Validasi gagal!');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Terjadi kesalahan!');
     }
-  } catch (err) {
-    console.error(err);
-    alert('Terjadi kesalahan!');
-  }
-};
-
+  };
 
   // Key unik untuk re-render PDF saat kesimpulan berubah
   const pdfKey = JSON.stringify({ kesimpulan, result, cpmiResult, subtestResults });
@@ -139,12 +153,11 @@ useEffect(() => {
           )}
         </PDFDownloadLink>
         <button
-  onClick={handleValidate}
-  className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 mt-2"
->
-  Validasi & Perbarui PDF
-</button>
-
+          onClick={handleValidate}
+          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 mt-2"
+        >
+          Validasi & Perbarui PDF
+        </button>
       </div>
 
       {/* Content 2 kolom */}
@@ -152,14 +165,12 @@ useEffect(() => {
         {/* Form kiri */}
         <div className="w-1/3 bg-white rounded shadow p-4 flex flex-col">
           <h2 className="text-lg font-bold mb-4">Kesimpulan</h2>
-
           <label className="font-semibold mb-1">Kesimpulan:</label>
           <textarea
             className="w-full h-40 p-2 border rounded mb-4"
             value={kesimpulan}
             onChange={(e) => setKesimpulan(e.target.value)}
           />
-
           <button
             onClick={handleSave}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mt-auto"

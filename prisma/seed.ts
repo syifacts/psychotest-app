@@ -13,7 +13,7 @@ const testTypes = [
   { name: "DISC", desc: "DISC Personality Assessment", duration: 60, price: 150000, img: "/disc.jpg" },
   { name: "MBTI", desc: "Myers–Briggs Type Indicator", duration: 60, price: 150000, img: "/mbti.jpg" },
   { name: "MSAI", desc: "Multiple Self-Assessment Inventory", duration: 60, price: 150000, img: "/msai.jpg" },
-  { name: "MSDT", desc: "Multi-Stage Diagnostic Test", duration: 60, price: 150000, img: "/msdt.jpg" },
+  { name: "MSDT", desc: "Multi-Stage Diagnostic Test", duration: 30, price: 150000, img: "/msdt.jpg" },
   { name: "Papikostick", desc: "Papikostick Handwriting Personality Test", duration: 60, price: 150000, img: "/papikostick.jpg" },
   { name: "RMIB", desc: "Rothwell-Miller Interest Blank", duration: 60, price: 150000, img: "/rmib.jpg" },
   { name: "TIU5", desc: "TIU Cognitive Ability Test Level 5", duration: 60, price: 150000, img: "/tiu.jpg" },

@@ -75,7 +75,7 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, ttd, b
 
   useEffect(() => {
     if (barcode) {
-      const url = `https://04945151e09f.ngrok-free.app/validate/${barcode}`;
+      const url = `https://8a106cfaf826.ngrok-free.app/validate/${barcode}`;
       QRCode.toDataURL(url)
         .then(setQrCodeBase64)
         .catch((err) => console.error("QR generation error:", err));
@@ -186,34 +186,35 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, ttd, b
     </Text>
   </View>
 
-  {/* Identitas Psikolog */}
-  <View style={{ marginBottom: 20 }}>
-    <Text style={[styles.bold, { marginBottom: 4 }]}>Identitas Psikolog</Text>
-    <Text style={{ fontSize: 9, color: "gray", marginBottom: 6 }}>
-      Psychologist’s Identity
-    </Text>
-
-    {/* Nama Psikolog */}
-    <View style={{ flexDirection: "row", borderBottomWidth: 1, borderColor: "#000", paddingVertical: 4 }}>
-      <Text style={{ width: 180, fontFamily: "Times-Bold" }}>Nama Psikolog</Text>
-      <Text style={{ flex: 1 }}> : {result?.ValidatedBy?.fullName || "-"}</Text>
-    </View>
-    <Text style={{ fontSize: 9, color: "gray", marginBottom: 4 }}>Psychologist’s Name</Text>
-
-    {/* Lembaga */}
-    <View style={{ flexDirection: "row", borderBottomWidth: 1, borderColor: "#000", paddingVertical: 4 }}>
-      <Text style={{ width: 180, fontFamily: "Times-Bold" }}>Nama Fasyankes/Lembaga Layanan Psikologi</Text>
-      <Text style={{ flex: 1 }}> : {result?.ValidatedBy?.lembagalayanan || "-"}</Text>
-    </View>
-    <Text style={{ fontSize: 9, color: "gray", marginBottom: 4 }}>Clinic/Hospital</Text>
-
-    {/* Tanggal */}
-    <View style={{ flexDirection: "row", borderBottomWidth: 1, borderColor: "#000", paddingVertical: 4 }}>
-      <Text style={{ width: 180, fontFamily: "Times-Bold" }}>Tanggal Pemeriksaan</Text>
-      <Text style={{ flex: 1 }}> : {new Date(attempt?.createdAt || Date.now()).toLocaleDateString("id-ID", { day:"numeric", month:"long", year:"numeric" })}</Text>
-    </View>
-    <Text style={{ fontSize: 9, color: "gray" }}>Date of Assessment</Text>
-  </View>
+   {/* Identitas Psikolog */}
+   <View style={{ marginBottom: 20 }}>
+     <Text style={[styles.bold, { marginBottom: 4 }]}>Identitas Psikolog</Text>
+     <Text style={{ fontSize: 9, color: "gray", marginBottom: 6, borderBottomWidth: 1, borderColor: "#525252" }}>
+       Psychologist’s Identity
+     </Text>
+ 
+     {/* Nama Psikolog */}
+     <View style={{ flexDirection: "row", paddingVertical: 4 }}>
+       <Text style={{ width: 180, fontFamily: "Times-Bold" }}>Nama Psikolog</Text>
+       <Text style={{ flex: 1 }}> : {result?.ValidatedBy?.fullName || "-"}</Text>
+     </View>
+     <Text style={{ borderColor: "#525252", borderBottomWidth: 1,fontSize: 9, color: "gray", marginBottom: 4 }}>Psychologist’s Name</Text>
+ 
+     {/* Lembaga */}
+     <View style={{ flexDirection: "row", paddingVertical: 4 }}>
+       <Text style={{ width: 180, fontFamily: "Times-Bold" }}>Nama Fasyankes/Lembaga Layanan Psikologi</Text>
+       <Text style={{ flex: 1 }}> : {result?.ValidatedBy?.lembagalayanan || "-"}</Text>
+     </View>
+     <Text style={{ fontSize: 9, color: "gray", marginBottom: 4, borderColor: "#525252", borderBottomWidth: 1 }}>Clinic/Hospital</Text>
+ 
+     {/* Tanggal */}
+     <View style={{ flexDirection: "row", paddingVertical: 4 }}>
+       <Text style={{ width: 180, fontFamily: "Times-Bold" }}>Tanggal Pemeriksaan</Text>
+       <Text style={{ flex: 1 }}> : {new Date(attempt?.createdAt || Date.now()).toLocaleDateString("id-ID", { day:"numeric", month:"long", year:"numeric" })}</Text>
+     </View>
+     <Text style={{ fontSize: 9, color: "gray", borderColor: "#525252", borderBottomWidth: 1 }}>Date of Assessment</Text>
+   </View>
+ 
 
 {/* Tabel CPMI */}
 <View style={{ marginTop: 10, borderWidth: 1, borderColor: "#000" }}>
@@ -312,7 +313,7 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, ttd, b
       {expiresAt && <Text style={styles.validation}>Berlaku sampai: {new Date(expiresAt).toLocaleDateString("id-ID")}</Text>}
       {validationNotes && (
   <View style={{ width: 120, marginTop: 3 }}>
-    <Text style={[styles.validation, { flexWrap: "wrap" }]}>{validationNotes}</Text>
+    <Text style={[styles.validation, {textAlign:"justify", flexWrap: "wrap" }]}>{validationNotes}</Text>
   </View>
 )}
 

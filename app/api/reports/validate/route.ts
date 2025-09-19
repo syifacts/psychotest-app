@@ -182,6 +182,12 @@ if (result?.ValidatedBy?.ttdHash) {
   barcodettd = await QRCode.toDataURL(result.ValidatedBy.ttdHash.toString());
   console.log("✅ Generated barcodettd:", barcodettd.substring(0, 50));
 }
+// // === Generate QR dari TTD URL psikolog (bukan hash) ===
+// let barcodettd: string | null = null;
+// if (result?.ValidatedBy?.ttdUrl) {
+//   barcodettd = await QRCode.toDataURL(result.ValidatedBy.ttdUrl.toString());
+//   console.log("✅ Generated barcodettd pakai URL:", barcodettd.substring(0, 50));
+// }
 
     // Update result
     const updated = await prisma.result.update({
