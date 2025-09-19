@@ -93,3 +93,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Gagal membuat attempt" }, { status: 500 });
   }
 }
+// === GET: daftar attempt user ===
+export async function GET(req: NextRequest) {
+  try {
+    const url = new URL(req.url);
+    const userId = Number(url.searchParams.get("userId"));
+
+    if (!userId) {
+      return NextResponse.json({ error: "userId wajib diisi" }, { status: 400 });
+    }
+
+    const attempts = await prisma.testAttempt.findMany({
+      where: { userId },
+      include: {
+        TestType: true,
+        Payment: true,
+        results: true,
+      },
+      orderBy: { startedAt: "desc" },
+    });
+
+    return NextResponse.json(attempts);
+  } catch (err) {
+    console.error("❌ Gagal ambil attempts:", err);
+    return NextResponse.json({ error: "Gagal ambil attempts" }, { status: 500 });
+  }
+}

@@ -38,6 +38,7 @@ const CPMIPage = () => {
   const [timeLeft, setTimeLeft] = useState(30 * 60);
 
   const [attemptId, setAttemptId] = useState<number | null>(null);
+  const [accessReason, setAccessReason] = useState(""); // Tambahan
 
   // -------------------------
   // Ambil user & test info dari server
@@ -68,6 +69,7 @@ const CPMIPage = () => {
         const accessRes = await fetch(`/api/tes/check-access?userId=${userData.user.id}&type=CPMI`);
         const accessData = await accessRes.json();
         setHasAccess(accessData.access);
+        setAccessReason(accessData.reason || "");
       } catch (err) {
         console.error("Gagal fetch user/test info CPMI:", err);
       }
@@ -208,38 +210,47 @@ const CPMIPage = () => {
   // -------------------------
   // Submit Test
   // -------------------------
-  const handleSubmit = async () => {
-    if (!user || !attemptId) return;
+// -------------------------
+// Submit Test
+// -------------------------
+const handleSubmit = async () => {
+  if (!user || !attemptId) return;
 
-    try {
-      const payload: AnswerPayload[] = Object.entries(answers).map(([qid, choice]) => {
-        const q = questions.find((q) => q.id === Number(qid));
-        return { questionId: Number(qid), questionCode: q?.code, choice };
-      });
+  try {
+    const payload: AnswerPayload[] = Object.entries(answers).map(([qid, choice]) => {
+      const q = questions.find((q) => q.id === Number(qid));
+      return { questionId: Number(qid), questionCode: q?.code, choice };
+    });
 
-      const res = await fetch("/api/tes/submit-cpmi", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, type: "CPMI", attemptId, answers: payload }),
-        credentials: "include",
-      });
+    const res = await fetch("/api/tes/submit-cpmi", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, type: "CPMI", attemptId, answers: payload }),
+      credentials: "include",
+    });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal submit CPMI");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Gagal submit CPMI");
 
-      localStorage.removeItem("attemptId");
-      localStorage.removeItem("endTime");
-      localStorage.removeItem("currentIndex");
+    // Hapus attempt lama dari localStorage
+    localStorage.removeItem("attemptId");
+    localStorage.removeItem("endTime");
+    localStorage.removeItem("currentIndex");
 
-      alert("🎉 Tes CPMI selesai! Hasil bisa dilihat di Dashboard.");
-      router.push("/dashboard");
-    } catch (err: any) {
-      alert(err.message);
-      localStorage.removeItem("attemptId");
-      localStorage.removeItem("endTime");
-      localStorage.removeItem("currentIndex");
-    }
-  };
+    // Reset akses supaya harus bayar lagi
+    setHasAccess(false);
+
+    alert("🎉 Tes CPMI selesai! Hasil bisa dilihat di Dashboard.");
+    router.push("/dashboard");
+  } catch (err: any) {
+    alert(err.message);
+    localStorage.removeItem("attemptId");
+    localStorage.removeItem("endTime");
+    localStorage.removeItem("currentIndex");
+    setHasAccess(false);
+  }
+};
+
 
   // -------------------------
   // Restore attempt on refresh
@@ -314,6 +325,7 @@ const CPMIPage = () => {
       <CPMIIntro
         testInfo={testInfo}
         hasAccess={hasAccess}
+          accessReason={accessReason} // baru
         setHasAccess={setHasAccess}
         startAttempt={async () => {
           await startAttempt();

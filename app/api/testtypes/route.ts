@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   const testTypes = await prisma.testType.findMany({
     select: {
+      id: true,
       name: true,
       desc: true,
       price: true,

@@ -1,16 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { BlobProvider } from "@react-pdf/renderer";
 import ReportCPMIDocument from "@/components/report/reportDocumentCPMI";
 
-export default function ValidatePage({ params }: { params: { barcode: string } }) {
-  const { barcode } = params;
+export default function ValidatePage() {
+  const params = useParams<{ barcode: string }>();
+  const barcode = params?.barcode; // <-- dari URL
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!barcode) return;
     fetch(`/api/report/view/${barcode}`)
-      .then(res => res.json())
+      .then((res) => res.json())
       .then(setData)
       .finally(() => setLoading(false));
   }, [barcode]);
@@ -41,10 +44,7 @@ export default function ValidatePage({ params }: { params: { barcode: string } }
 
           return (
             <div>
-              {/* Preview PDF */}
               <iframe src={url} width="100%" height="800px" style={{ border: "1px solid #ccc" }} />
-
-              {/* Tombol download */}
               <a
                 href={url}
                 download={`Report-${barcode}.pdf`}

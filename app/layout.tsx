@@ -1,23 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Poppins } from "next/font/google";
+import { poppins, geistSans, geistMono } from "./font";
 import "./globals.css";
-import IdleLogout from "../components/idlelogout"; // 👈 tambahkan
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  variable: "--font-poppins",
-});
-
-const geistSans = Geist({
-  subsets: ["latin"],
-  variable: "--font-geist-sans",
-});
-
-const geistMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-geist-mono",
-});
+import IdleLogout from "../components/idlelogout";
 
 export const metadata: Metadata = {
   title: "Psychotest App",
@@ -38,7 +22,7 @@ export default function RootLayout({
       className={`${poppins.variable} ${geistSans.variable} ${geistMono.variable}`}
     >
       <body className="antialiased">
-        <IdleLogout />   {/* 👈 Idle logout aktif global */}
+        <IdleLogout />
         {children}
       </body>
     </html>

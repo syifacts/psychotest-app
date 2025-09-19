@@ -34,36 +34,11 @@ export async function POST(req: NextRequest) {
       amount: totalAmount,
       status: PaymentStatus.SUCCESS,
     };
+
     if (decoded.role === "PERUSAHAAN") paymentData.companyId = decoded.id;
     else paymentData.userId = decoded.id;
 
     const payment = await prisma.payment.create({ data: paymentData });
-
-    // Buat TestAttempt langsung
-    if (decoded.role === "PERUSAHAAN") {
-      // misal ada input jumlah karyawan = qty, buat dummy attempt untuk karyawan
-      // di sini asumsi kamu punya relasi user-company, atau daftar user yg ikut paket
-      const users = await prisma.user.findMany({
-        where: { role: "USER" }, // ganti dengan filter karyawan perusahaan
-        take: qty,              // sesuai jumlah
-      });
-
-      for (const u of users) {
-        const existing = await prisma.testAttempt.findFirst({
-          where: { userId: u.id, testTypeId },
-        });
-        if (!existing) {
-          await prisma.testAttempt.create({
-            data: { userId: u.id, testTypeId, paymentId: payment.id },
-          });
-        }
-      }
-    } else {
-      // user individual
-      await prisma.testAttempt.create({
-        data: { userId: decoded.id, testTypeId, paymentId: payment.id },
-      });
-    }
 
     return NextResponse.json({
       success: true,

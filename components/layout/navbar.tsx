@@ -56,7 +56,8 @@ const Navbar = () => {
       { href: "/account", label: "Akun" },
     ],
     PSIKOLOG: [
-      { href: "/psikolog/dashboard", label: "List Tes" },
+      { href: "/psikolog/dashboard", label: "Dashboard" },
+      { href: "/psikolog/validasi", label: "Validasi" },
       { href: "/account", label: "Akun" },
     ],
     SUPERADMIN: [

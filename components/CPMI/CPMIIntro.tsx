@@ -12,13 +12,22 @@ interface Props {
   hasAccess: boolean;
   setHasAccess: (val: boolean) => void;
   startAttempt: () => Promise<void>;
-  role: "USER" | "PERUSAHAAN"; // ✅ tambahin role di sini juga
+  accessReason?: string;
+  role: "USER" | "PERUSAHAAN";
 }
 
-const CPMIIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAttempt, role }) => {
+const CPMIIntro: React.FC<Props> = ({
+  testInfo,
+  hasAccess,
+  setHasAccess,
+  startAttempt,
+  role,
+  accessReason,
+}) => {
+  const isCompanyAccess = accessReason?.startsWith("Sudah didaftarkan oleh perusahaan");
+
   return (
     <>
-      {/* ✅ Navbar */}
       <Navbar />
 
       <div className={styles.pageWrapper}>
@@ -26,7 +35,7 @@ const CPMIIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
         <div className={styles.floatingCircle}></div>
         <div className={styles.floatingSquare}></div>
 
-        {/* LEFT */}
+        {/* LEFT COLUMN */}
         <motion.div
           className={styles.leftColumn}
           initial={{ opacity: 0, x: -50 }}
@@ -37,8 +46,7 @@ const CPMIIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
           <header className={styles.header}>
             <h1 className={styles.title}>Tes CPMI (Calon Pekerja Migran Indonesia)</h1>
             <p className={styles.subtitle}>
-              Tes ini dirancang untuk mengukur <b>tingkat konsentrasi</b>,{" "}
-              <b>pengendalian diri</b>, dan <b>ketahanan kerja</b> sebagai syarat penting
+              Tes ini dirancang untuk mengukur <b>tingkat konsentrasi</b>, <b>pengendalian diri</b>, dan <b>ketahanan kerja</b> sebagai syarat penting
               dalam kesiapan bekerja di luar negeri.
             </p>
           </header>
@@ -76,7 +84,7 @@ const CPMIIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
           </motion.section>
         </motion.div>
 
-        {/* RIGHT */}
+        {/* RIGHT COLUMN */}
         <motion.aside
           className={styles.rightColumn}
           initial={{ opacity: 0, x: 50 }}
@@ -99,12 +107,20 @@ const CPMIIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
             </div>
 
             <div className={styles.paymentWrapper}>
+              {/* Tampilkan badge perusahaan HANYA jika attempt belum selesai */}
+              {isCompanyAccess && hasAccess && (
+                <p className={styles.accessReasonBadge} style={{ marginBottom: "12px", color: "#555" }}>
+                  🏢 {accessReason}
+                </p>
+              )}
+
+              {/* CPMIPaymentButton akan otomatis menyesuaikan tombol jika hasAccess = false */}
               <CPMIPaymentButton
                 hasAccess={hasAccess}
                 setHasAccess={setHasAccess}
                 startAttempt={startAttempt}
                 testInfo={testInfo}
-                role={role} // ✅ jangan lupa kirim role
+                role={role}
               />
             </div>
 

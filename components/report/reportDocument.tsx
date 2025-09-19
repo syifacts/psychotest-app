@@ -125,6 +125,7 @@ export default function ReportDocument({
   subtestResults: any[];
   result: any | null;
 }) {
+  
   const user = attempt.User;
   const testType = attempt.TestType;
 

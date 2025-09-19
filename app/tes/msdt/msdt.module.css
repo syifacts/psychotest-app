@@ -1,180 +1,466 @@
-/* 🔹 Halaman Intro MSDT */
-.introContainer {
-  max-width: 800px;
+/* =======================
+   LAYOUT UTAMA
+======================= */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: "Inter", sans-serif;
+  color: #111827;
+}
+
+.pageWrapper {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 40px;
+  max-width: 1200px;
   margin: 60px auto;
-  padding: 30px;
-  font-family: "Poppins", sans-serif;
-  line-height: 1.8;
-  color: #333;
-  text-align: center;
+  padding: 20px;
 }
 
-.title {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1a237e;
-  margin-bottom: 15px;
+.leftColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  animation: fadeIn 0.8s ease forwards;
 }
 
-.description {
-  font-size: 1.1rem;
-  margin-bottom: 20px;
+/* msdt.module.css */
+
+/* RIGHT COLUMN */
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* jarak antar elemen */
+  padding: 16px;
+  background: #f9f9f9;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  width: 100%;
+  max-width: 320px;
+  box-sizing: border-box;
 }
 
-.btn {
-  background: #1a237e;
-  color: #fff;
-  border: none;
-  padding: 12px 24px;
-  margin: 10px;
-  font-size: 1rem;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
 
-.btn:hover {
-  background: #283593;
-}
 
 .backWrapper {
-  margin-top: 20px;
+  margin-top: auto; /* dorong ke bawah */
 }
 
 .backBtn {
-  background: #9e9e9e;
-  color: #fff;
+  padding: 10px 16px;
+  background-color: #eceff1;
   border: none;
-  padding: 10px 20px;
   border-radius: 8px;
-  font-size: 0.95rem;
   cursor: pointer;
-  transition: background 0.3s ease;
+  font-weight: 500;
 }
 
 .backBtn:hover {
-  background: #757575;
+  background-color: #cfd8dc;
 }
 
-/* 🔹 Container Tes */
-.container {
-  max-width: 1100px;
-  margin: 30px auto;
-  padding: 20px;
-  font-family: "Poppins", sans-serif;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
 
+/* =======================
+   HEADER & JUDUL
+======================= */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 2.3rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.subtitle {
+  font-size: 1.05rem;
+  color: #555;
+  line-height: 1.6;
+  max-width: 700px;
+  margin: 0 auto 20px auto;
 }
 
 .timer {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #e53935;
+  font-size: 18px;
+  font-weight: 600;
+  color: #dc2626;
+  background: #fee2e2;
+  padding: 6px 14px;
+  border-radius: 8px;
 }
 
-/* 🔹 Konten Utama */
+/* =======================
+   TOMBOL
+======================= */
+.btn {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #3b82f6, #1e40af);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  background: linear-gradient(135deg, #1e40af, #1e3a8a);
+  transform: scale(1.05);
+}
+
+.backBtn {
+  padding: 10px 20px;
+  margin-top: 40px;
+  background: #f3f4f6;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.backBtn:hover {
+  background: #e5e7eb;
+  transform: scale(1.03);
+}
+
+/* =======================
+   LAYOUT UTAMA
+======================= */
 .mainContent {
   display: flex;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 24px;
 }
 
+/* =======================
+   CARD SOAL
+======================= */
 .questionSection {
   flex: 3;
-  background: #f9f9f9;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  background: #ffffff;
+  padding: 28px 24px;
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+    max-height: 80vh;   /* batasi tinggi sesuai viewport */
+  overflow-y: auto;   /* scroll jika melebihi max-height */
+}
+.questionSection::-webkit-scrollbar {
+  width: 6px;
+}
+
+.questionSection::-webkit-scrollbar-thumb {
+  background: #2563eb;
+  border-radius: 3px;
+}
+
+.questionSection:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+}
+
+.questionContent {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  color: #1f2937;
 }
 
 .optionsList {
   list-style: none;
   padding: 0;
-  margin-top: 15px;
+  margin: 0 0 20px 0;
+}
+
+.optionsList li {
+  margin-bottom: 14px;
 }
 
 .optionLabel {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px;
-  margin: 6px 0;
-  border: 2px solid #ddd;
-  border-radius: 8px;
+  gap: 12px;
   cursor: pointer;
-  transition: border-color 0.3s, background 0.3s;
+  padding: 10px 14px;
+  border-radius: 12px;
+  transition: 0.2s;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
 }
 
 .optionLabel:hover {
-  border-color: #1a237e;
-  background: #f1f1f1;
+  background: #e0f2fe;
+  border-color: #60a5fa;
 }
 
-.optionLabel input {
-  accent-color: #1a237e;
-  transform: scale(1.2);
+.optionsList input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb;
+  cursor: pointer;
 }
 
-/* 🔹 Navigasi */
+.optionSelected {
+  background: #2563eb;
+  color: #fff;
+  border-color: #1e40af;
+}
+
+/* =======================
+   NAVIGASI SOAL
+======================= */
 .navButtons {
   display: flex;
   justify-content: space-between;
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
-/* 🔹 Answer Card */
+.navButtons button {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.navButtons button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* =======================
+   RINGKASAN JAWABAN
+======================= */
 .answerCard {
   flex: 1;
   background: #fff;
-  padding: 15px;
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  padding: 24px;
+  border-radius: 20px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
   height: fit-content;
+  position: sticky;
+  top: 80px;
 }
 
 .answerCard h3 {
-  font-size: 1.1rem;
-  margin-bottom: 12px;
+  font-size: 16px;
+  margin-bottom: 16px;
+  font-weight: 600;
   text-align: center;
+  color: #1e40af;
 }
 
 .answerGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 10px;
 }
 
 .answerNumber {
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  background: #f5f5f5;
-  cursor: pointer;
-  font-size: 0.9rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
   font-weight: 600;
-}
-
-.answerNumber:hover {
-  background: #eee;
-}
-
-.answered {
-  background: #4caf50 !important;
-  color: #fff;
+  cursor: pointer;
+  transition: 0.2s;
 }
 
 .unanswered {
-  background: #f44336 !important;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.answered {
+  background: #2563eb;
   color: #fff;
 }
 
 .current {
-  border: 2px solid #1a237e !important;
+  outline: 3px solid #facc15;
+  transform: scale(1.1);
+}
+
+/* =======================
+   INTRO & PAYMENT
+======================= */
+.paymentBox {
+  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+  border-radius: 20px;
+  padding: 40px 30px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  width: 400;
+}
+
+.paymentBox:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+}
+
+.illustration {
+  max-width: 220px;
+  margin: 0 auto 25px auto;
+  display: block;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.illustration:hover {
+  transform: scale(1.08) rotate(-2deg);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
+
+.sectionTitle {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #1e40af;
+  margin-bottom: 16px;
+}
+
+.benefitList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.benefitList li {
+  margin-bottom: 10px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+}
+.benefitsMini {
+  background: #f3f4f6; /* light gray background */
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.benefitsMini:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.benefitsMini h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #1e40af; /* dark blue */
+  margin-bottom: 12px;
+}
+
+.benefitsMini ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.benefitsMini li {
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+}
+
+.benefitsMini li::before {
+  content: "✔️";
+  margin-right: 8px;
+  font-size: 0.95rem;
+}
+
+
+/* =======================
+   BAGIAN BANTUAN / INFO
+======================= */
+.extraInfo {
+  margin: 20px 0;
+  text-align: left;
+  font-size: 0.95rem;
+  color: #333;
+  line-height: 1.6;
+}
+
+.supportBox {
+  margin-top: 25px;
+  padding: 16px 18px;
+  background: #f9fafb;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: #444;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.accessReasonBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  border-radius: 16px;
+  background-color: #e6f4ea;
+  color: #1b5e20;
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid #a5d6a7;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.accessReasonBadge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.accessReasonBadge span.icon {
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+}
+
+/* =======================
+   ANIMASI & RESPONSIVE
+======================= */
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
+  .pageWrapper {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .rightColumn {
+    margin-top: 20px;
+  }
 }
