@@ -396,6 +396,7 @@ model PersonalityResult {
 
   // validasi psikolog
   barcode    String? @unique @db.VarChar(30)
+  barcodettd String? @db.Text
   validated  Boolean  @default(false)
   validatedById Int?
   validatedAt DateTime?
