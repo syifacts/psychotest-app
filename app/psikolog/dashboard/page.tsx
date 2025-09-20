@@ -58,6 +58,8 @@ export default function DashboardKeseluruhan() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [overallStatsBySource, setOverallStatsBySource] = useState<any[]>([]);
+
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const router = useRouter();
@@ -104,6 +106,19 @@ export default function DashboardKeseluruhan() {
           withCredentials: true,
         });
         setReports(res.data);
+        // Statistik keseluruhan per sumber
+const groupedOverallBySource: Record<string, number> = {};
+res.data.forEach((r: Report) => {
+  const source = r.Company?.fullName || "Sendiri";
+  groupedOverallBySource[source] = (groupedOverallBySource[source] || 0) + 1;
+});
+setOverallStatsBySource(
+  Object.entries(groupedOverallBySource).map(([name, value]) => ({
+    name,
+    value,
+  }))
+);
+
 
         // Statistik untuk hari ini
         const today = new Date().toLocaleDateString();
@@ -198,31 +213,56 @@ export default function DashboardKeseluruhan() {
   </div>
 </div>
 
-{/* 🔹 Chart baru untuk total semua tes per jenis */}
-<div className="bg-white p-6 rounded-xl shadow mb-8">
-  <h2 className="font-semibold mb-4 text-center text-gray-700">
-    Statistik Keseluruhan (Per Jenis Tes)
-  </h2>
-  {reports.length > 0 ? (
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart
-        data={testTypes.map((tt) => ({
-          name: tt.name,
-          value: reports.filter((r) => r.TestType?.name === tt.name).length,
-        }))}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" />
-        <YAxis allowDecimals={false} />
-        <Tooltip />
-        <Legend />
-        <Bar dataKey="value" fill="#10B981" radius={[6, 6, 0, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
-  ) : (
-    <p className="text-center text-gray-400">Belum ada data</p>
-  )}
+{/* 🔹 Chart Section (2 kolom grid) */}
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+  {/* Chart 1: Statistik Keseluruhan (Per Jenis Tes) */}
+  <div className="bg-white p-6 rounded-xl shadow">
+    <h2 className="font-semibold mb-4 text-center text-gray-700">
+      Statistik Keseluruhan (Per Jenis Tes)
+    </h2>
+    {reports.length > 0 ? (
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart
+          data={testTypes.map((tt) => ({
+            name: tt.name,
+            value: reports.filter((r) => r.TestType?.name === tt.name).length,
+          }))}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="value" fill="#10B981" radius={[6, 6, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    ) : (
+      <p className="text-center text-gray-400">Belum ada data</p>
+    )}
+  </div>
+
+  {/* Chart 2: Total Tes Keseluruhan (Perusahaan vs Sendiri) */}
+  <div className="bg-white p-6 rounded-xl shadow">
+    <h2 className="font-semibold mb-4 text-center text-gray-700">
+      Total Tes Keseluruhan
+    </h2>
+    {overallStatsBySource.length > 0 ? (
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={overallStatsBySource}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="value" fill="#6366F1" radius={[6, 6, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    ) : (
+      <p className="text-center text-gray-400">Belum ada data</p>
+    )}
+  </div>
 </div>
+
 
 
         {/* 🔹 Global Filters */}
