@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma";
 import bcrypt from "bcrypt";
 
 const testTypes = [
+   {name: "Test untuk CPMI", desc: "Test Calon Pekerja Migran Indonesia", duration: 12, price: 150000, img: "/cpmi.jpg" },
   { name: "IST", desc: "Intelligence Structure Test", duration: 60, price: 150000, img: "/ist.jpeg" },
   { name: "EPPS", desc: "Edwards Personal Preference Schedule", duration: 60, price: 150000, img: "/epps.png" },
   { name: "MPPI", desc: "Minnesota Multiphasic Personality Inventory", duration: 60, price: 100000, img: "/mmpi.jpg" },
@@ -31,7 +32,6 @@ const testTypes = [
   { name: "FRT", desc: "Figural Reasoning Test", duration: 60, price: 150000, img: "/frt.jpg" },
   { name: "Aptitude Test", desc: "General Aptitude Test", duration: 60, price: 150000, img: "/aptitude.jpg" },
   { name: "Enneagram", desc: "Enneagram Personality Typing Test", duration: 60, price: 150000, img: "/enneagram.jpg" },
-  {name: "CPMI", desc: "Test Calon Pekerja Migran Indonesia", duration: 25, price: 150000, img: "/cpmi.jpg" },
 ];
 
 // ==== SUBTEST IST ====

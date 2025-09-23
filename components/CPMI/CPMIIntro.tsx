@@ -13,7 +13,7 @@ interface Props {
   setHasAccess: (val: boolean) => void;
   startAttempt: () => Promise<void>;
   accessReason?: string;
-  role: "USER" | "PERUSAHAAN";
+   role: "USER" | "PERUSAHAAN" | "GUEST"; 
 }
 
 const CPMIIntro: React.FC<Props> = ({

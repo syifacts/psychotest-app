@@ -57,6 +57,9 @@ export default function CompanyDashboard() {
   const [filterName, setFilterName] = useState<string>("all");
 const [statusFilter, setStatusFilter] = useState<string>("all");
   const [testTypes, setTestTypes] = useState<TestType[]>([]);
+  const [testId, setTestId] = useState<string>("");
+  
+
 // const [showTypeFilter, setShowTypeFilter] = useState(false);
 // const [showNameFilter, setShowNameFilter] = useState(false);
 // const [showStatusFilter, setShowStatusFilter] = useState(false);
@@ -65,6 +68,61 @@ const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Statistik
   const [reports, setReports] = useState<any[]>([]);
+  const [generatedUserId, setGeneratedUserId] = useState("");
+const [generatedTestId, setGeneratedTestId] = useState("");
+
+useEffect(() => {
+  const generateIds = async () => {
+    if (!companyId) return;
+
+    let testTypeName = "";
+    if (assignTarget === "TEST") {
+      const testObj = singlePayments.find(p => p.id === selectedTest);
+      testTypeName = testObj?.TestType?.name ?? "";
+    }
+
+    try {
+      const res = await fetch(
+        `/api/company/generate-ids?companyId=${companyId}&testTypeName=${testTypeName}`
+      );
+      if (!res.ok) throw new Error("Gagal generate ID");
+      const { userId, testId } = await res.json();
+      setGeneratedUserId(userId);
+      setGeneratedTestId(testId ?? "");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // hanya generate kalau ada paket/test yang dipilih
+  if ((assignTarget === "PACKAGE" && selectedPurchase) || 
+      (assignTarget === "TEST" && selectedTest)) {
+    generateIds();
+  }
+}, [companyId, selectedPurchase, selectedTest, assignTarget, singlePayments]);
+
+// Fungsi generate random ID
+const generateId = (prefix: string) => {
+  const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  return `${prefix}-${date}-${rand}`;
+};
+const handleGenerate = async () => {
+  if (!companyId) return;
+  try {
+    const res = await fetch(
+      `/api/company/generate-ids?companyId=${companyId}&testTypeName=${assignTarget === "TEST" ? "CPMI" : ""}`
+    );
+    if (!res.ok) throw new Error("Gagal generate ID");
+    const { userId, testId } = await res.json();
+    setGeneratedUserId(userId);
+    if (testId) setGeneratedTestId(testId);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -109,36 +167,43 @@ const [statusFilter, setStatusFilter] = useState<string>("all");
     fetchDashboard();
   }, [companyId]);
 
-  const handleAddUser = async () => {
-    if (!userEmail) return alert("Masukkan email user");
+const handleAddUser = async () => {
+  if (!companyId) return;
 
-    let url = "/api/company/register-user";
-    let body: any = { email: userEmail };
+  try {
+    // 1️⃣ Minta ID dari BE
+const selectedTestObj = singlePayments.find(p => p.id === selectedTest);
+const testName = selectedTestObj?.TestType?.name ?? "";
+const idRes = await fetch(
+  `/api/company/generate-ids?companyId=${companyId}&testTypeName=${testName}`
+);
 
-    if (assignTarget === "PACKAGE") {
-      if (!selectedPurchase) return alert("Pilih paket");
-      body.packagePurchaseId = selectedPurchase;
-    } else {
-      if (!selectedTest) return alert("Pilih test satuan");
-      body.paymentId = selectedTest;
-    }
+    if (!idRes.ok) throw new Error("Gagal generate ID");
+    const { userId, testId } = await idRes.json();
 
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (!res.ok) return alert(data.error);
-      alert("User berhasil ditambahkan");
-      setUserEmail("");
-      fetchDashboard();
-    } catch (err) {
-      console.error(err);
-      alert("Terjadi kesalahan saat menambahkan user");
-    }
-  };
+    // 2️⃣ Daftarkan user ke package / test
+    const res = await fetch("/api/company/register-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId, // 🔥 pake userId dari BE, bukan email
+        packagePurchaseId: assignTarget === "PACKAGE" ? selectedPurchase : null,
+        paymentId: assignTarget === "TEST" ? selectedTest : null,
+        testCustomId: testId ?? null, // kalau test satuan
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) return alert(data.error);
+
+    alert(`✅ User berhasil didaftarkan!\nToken: ${data.token ?? "-"}`);
+    fetchDashboard();
+  } catch (err) {
+    console.error(err);
+    alert("Terjadi kesalahan saat mendaftarkan user");
+  }
+};
+
 
   const handleRemoveUser = async (
     userId: number,
@@ -322,7 +387,7 @@ const notTestedUsers = allUsers.filter(u => u.status === "Belum Tes").length;
 </div>
 
 
-     {/* Daftarkan User */}
+{/* Daftarkan User */}
 <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
   <h2 className="text-xl font-bold mb-6 text-indigo-700 text-center md:text-left">
     Daftarkan User
@@ -334,16 +399,19 @@ const notTestedUsers = allUsers.filter(u => u.status === "Belum Tes").length;
       <label className="text-sm font-medium text-gray-600 mb-1">
         Tipe Pendaftaran
       </label>
-      <select
-        value={assignTarget}
-        onChange={(e) =>
-          setAssignTarget(e.target.value as "PACKAGE" | "TEST")
-        }
-        className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-      >
-        <option value="PACKAGE">Paket</option>
-        <option value="TEST">Test Satuan</option>
-      </select>
+<select
+  value={assignTarget}
+  onChange={(e) => {
+    setAssignTarget(e.target.value as "PACKAGE" | "TEST");
+    // reset testId saat ganti tipe
+    if (e.target.value === "TEST") setGeneratedTestId("");
+  }}
+  className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+>
+  <option value="PACKAGE">Paket</option>
+  <option value="TEST">Test Satuan</option>
+</select>
+
     </div>
 
     {/* Pilih Paket / Test */}
@@ -375,43 +443,93 @@ const notTestedUsers = allUsers.filter(u => u.status === "Belum Tes").length;
           {singlePayments.map((p) => (
             <option key={p.id} value={p.id}>
               {p.TestType?.name} (Sisa{" "}
-              {p.remainingQuota ?? (p.quantity - (p.userPackages?.length ?? 0))})
+              {p.remainingQuota ??
+                (p.quantity - (p.userPackages?.length ?? 0))})
             </option>
           ))}
         </select>
       )}
     </div>
 
-    {/* Input Email */}
-    <div className="flex flex-col col-span-1 md:col-span-2">
+    {/* User ID (Auto) */}
+    <div className="flex flex-col">
       <label className="text-sm font-medium text-gray-600 mb-1">
-        Email User
+        User ID (Auto)
       </label>
       <input
-        type="email"
-        placeholder="Masukkan email user"
-        value={userEmail}
-        onChange={(e) => setUserEmail(e.target.value)}
-        className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 w-full"
+        type="text"
+        value={generatedUserId}
+        readOnly
+        className="border border-gray-300 rounded-lg p-2 bg-gray-100 cursor-not-allowed"
       />
     </div>
 
-    {/* Tombol Tambahkan */}
-    <div className="md:col-span-4 flex justify-end">
-      <button
-        onClick={handleAddUser}
-        className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed"
-        disabled={
-          !userEmail ||
-          (assignTarget === "PACKAGE" && !selectedPurchase) ||
-          (assignTarget === "TEST" && !selectedTest)
-        }
-      >
-        Tambahkan User
-      </button>
-    </div>
+    {/* Test ID (Auto, hanya jika pilih TEST) */}
+    {assignTarget === "TEST" && (
+      <div className="flex flex-col">
+        <label className="text-sm font-medium text-gray-600 mb-1">
+          Test ID (Auto)
+        </label>
+        <input
+          type="text"
+          value={generatedTestId}
+          readOnly
+          className="border border-gray-300 rounded-lg p-2 bg-gray-100 cursor-not-allowed"
+        />
+      </div>
+    )}
+<button
+  onClick={async () => {
+    if (!companyId) return;
+
+    try {
+      // 1️⃣ Generate ID resmi dari BE
+      const idRes = await fetch(
+        `/api/company/generate-ids?companyId=${companyId}&testTypeId=${selectedTest ?? ""}`
+      );
+      if (!idRes.ok) throw new Error("Gagal generate ID");
+
+const { userId, testId } = await idRes.json();
+setGeneratedUserId(userId);
+setGeneratedTestId(testId ?? "");
+
+      // 2️⃣ Daftarkan user
+      const res = await fetch("/api/company/register-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          packagePurchaseId: assignTarget === "PACKAGE" ? selectedPurchase : null,
+          paymentId: assignTarget === "TEST" ? selectedTest : null,
+          testCustomId: testId ?? null,
+          companyId,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) return alert(data.error);
+
+      alert(`✅ User berhasil didaftarkan!\nToken: ${data.token ?? "-"}`);
+      fetchDashboard();
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan saat mendaftarkan user");
+    }
+  }}
+  className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed"
+  disabled={
+    (assignTarget === "PACKAGE" && !selectedPurchase) ||
+    (assignTarget === "TEST" && !selectedTest)
+  }
+>
+  Tambahkan User
+</button>
+
+
   </div>
 </div>
+
+
 
 {/* Table + Column Filters */}
 <div className="bg-white p-6 rounded-xl shadow overflow-x-auto">

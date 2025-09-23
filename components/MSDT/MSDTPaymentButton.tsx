@@ -42,35 +42,47 @@ const MSDTPaymentButton: React.FC<Props> = ({
   }, []);
 
   const handlePayment = async () => {
-    if (!user?.id || !testInfo?.id) return;
+  // ❌ Cek dulu login/guest
+  if (!user) {
+    alert("Silahkan login terlebih dahulu untuk membeli test!");
+    return window.location.href = "/login";
+  }
 
-    setLoading(true);
-    try {
-      const payRes = await fetch("/api/payment/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.id,
-          testTypeId: testInfo.id,
-          quantity: role === "PERUSAHAAN" ? quantity : 1,
-        }),
-      });
+  if ((user as any).role === "GUEST") {
+    alert("Silahkan login terlebih dahulu untuk membeli test!");
+    return window.location.href = "/login";
+  }
 
-      const payData = await payRes.json();
-      if (!payRes.ok || !payData.success) {
-        alert("❌ Pembayaran gagal!");
-        return;
-      }
+  if (!testInfo?.id) return;
 
-      alert("✅ Pembayaran berhasil! Silakan klik 'Mulai Tes' untuk memulai.");
-      setHasAccess(true);
-    } catch (err) {
-      console.error(err);
-      alert("❌ Terjadi kesalahan saat pembayaran.");
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  try {
+    const payRes = await fetch("/api/payment/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user.id,
+        testTypeId: testInfo.id,
+        quantity: role === "PERUSAHAAN" ? quantity : 1,
+      }),
+    });
+
+    const payData = await payRes.json();
+    if (!payRes.ok || !payData.success) {
+      alert("❌ Pembayaran gagal!");
+      return;
     }
-  };
+
+    alert("✅ Pembayaran berhasil! Silakan klik 'Mulai Tes' untuk memulai.");
+    setHasAccess(true);
+  } catch (err) {
+    console.error(err);
+    alert("❌ Terjadi kesalahan saat pembayaran.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Tombol Mulai Tes jika sudah punya akses
   if (hasAccess) {

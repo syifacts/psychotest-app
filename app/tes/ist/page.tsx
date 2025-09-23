@@ -75,9 +75,17 @@ useEffect(() => {
   const fetchUserAndTest = async () => {
     try {
       const userRes = await fetch("/api/auth/me", { credentials: "include" });
-      if (!userRes.ok) return router.push("/login");
-      const userData = await userRes.json();
-      if (!userData.user) return router.push("/login");
+if (!userRes.ok) return router.push("/login");
+
+const userData = await userRes.json();
+
+// **GUEST boleh lanjut**
+if (!userData.user && !window.location.pathname.startsWith("/tes")) {
+  return router.push("/login");
+}
+
+setUser(userData.user); // bisa { role: "GUEST" }
+
 
       setUser(userData.user);
       setFullName(userData.user.fullName || "");
@@ -153,7 +161,17 @@ useEffect(() => {
  const [quantity, setQuantity] = useState(1); // default 1
 
 const handlePayAndFollow = async () => {
-  if (!user || !testInfo) return;
+  if (!user) {
+    alert("Silahkan login terlebih dahulu untuk membeli test!");
+    return router.push("/login");
+  }
+
+  if (user.role === "GUEST") {
+    alert("Silahkan login terlebih dahulu untuk membeli test!");
+    return router.push("/login");
+  }
+
+  if (!testInfo) return;
 
   try {
     // 1️⃣ Mulai pembayaran
@@ -175,17 +193,16 @@ const handlePayAndFollow = async () => {
     console.log("Payment berhasil:", data.payment);
     alert("✅ Pembayaran berhasil!");
 
-    // ⚠️ Jangan buat attempt di sini!
-    // cukup arahkan user ke form/profile untuk lanjut
     setHasAccess(true);
-setAlreadyTaken(false);
-setCheckReason(data.reason || "Sudah bayar sendiri");
+    setAlreadyTaken(false);
+    setCheckReason(data.reason || "Sudah bayar sendiri");
     handleFollowTest();
   } catch (err: any) {
     console.error(err);
     alert("Pembayaran gagal: " + err.message);
   }
 };
+
 
 
   // -------------------------

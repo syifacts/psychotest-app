@@ -123,7 +123,7 @@ const Navbar = () => {
           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
           flex-wrap: wrap;
           gap: 10px;
-          height: 120px;
+          height: 90px;
         }
 
         .left {
@@ -165,7 +165,7 @@ const Navbar = () => {
           display: flex;
           gap: 40px;
           align-items: center;
-          font-size: 1.2rem;
+          font-size: 1rem;
         }
 
         .nav-links a {

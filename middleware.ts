@@ -1,24 +1,35 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
+import { prisma } from "@/lib/prisma";
 
 const JWT_SECRET = process.env.JWT_SECRET || "secretkey";
 
-// Halaman publik
-const publicPaths = ["/", "/login", "/register", "/api/report/view", "/api/user"];
+// Halaman publik dan halaman test yang boleh diakses guest
+const publicPaths = [
+  "/",
+  "/login",
+  "/register",
+  "/api/report/view",
+  "/api/user"
+];
 
-export function middleware(req: NextRequest) {
+// Halaman test yang bisa diakses guest tanpa login
+const guestTestPaths = ["/tes"];
+
+export async function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
   const path = url.pathname;
 
-  // Ambil token dari cookie
-  const token = req.cookies.get("token")?.value;
+  const authToken = req.cookies.get("token")?.value;
+  const testToken = url.searchParams.get("token");
 
-  if (token) {
+  // 1️⃣ Jika ada JWT login
+  if (authToken) {
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { role: string };
+      const decoded = jwt.verify(authToken, JWT_SECRET) as { role: string };
 
-      // Redirect user yang sudah login jika membuka login/register
+      // Redirect user yang sudah login jika buka login/register
       if (path === "/login" || path === "/register") {
         switch (decoded.role) {
           case "SUPERADMIN":
@@ -36,7 +47,7 @@ export function middleware(req: NextRequest) {
         return NextResponse.redirect(url);
       }
 
-      // Proteksi halaman role-based
+      // Proteksi role-based
       if (path.startsWith("/admin") && decoded.role !== "SUPERADMIN") {
         url.pathname = "/";
         return NextResponse.redirect(url);
@@ -50,25 +61,29 @@ export function middleware(req: NextRequest) {
         return NextResponse.redirect(url);
       }
 
-      // Semua halaman lain bisa diakses
       return NextResponse.next();
     } catch (err) {
-      // Token tidak valid → redirect ke login
-      url.pathname = "/login";
-      return NextResponse.redirect(url);
+      // invalid JWT → lanjut cek guest
     }
   }
 
-  // Token tidak ada → hanya boleh akses halaman publik
-  if (publicPaths.includes(path)) {
+  // 2️⃣ Jika ada token test dari query param
+  if (testToken) {
+    const valid = await prisma.token.findUnique({ where: { token: testToken } });
+    if (valid) return NextResponse.next();
+  }
+
+  // 3️⃣ Guest akses halaman test
+  if (guestTestPaths.some(p => path.startsWith(p))) {
     return NextResponse.next();
   }
-  if (publicPaths.some(publicPath => path.startsWith(publicPath))) {
-  return NextResponse.next();
-}
 
+  // 4️⃣ Halaman publik lain
+  if (publicPaths.includes(path) || publicPaths.some(p => path.startsWith(p))) {
+    return NextResponse.next();
+  }
 
-  // Bukan halaman publik → redirect ke login
+  // 5️⃣ Semua halaman lain → redirect ke login
   url.pathname = "/login";
   return NextResponse.redirect(url);
 }

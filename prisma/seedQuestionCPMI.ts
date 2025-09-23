@@ -13,11 +13,13 @@ async function main() {
       create: {
         code: `CPMI-${index + 1}`,
         content: q.content,
+        notes: q.notes,
         type: q.type,
-        options: q.options,         // langsung array
-        answerScores: q.answerScores, // langsung array
+        options: q.options ?? [],
+        image: q.image ?? null,
+        answer: Array.isArray(q.answer) ? q.answer : (q.answer ? [q.answer] : []),
         testTypeId: 30,
-        aspek: q.aspek
+         isScored: index >= 3,
       },
     });
   }

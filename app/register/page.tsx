@@ -16,9 +16,9 @@ export default function RegisterPage() {
   const [birthDate, setBirthDate] = useState('');
   const [gender, setGender] = useState('');
   const [education, setEducation] = useState('');
-  const [organization, setOrganization] = useState(''); // Nama lembaga/fasyankes atau perusahaan
-  const [phone, setPhone] = useState(''); // Hanya psikolog
-  const [address, setAddress] = useState(''); // Hanya perusahaan
+  const [organization, setOrganization] = useState(''); 
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -49,7 +49,9 @@ export default function RegisterPage() {
         bodyData.birthDate = birthDate;
         bodyData.gender = gender;
         bodyData.education = education;
-      } else if (role === "PSIKOLOG") {
+      } 
+      /* 
+      else if (role === "PSIKOLOG") {
         bodyData.fullName = name;
         bodyData.lembagalayanan = organization;
         bodyData.phone = phone;
@@ -59,7 +61,8 @@ export default function RegisterPage() {
       } else if (role === "PERUSAHAAN") {
         bodyData.fullName = organization;
         bodyData.address = address;
-      }
+      } 
+      */
 
       const response = await fetch("/api/auth/register", {
         method: "POST",
@@ -90,7 +93,6 @@ export default function RegisterPage() {
       setAddress('');
       termsCheckbox.checked = false;
 
-      // Redirect untuk USER default
       setTimeout(() => router.push("/login"), 2000);
     } catch (err) {
       console.error(err);
@@ -136,7 +138,7 @@ export default function RegisterPage() {
               Daftarkan akun untuk memulai eksplorasi potensi diri.
             </p>
 
-            {/* Pilih Role (User default, bisa switch ke Psikolog/Perusahaan) */}
+            {/* Pilih Role */}
             <div className="flex justify-center gap-4 mt-6">
               <button
                 className={`px-4 py-2 rounded ${roleSelected === "USER" ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"}`}
@@ -144,6 +146,8 @@ export default function RegisterPage() {
               >
                 User
               </button>
+
+              {/*
               <button
                 className={`px-4 py-2 rounded ${roleSelected === "PSIKOLOG" ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"}`}
                 onClick={() => setRoleSelected("PSIKOLOG")}
@@ -156,6 +160,7 @@ export default function RegisterPage() {
               >
                 Perusahaan
               </button>
+              */}
             </div>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-6">
@@ -167,30 +172,21 @@ export default function RegisterPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 {/* Kolom Kiri */}
-               <div className="space-y-6">
-  {(roleSelected === "USER" || roleSelected === "PSIKOLOG" || roleSelected === "PERUSAHAAN") && (
-    <div>
-      <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-        {roleSelected === "USER"
-          ? "Nama Lengkap"
-          : roleSelected === "PSIKOLOG"
-          ? "Nama Psikolog"
-          : "Nama Perusahaan"}
-      </label>
-
-      <input
-        id="name"
-        name="name"
-        type="text"
-        required
-        value={roleSelected === "PERUSAHAAN" ? organization : name}
-        onChange={(e) =>
-          roleSelected === "PERUSAHAAN" ? setOrganization(e.target.value) : setName(e.target.value)
-        }
-        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-      />
-    </div>
-  )}
+                <div className="space-y-6">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                      Nama Lengkap
+                    </label>
+                    <input
+                      id="name"
+                      name="name"
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
 
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700">Alamat Email</label>
@@ -222,99 +218,51 @@ export default function RegisterPage() {
 
                 {/* Kolom Kanan */}
                 <div className="space-y-6 max-w-xs">
-                  {roleSelected === "USER" && (
-                    <>
-                      <div>
-                        <label htmlFor="birthDate" className="block text-sm font-medium text-gray-700">Tanggal Lahir</label>
-                        <input
-                          id="birthDate"
-                          name="birthDate"
-                          type="date"
-                          required
-                          value={birthDate}
-                          onChange={(e) => setBirthDate(e.target.value)}
-                          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        />
-                      </div>
+                  <div>
+                    <label htmlFor="birthDate" className="block text-sm font-medium text-gray-700">Tanggal Lahir</label>
+                    <input
+                      id="birthDate"
+                      name="birthDate"
+                      type="date"
+                      required
+                      value={birthDate}
+                      onChange={(e) => setBirthDate(e.target.value)}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
 
-                      <div>
-                        <label htmlFor="gender" className="block text-sm font-medium text-gray-700">Jenis Kelamin</label>
-                        <select
-                          id="gender"
-                          required
-                          value={gender}
-                          onChange={(e) => setGender(e.target.value)}
-                          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        >
-                          <option value="">-- Pilih Jenis Kelamin --</option>
-                          <option value="LAKI_LAKI">Laki-laki</option>
-                          <option value="PEREMPUAN">Perempuan</option>
-                        </select>
-                      </div>
+                  <div>
+                    <label htmlFor="gender" className="block text-sm font-medium text-gray-700">Jenis Kelamin</label>
+                    <select
+                      id="gender"
+                      required
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value)}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    >
+                      <option value="">-- Pilih Jenis Kelamin --</option>
+                      <option value="LAKI_LAKI">Laki-laki</option>
+                      <option value="PEREMPUAN">Perempuan</option>
+                    </select>
+                  </div>
 
-                      <div>
-                        <label htmlFor="education" className="block text-sm font-medium text-gray-700">Pendidikan Terakhir</label>
-                        <select
-                          id="education"
-                          required
-                          value={education}
-                          onChange={(e) => setEducation(e.target.value)}
-                          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        >
-                          <option value="">-- Pilih Pendidikan --</option>
-                          <option value="SMA/SMK">SMA/SMK</option>
-                          <option value="Diploma">Diploma</option>
-                          <option value="Sarjana">Sarjana (S1)</option>
-                          <option value="Magister">Magister (S2)</option>
-                          <option value="Doktor">Doktor (S3)</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
-
-                  {roleSelected === "PSIKOLOG" && (
-                    <>
-                      <div>
-                        <label htmlFor="organization" className="block text-sm font-medium text-gray-700">Nama Lembaga/Fasyankes</label>
-                        <input
-                          id="organization"
-                          name="organization"
-                          type="text"
-                          required
-                          value={organization}
-                          onChange={(e) => setOrganization(e.target.value)}
-                          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="phone" className="block text-sm font-medium text-gray-700">No. Telepon</label>
-                        <input
-                          id="phone"
-                          name="phone"
-                          type="text"
-                          required
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {roleSelected === "PERUSAHAAN" && (
-                    <div>
-                      <label htmlFor="address" className="block text-sm font-medium text-gray-700">Alamat Perusahaan</label>
-                      <input
-                        id="address"
-                        name="address"
-                        type="text"
-                        required
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      />
-                    </div>
-                  )}
+                  <div>
+                    <label htmlFor="education" className="block text-sm font-medium text-gray-700">Pendidikan Terakhir</label>
+                    <select
+                      id="education"
+                      required
+                      value={education}
+                      onChange={(e) => setEducation(e.target.value)}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    >
+                      <option value="">-- Pilih Pendidikan --</option>
+                      <option value="SMA/SMK">SMA/SMK</option>
+                      <option value="Diploma">Diploma</option>
+                      <option value="Sarjana">Sarjana (S1)</option>
+                      <option value="Magister">Magister (S2)</option>
+                      <option value="Doktor">Doktor (S3)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -340,15 +288,15 @@ export default function RegisterPage() {
               >
                 {isLoading ? 'Mendaftarkan...' : 'Daftar'}
               </button>
-                        <p className="mt-6 text-center text-sm text-gray-600">
-                  Sudah punya akun?{' '}
-                  <Link
-                    href="/login"
-                    className="font-medium text-blue-500 hover:underline hover:text-blue-600"
-                  >
-                    Masuk
-                  </Link>
-                </p>
+              <p className="mt-6 text-center text-sm text-gray-600">
+                Sudah punya akun?{' '}
+                <Link
+                  href="/login"
+                  className="font-medium text-blue-500 hover:underline hover:text-blue-600"
+                >
+                  Masuk
+                </Link>
+              </p>
             </form>
           </div>
         </div>

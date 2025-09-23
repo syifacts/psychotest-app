@@ -401,3 +401,25 @@
 .accessReasonBadge span.icon {
   font-size: 16px;
 }
+/* cpmi.module.css */
+
+/* Field jawaban essay */
+.essayInput {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  resize: vertical; /* hanya bisa diubah tinggi, tidak lebar */
+  min-height: 100px; /* tinggi minimal */
+  box-sizing: border-box;
+  margin-top: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.essayInput:focus {
+  outline: none;
+  border-color: #4a90e2; /* warna border saat focus */
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
