@@ -16,6 +16,11 @@ export async function GET() {
         id: true,
         fullName: true,
         role: true,
+        tokens: {
+      select: { token: true },
+      take: 1,
+      orderBy: { createdAt: "desc" },
+    },
         purchasedPackagesAsCompany: { select: { id: true } },
         companyPayments: { select: { id: true } },
         attempts: { select: { id: true } } // untuk user biasa, jumlah test yang mereka lakukan
@@ -26,6 +31,7 @@ export async function GET() {
       id: u.id,
       fullName: u.fullName,
       role: u.role,
+      token: u.tokens[0]?.token || null,
       totalPackagePurchases: u.purchasedPackagesAsCompany.length,
       totalPayments: u.companyPayments.length,
       totalAttempts: u.role === "USER" ? u.attempts.length : 0, // jumlah test untuk user

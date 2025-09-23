@@ -69,7 +69,7 @@ const Navbar = () => {
       { href: "/", label: "Beranda" },
       { href: "/company/dashboard", label: "Dashboard" },
       { href: "/dashboard", label: "Layanan Tes" },
-      { href: "/company/packages", label: "Bundle Paket" },
+  //    { href: "/company/packages", label: "Bundle Paket" },
       { href: "/account", label: "Akun" },
     ],
   };

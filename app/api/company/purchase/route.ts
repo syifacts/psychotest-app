@@ -28,29 +28,43 @@ export async function GET(req: Request) {
       where: { companyId },
       include: {
         package: { include: { tests: { include: { testType: true } } } },
-        userPackages: { include: { User: true } }, // hanya user yang sudah didaftarkan
+        userPackages: {
+          include: {
+            User: {
+              include: {
+                tokens: {
+                  select: { token: true },
+                  take: 1,
+                  orderBy: { createdAt: "desc" }, // ambil token terbaru
+                },
+              },
+            },
+          },
+        },
       },
     });
 
     // --- Test satuan (single payment) ---
     const singlePaymentsRaw = await prisma.payment.findMany({
       where: { companyId, status: "SUCCESS" },
-      include: { TestType: true }, // informasi testType
+      include: { TestType: true },
     });
 
     // Mapping user yang sudah didaftarkan ke test
     const singlePayments = await Promise.all(
       singlePaymentsRaw.map(async (payment) => {
-        // Ambil TestAttempt yang sudah dibuat untuk user tertentu
         const registeredAttempts = await prisma.testAttempt.findMany({
           where: { paymentId: payment.id },
-          include: { User: true },
+          include: { User: { include: { tokens: { take: 1, orderBy: { createdAt: "desc" }, select: { token: true } } } } },
         });
 
         return {
           ...payment,
-          userPackages: registeredAttempts.map(a => a.User ?? {}), // tampilkan user terdaftar
-          remainingQuota: payment.quantity - registeredAttempts.length, 
+          userPackages: registeredAttempts.map(a => ({
+            ...a.User,
+            token: a.User?.tokens?.[0]?.token ?? null,
+          })),
+          remainingQuota: payment.quantity - registeredAttempts.length,
         };
       })
     );

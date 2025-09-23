@@ -32,7 +32,8 @@ const CPMIPaymentButton: React.FC<Props> = ({
   const [quantity, setQuantity] = useState(1);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
-  const [tokenCompleted, setTokenCompleted] = useState(false); // <-- state baru
+  const [tokenCompleted, setTokenCompleted] = useState(false);
+  const [checkingToken, setCheckingToken] = useState(true);
 
   // ---------------------------
   // Ambil info user / token
@@ -43,26 +44,36 @@ useEffect(() => {
       if (token) {
         const resToken = await fetch(`/api/token/info?token=${token}`);
         const dataToken = await resToken.json();
+        console.log("Token API response:", resToken);
+        console.log("Token data:", dataToken);
 
-        if (resToken.ok && dataToken) {
-          setUser({
-            id: dataToken.userId ?? 0,
-            name: dataToken.companyName ?? "Guest",
-            email: "",
-            role: "GUEST",
-          });
-
-          // ✅ gunakan isCompleted ATAU used
-          setTokenCompleted((dataToken.isCompleted ?? false) || (dataToken.used ?? false));
-
-
-          setHasAccess(true);
+        if (!resToken.ok) {
+          console.log("Token tidak valid atau sudah digunakan");
+          setTokenCompleted(true); // ✅ tes tidak bisa dikerjakan
+          setCheckingToken(false);
           return;
         }
+
+        // Token valid
+        setUser({
+          id: dataToken.userId ?? 0,
+          name: dataToken.companyName ?? "Guest",
+          email: "",
+          role: "GUEST",
+        });
+
+        const completed = Boolean(dataToken.isCompleted) || Boolean(dataToken.used);
+        setTokenCompleted(completed);
+        if (!completed) setHasAccess(true);
+        setCheckingToken(false);
+        return;
       }
 
+      // Kalau tidak pakai token, ambil user login
       const resUser = await fetch("/api/auth/me", { credentials: "include" });
       const dataUser = await resUser.json();
+    //  console.log("User API response:", resUser);
+     // console.log("User data:", dataUser);
 
       if (resUser.ok && dataUser.user) {
         setUser({
@@ -74,6 +85,8 @@ useEffect(() => {
       }
     } catch (err) {
       console.error("Gagal fetch user/token info:", err);
+    } finally {
+      setCheckingToken(false);
     }
   };
 
@@ -94,6 +107,7 @@ useEffect(() => {
 
     setLoading(true);
     try {
+  //    console.log("Memulai pembayaran...");
       const payRes = await fetch("/api/payment/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -105,6 +119,8 @@ useEffect(() => {
       });
 
       const payData = await payRes.json();
+    //  console.log("Payment response:", payRes, payData);
+
       if (!payRes.ok || !payData.success) {
         alert("❌ Pembayaran gagal!");
         return;
@@ -123,77 +139,87 @@ useEffect(() => {
   // ---------------------------
   // Render
   // ---------------------------
+ // console.log("Render -> user:", user, "hasAccess:", hasAccess, "tokenCompleted:", tokenCompleted);
 
-  if (tokenCompleted) {
-    return (
-      <p style={{ color: "red", fontWeight: 500 }}>
-        ✅ Tes sudah selesai, tidak bisa mengerjakan lagi.
-      </p>
-    );
-  }
+// ---------------------------
+// Render
+// ---------------------------
 
-  // Guest via token
-  if (user?.role === "GUEST" && hasAccess) {
-    return (
-      <div>
-        <p>
-          ✅ Sudah didaftarkan oleh perusahaan: <b>{user.name}</b>
-        </p>
-        <button className={styles.btn} onClick={startAttempt}>
-          Mulai Tes
-        </button>
-      </div>
-    );
-  }
+if (checkingToken) {
+  return <p>Memeriksa status tes...</p>;
+}
 
-  // User / Perusahaan sudah bayar / punya akses
-  if (hasAccess) {
-    return (
-      <div>
-        <button className={styles.btn} onClick={startAttempt} disabled={!user}>
-          Mulai Tes
-        </button>
-      </div>
-    );
-  }
+if (tokenCompleted) {
+  return (
+    <p style={{ color: "red", fontWeight: 500 }}>
+      ✅ Tes sudah selesai, tidak bisa mengerjakan lagi.
+    </p>
+  );
+}
 
-  // Belum bayar, tampilkan tombol Bayar / Beli
+// Jika user GUEST tapi token valid
+if (user?.role === "GUEST" && hasAccess) {
   return (
     <div>
-      {user?.role === "PERUSAHAAN" && (
-        <div style={{ marginBottom: "12px" }}>
-          <label
-            style={{ display: "block", marginBottom: "4px", fontWeight: 500 }}
-          >
-            Jumlah Kuantitas
-          </label>
-          <input
-            type="number"
-            min={1}
-            value={quantity}
-            onChange={(e) => setQuantity(Number(e.target.value))}
-            className={styles.input}
-            style={{
-              padding: "8px",
-              border: "1px solid #ccc",
-              borderRadius: "6px",
-              width: "120px",
-            }}
-          />
-        </div>
-      )}
+      <p>
+        ✅ Sudah didaftarkan oleh perusahaan: <b>{user.name}</b>
+      </p>
+      <button className={styles.btn} onClick={startAttempt}>
+        Mulai Tes
+      </button>
+    </div>
+  );
+}
 
+// Hanya tampilkan tombol Mulai Tes untuk user biasa (USER) atau karyawan dengan token
+if (hasAccess && user?.role !== "PERUSAHAAN") {
+  return (
+    <div>
+      <button className={styles.btn} onClick={startAttempt} disabled={!user}>
+        Mulai Tes
+      </button>
+    </div>
+  );
+}
+
+// Render tombol pembayaran untuk PERUSAHAAN
+return (
+  <div>
+    {user?.role === "PERUSAHAAN" && (
+      <div style={{ marginBottom: "12px" }}>
+        <label
+          style={{ display: "block", marginBottom: "4px", fontWeight: 500 }}
+        >
+          Jumlah Kuantitas
+        </label>
+        <input
+          type="number"
+          min={1}
+          value={quantity}
+          onChange={(e) => setQuantity(Number(e.target.value))}
+          className={styles.input}
+          style={{
+            padding: "8px",
+            border: "1px solid #ccc",
+            borderRadius: "6px",
+            width: "120px",
+          }}
+        />
+      </div>
+    )}
+
+    {user?.role === "PERUSAHAAN" && (
       <button
         className={styles.btn}
         onClick={handlePayment}
         disabled={!user || loading}
       >
-        {user?.role === "PERUSAHAAN"
-          ? "Beli Tes (dengan Kuantitas)"
-          : "Bayar untuk Ikut Tes"}
+        Beli Tes (dengan Kuantitas)
       </button>
-    </div>
-  );
+    )}
+  </div>
+);
+
 };
 
 export default CPMIPaymentButton;

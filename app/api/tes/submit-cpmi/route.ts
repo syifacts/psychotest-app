@@ -297,34 +297,37 @@ export async function POST(req: NextRequest) {
     });
 
     // Hitung jumlah jawaban benar
-    let jumlahBenar = 0;
+   let jumlahBenar = 0;
 
-    const answerData = answers.map(a => {
-      const question = questions.find(q => q.id === a.questionId);
-      const normalizedChoice = String(a.choice).trim();
+const answerData = answers.map(a => {
+  const question = questions.find(q => q.id === a.questionId);
+  const normalizedChoice = String(a.choice).trim();
 
-      let isCorrect: boolean | null = null;
-      if (question?.answer) {
-        if (Array.isArray(question.answer)) {
-          // essay case-sensitive
-          const arr = question.answer.filter(ans => ans != null) as string[];
-          isCorrect = arr.includes(normalizedChoice); // ✅ case-sensitive
-        } else {
-          // single/mc
-          isCorrect = normalizedChoice === String(question.answer);
-        }
-      }
+  let isCorrect: boolean | null = null;
+  if (question?.answer) {
+    if (Array.isArray(question.answer)) {
+      // essay case-insensitive
+      const arr = question.answer
+        .filter(ans => ans != null)
+        .map(ans => String(ans).trim().toLowerCase());
+      isCorrect = arr.includes(normalizedChoice.toLowerCase());
+    } else {
+      // single/mc
+      isCorrect = normalizedChoice.toLowerCase() === String(question.answer).trim().toLowerCase();
+    }
+  }
 
-      if (isCorrect) jumlahBenar += 1;
+  if (isCorrect) jumlahBenar += 1;
 
-      return {
-        userId,
-        attemptId,
-        questionCode: question?.code ?? null,
-        choice: normalizedChoice,
-        isCorrect,
-      };
-    });
+  return {
+    userId,
+    attemptId,
+    questionCode: question?.code ?? null,
+    choice: normalizedChoice, // tetap simpan apa yang diketik user
+    isCorrect,
+  };
+});
+
 
     // Simpan jawaban
     await Promise.all(
@@ -369,18 +372,24 @@ export async function POST(req: NextRequest) {
       where: { id: attemptId },
       data: { isCompleted: true, finishedAt: now },
     });
-//     await prisma.token.updateMany({
-//   where: {
-//     testTypeId: attempt.testTypeId,
-//     testAttempt: {
-//       id: attemptId,
-//     },
-//   },
-//   data: {
-//     used: true,
-//     usedAt: new Date(),
-//   },
-// });
+    // Cari token yang terkait attempt
+const token = await prisma.token.findFirst({
+  where: {
+    testTypeId: attempt.testTypeId,
+    testAttempt: { id: attemptId }, // pastikan di schema token ada kolom FK testAttemptId
+  },
+});
+
+if (token) {
+  await prisma.token.update({
+    where: { id: token.id },
+    data: {
+      used: true,
+      usedAt: new Date(),
+    },
+  });
+}
+
 
 
     return NextResponse.json({ message: "Jawaban berhasil disimpan", jumlahBenar, scoreIq });

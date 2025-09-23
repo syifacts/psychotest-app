@@ -43,11 +43,15 @@ export async function POST(req: NextRequest) {
 
       // ✅ hash password dari userId
       const hashedPassword = await bcrypt.hash(userId, 10);
+const count = await prisma.user.count({
+  where: { companyId: Number(companyId) },
+});
+const fullName = `Karyawan ${count + 1}`;
 
       user = await prisma.user.create({
         data: {
           email: email ?? `${userId}@gmail.com`,
-          fullName: "CPMI Baru",
+          fullName: fullName,
           password: hashedPassword, // ✅ simpan hash
           role: "USER",
           customId: userId,

@@ -267,63 +267,74 @@ const handleSaveTTD = async () => {
           </div>
         </div>
 
-        {/* Riwayat Tes */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Riwayat Tes</h3>
-          <div className="overflow-x-auto">
-            {isLoadingHistory ? (
-              <p className="text-center text-gray-500 py-4">Memuat riwayat...</p>
-            ) : testHistory.length > 0 ? (
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Nama Tes</th>
-                    <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Tanggal Pengerjaan</th>
-                    <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 relative"><span className="sr-only">Aksi</span></th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {testHistory.map((historyItem) => (
-                    <tr key={historyItem.id}>
-                      <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{historyItem.testType.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                        {new Date(historyItem.completedAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            historyItem.status === "Selesai"
-                              ? "bg-green-100 text-green-800"
-                              : historyItem.status === "Sedang diverifikasi psikolog"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {historyItem.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right font-medium">
-                        {historyItem.status === "Selesai" ? (
-                          <a
-                            href={`/tes/hasil/${historyItem.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            Lihat Hasil
-                          </a>
-                        ) : "-"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p className="text-center text-gray-500 py-4">Anda belum pernah mengerjakan tes apapun.</p>
-            )}
-          </div>
-        </div>
+       {/* Riwayat Tes hanya untuk role "USER" biasa */}
+{!["PSIKOLOG", "SUPERADMIN", "PERUSAHAAN"].includes(user.role || "") && (
+  <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+    <h3 className="text-lg font-semibold text-gray-900 mb-4">Riwayat Tes</h3>
+    <div className="overflow-x-auto">
+      {isLoadingHistory ? (
+        <p className="text-center text-gray-500 py-4">Memuat riwayat...</p>
+      ) : testHistory.length > 0 ? (
+        <table className="min-w-full divide-y divide-gray-200 text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Nama Tes</th>
+              <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Tanggal Pengerjaan</th>
+              <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 relative"><span className="sr-only">Aksi</span></th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {testHistory.map((historyItem) => (
+              <tr key={historyItem.id}>
+                <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{historyItem.testType.name}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                  {new Date(historyItem.completedAt).toLocaleDateString('id-ID', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span
+                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      historyItem.status === "Selesai"
+                        ? "bg-green-100 text-green-800"
+                        : historyItem.status === "Sedang diverifikasi psikolog"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
+                  >
+                    {historyItem.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right font-medium">
+                  {historyItem.status === "Selesai" ? (
+                    <a
+                      href={`/tes/hasil/${historyItem.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-900"
+                    >
+                      Lihat Hasil
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="text-center text-gray-500 py-4">
+          Anda belum pernah mengerjakan tes apapun.
+        </p>
+      )}
+    </div>
+  </div>
+)}
+
 
         {/* Tombol Logout */}
         <div className="mt-8 text-center">
