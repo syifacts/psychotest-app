@@ -348,8 +348,11 @@ const allUsers = [
 
 const testStats = testTypes.map((t) => {
   const count = allUsers.filter(
-    (u) => u.name === t.name && u.status === "Sudah Tes"
+    (u) =>
+      u.name === t.name &&
+      (u.status === "Selesai" || u.status === "Sedang diverifikasi psikolog")
   ).length;
+
   return {
     testName: t.name,
     count,
