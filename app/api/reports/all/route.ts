@@ -102,6 +102,7 @@ export async function GET(req: NextRequest) {
             },
           },
         },
+        ValidatedBy: { select: { id: true, fullName: true } }, 
       },
       orderBy: { createdAt: "desc" },
     });
@@ -123,6 +124,7 @@ export async function GET(req: NextRequest) {
             },
           },
         },
+        ValidatedBy: { select: { id: true, fullName: true } }, 
       },
       orderBy: { createdAt: "desc" },
     });
@@ -147,6 +149,8 @@ export async function GET(req: NextRequest) {
           : null,
         Company: company,
         validated: r.validated,
+         validatedBy: r.ValidatedBy, // ✅ pakai ini untuk nama psikolog
+   result: `/tes/hasil/${r.attemptId}`,  
         validatedAt: r.validatedAt,
         createdAt: r.createdAt,
       };
@@ -174,8 +178,11 @@ export async function GET(req: NextRequest) {
         validated: r.validated,
         validatedAt: r.validatedAt,
         createdAt: r.createdAt,
+        validatedBy: r.ValidatedBy || null,  // ✅ penting
+           result: `/tes/hasil/${r.attemptId}`,  
       };
     });
+    
 
     // Gabungkan dua hasil
     const combined = [...mappedResults, ...mappedPersonality].sort(

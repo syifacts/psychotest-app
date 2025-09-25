@@ -356,7 +356,7 @@ Pernyataan (3) apakah:`,
   answer: "YA"
 },
 {
-  content: "DAPAT DIPERCAYA    GAMPANG PERCAYA\nApakah kata-kata ini:",
+  content: "DAPAT DIPERCAYA  |  GAMPANG PERCAYA\nApakah kata-kata ini:",
   type: "single" as const,
   options: [
     "memiliki arti yang sama",

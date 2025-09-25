@@ -261,6 +261,16 @@ const rsToIq: Record<number, number> = {
   35: 128, 36: 130, 37: 132, 38: 134, 39: 136, 40: 138, 41: 140, 42: 142,
   43: 143, 44: 146, 45: 146, 46: 146, 47: 146, 48: 146, 49: 146, 50: 146,
 };
+function getKeteranganIq(score: number) {
+  if (score <= 65) return "Mentally Defective";
+  if (score <= 79) return "Borderline Defective";
+  if (score <= 90) return "Low Average";
+  if (score <= 110) return "Average";
+  if (score <= 119) return "High Average";
+  if (score <= 127) return "Superior";
+  if (score <= 139) return "Very Superior";
+  return "Genius";
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -344,6 +354,27 @@ const answerData = answers.map(a => {
 
     // Cari IQ dari jumlahBenar
     const scoreIq = rsToIq[jumlahBenar] ?? 59; // default 59 kalau RS > 50
+const keteranganiqCPMI = getKeteranganIq(scoreIq);
+// Ambil template summary sesuai scoreIq
+const template = await prisma.summaryTemplate.findFirst({
+  where: {
+    testTypeId: attempt.testTypeId,
+    minScore: { lte: scoreIq },
+    maxScore: { gte: scoreIq },
+  },
+});
+
+let kesimpulan = "";
+let summaryTemplateId: number | null = null;
+
+if (template) {
+    summaryTemplateId = template.id; // simpan ID template
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { fullName: true } });
+  kesimpulan = template.template
+    .replace("{name}", user?.fullName || "Peserta")
+    .replace("{scoreiq}", scoreIq.toString())
+    .replace("{keteranganiqCPMI}", keteranganiqCPMI);
+}
 
     // Update Result & TestAttempt
     await prisma.result.upsert({
@@ -356,6 +387,9 @@ const answerData = answers.map(a => {
       update: {
         jumlahbenar: jumlahBenar,
         scoreiq: scoreIq,
+        keteranganiqCPMI: getKeteranganIq(scoreIq),
+         kesimpulan,
+         summaryTemplateId,
         isCompleted: true,
       },
       create: {
@@ -364,7 +398,10 @@ const answerData = answers.map(a => {
         testTypeId: attempt.testTypeId,
         jumlahbenar: jumlahBenar,
         scoreiq: scoreIq,
+        keteranganiqCPMI: getKeteranganIq(scoreIq),
         isCompleted: true,
+        kesimpulan,
+    summaryTemplateId, 
       },
     });
 

@@ -49,6 +49,11 @@ const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(30 * 60);
 
   const [exampleQuestions, setExampleQuestions] = useState<Question[]>([]);
+  const [endTime, setEndTime] = useState<Date | null>(() => {
+  const saved = localStorage.getItem("endTime");
+  return saved ? new Date(saved) : null;
+});
+
   
 
   // Step: intro -> biodata -> instruction -> questions
@@ -131,7 +136,7 @@ const loadQuestions = async (attemptId?: number) => {
     console.log("Filtered questions with images:", qList); // <-- cek image sudah ada
 
     setQuestions(qList || []);
-    setTimeLeft(testInfo?.duration ? testInfo.duration * 60 : 30 * 60);
+   // setTimeLeft(testInfo?.duration ? testInfo.duration * 60 : 30 * 60);
 
     // cari index soal awal
     const startIndex = qList.findIndex((q) => q.code === "CPMI-4" || q.id === 329);
@@ -175,19 +180,24 @@ const loadExistingAnswers = async (attemptId: number, qList?: Question[]) => {
  const startAttempt = async () => {
   if (!testInfo?.id || !user) return;
 
+  // Jika sudah ada attempt, jangan reset timer
+  if (attemptId) {
+    await loadQuestions(attemptId);
+    return;
+  }
+
+  // Reset localStorage & state untuk attempt baru
   localStorage.removeItem("attemptId");
   localStorage.removeItem("endTime");
   localStorage.removeItem("currentIndex");
   setAttemptId(null);
   setAnswers({});
   setCurrentIndex(0);
-  setTimeLeft(testInfo.duration ? testInfo.duration * 60 : 30 * 60);
 
   try {
     const body: any = { testTypeId: testInfo.id };
 
     if (role === "GUEST") {
-      // ambil guestToken dari URL atau state
       const urlParams = new URLSearchParams(window.location.search);
       const guestToken = urlParams.get("token");
       if (!guestToken) throw new Error("Guest token tidak ditemukan");
@@ -200,7 +210,7 @@ const loadExistingAnswers = async (attemptId: number, qList?: Question[]) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-      credentials: "include", // tetap untuk user login
+      credentials: "include",
     });
 
     const data = await res.json();
@@ -209,15 +219,14 @@ const loadExistingAnswers = async (attemptId: number, qList?: Question[]) => {
     setAttemptId(data.id);
     localStorage.setItem("attemptId", data.id.toString());
 
+    // Set endTime baru
     const duration = testInfo.duration || 30;
-    const endTime = new Date();
-    endTime.setMinutes(endTime.getMinutes() + duration);
-    localStorage.setItem("endTime", endTime.toISOString());
+    const newEndTime = new Date();
+    newEndTime.setSeconds(newEndTime.getSeconds() + duration * 60);
+    setEndTime(newEndTime);
+    localStorage.setItem("endTime", newEndTime.toISOString());
 
-    setCurrentIndex(0);
-    localStorage.setItem("currentIndex", "0");
-
-    await loadQuestions(data.id); // teruskan attemptId baru
+    await loadQuestions(data.id); // load soal
 
   } catch (err) {
     console.error("Gagal memulai attempt:", err);
@@ -228,24 +237,21 @@ const loadExistingAnswers = async (attemptId: number, qList?: Question[]) => {
   // -------------------------
   // Timer
   // -------------------------
-  useEffect(() => {
-    if (step !== "questions") return;
+useEffect(() => {
+  if (!endTime) return;
 
-    const savedEnd = localStorage.getItem("endTime");
-    if (!savedEnd) return;
+  const timer = setInterval(() => {
+    const diff = Math.max(0, Math.floor((endTime.getTime() - Date.now()) / 1000));
+    setTimeLeft(diff);
+    if (diff <= 0) {
+      handleSubmit();
+      clearInterval(timer);
+    }
+  }, 1000);
 
-    const endTime = new Date(savedEnd);
-    const timer = setInterval(() => {
-      const diff = Math.max(0, Math.floor((endTime.getTime() - Date.now()) / 1000));
-      setTimeLeft(diff);
-      if (diff <= 0) {
-        handleSubmit();
-        clearInterval(timer);
-      }
-    }, 1000);
+  return () => clearInterval(timer);
+}, [endTime]);
 
-    return () => clearInterval(timer);
-  }, [step]);
 
   // -------------------------
   // Select answer
@@ -447,6 +453,7 @@ case "questions":
 
       <div className={styles.mainContent}>
         <div className={styles.questionSection}>
+          
           {/* Soal */}
  <div className={styles.questionContent}>
   {/* Inline teks + gambar dari content */}
@@ -543,7 +550,17 @@ case "questions":
               <button className={styles.btn} onClick={handleSubmit}>Submit Tes</button>
             )}
           </div>
+           {/* Tombol kembali ke instruksi */}
+          <button
+  className={styles.backBtn}
+  style={{ marginBottom: "12px" }}
+  onClick={() => setStep("instruction")}
+>
+  ← Kembali ke Instruksi
+</button>
+
         </div>
+        
 
         {/* Ringkasan Jawaban */}
         <div className={styles.answerCard}>

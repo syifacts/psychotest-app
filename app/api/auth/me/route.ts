@@ -17,15 +17,48 @@ export async function GET(req: Request) {
 
     console.log("Token yang dipakai:", token);
 
-    // 1️⃣ Token test di DB
     if (token) {
+      // 1️⃣ Cek token test di DB
       const testToken = await prisma.token.findUnique({ where: { token } });
-      if (testToken) return NextResponse.json({ user: { id: testToken.userId, role: "GUEST" } });
+      if (testToken && testToken.userId != null) {
+        const userFromDB = await prisma.user.findUnique({
+          where: { id: testToken.userId },
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            role: true,
+            birthDate: true,
+            profileImage: true,
+            ttdUrl: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+        if (userFromDB) return NextResponse.json({ user: userFromDB });
+      }
 
-      // 2️⃣ JWT login
+      // 2️⃣ Cek JWT login
       try {
         const decoded = jwt.verify(token, JWT_SECRET) as any;
-        return NextResponse.json({ user: decoded });
+        if (decoded.id == null) throw new Error("JWT tidak valid");
+
+        const userFromDB = await prisma.user.findUnique({
+          where: { id: decoded.id },
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            role: true,
+            birthDate: true,
+            profileImage: true,
+            ttdUrl: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+
+        if (userFromDB) return NextResponse.json({ user: userFromDB });
       } catch (err) {
         console.log("JWT invalid:", err);
       }

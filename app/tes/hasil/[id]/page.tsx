@@ -20,7 +20,13 @@ export default function HasilPage() {
   const [subtestResults, setSubtestResults] = useState<any[]>([]);
   const [result, setResult] = useState<any | null>(null);
   const [cpmiResult, setCpmiResult] = useState<any | null>(null); 
-  const [kesimpulan, setKesimpulan] = useState('');   // ✅ Tambah
+const [kesimpulan, setKesimpulan] = useState({
+  kesimpulan: '',
+  kesimpulanSikap: '',
+  kesimpulanKepribadian: '',
+  kesimpulanBelajar: ''
+});
+ // ✅ Tambah
   const [ttd, setTtd] = useState('');                 // ✅ Tambah
   const [isLoading, setIsLoading] = useState(true);
 

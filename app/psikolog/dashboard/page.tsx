@@ -26,10 +26,12 @@ import {
 interface Report {
   id: number;
   User: { fullName: string };
-  TestType: { name: string };
+  TestType: { id: number; name: string };
   Attempt: { id: number; startedAt: string };
   Company?: { fullName: string } | null;
   validated?: boolean;
+   validatedBy?: { fullName: string } | null;
+   result: string;
 }
 
 interface Company {
@@ -59,10 +61,125 @@ export default function DashboardKeseluruhan() {
   const [endDate, setEndDate] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [overallStatsBySource, setOverallStatsBySource] = useState<any[]>([]);
+  const [filterPsychologist, setFilterPsychologist] = useState<string>("all");
+
 
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const router = useRouter();
+  
+// Tambahkan state untuk pagination
+const [currentPage, setCurrentPage] = useState<number>(1);
+const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+// Filter berdasarkan nama user
+const filteredReports = reports
+  .filter((r) =>
+    searchUser
+      ? r.User.fullName.toLowerCase().includes(searchUser.toLowerCase())
+      : true
+  )
+  .filter((r) =>
+    filterTestType === "all"
+      ? true
+      : r.TestType?.name === filterTestType
+  )
+  .filter((r) =>
+    filterCompany === "all"
+      ? true
+      : filterCompany === "self"
+      ? !r.Company
+      : r.Company?.fullName === filterCompany
+  )
+  .filter((r) =>
+    statusFilter === "all"
+      ? true
+      : statusFilter === "pending"
+      ? !r.validated
+      : r.validated
+  )
+  .filter((r) =>
+    filterPsychologist === "all"
+      ? true
+      : r.validatedBy?.fullName === filterPsychologist
+  );
+
+  const filteredTestTypes = Array.from(
+  new Set(
+    reports
+      .filter((r) =>
+        filterCompany === "all"
+          ? true
+          : filterCompany === "self"
+          ? !r.Company
+              : r.Company?.fullName === filterCompany
+      )
+      .filter((r) =>
+        statusFilter === "all"
+          ? true
+          : statusFilter === "pending"
+          ? !r.validated
+          : r.validated
+      )
+      .map((r) => r.TestType?.name)
+      .filter(Boolean) as string[]
+  )
+);
+const filteredCompanies = Array.from(
+  new Set(
+    reports
+      .filter((r) =>
+        filterTestType === "all" ? true : r.TestType?.id.toString() === filterTestType
+      )
+      .filter((r) =>
+        statusFilter === "all"
+          ? true
+          : statusFilter === "pending"
+          ? !r.validated
+          : r.validated
+      )
+      .map((r) => r.Company?.fullName || "self") // pakai "self" untuk user sendiri
+  )
+);
+
+// const filteredStatus = Array.from(
+//   new Set(
+//     reports
+//       .filter((r) =>
+//         filterTestType === "all"
+//           ? true
+//           : r.TestType?.id.toString() === filterTestType
+//       )
+//       .filter((r) =>
+//         filterCompany === "all"
+//           ? true
+//           : filterCompany === "self"
+//           ? !r.Company
+//               : r.Company?.fullName === filterCompany
+//       )
+//       .map((r) => (r.validated ? "selesai" : "pending"))
+//   )
+// );
+
+
+// Hitung total halaman dari filtered data
+const totalPages = Math.ceil(filteredReports.length / rowsPerPage);
+
+// Data yang ditampilkan di tabel saat ini
+const paginatedReports = filteredReports.slice(
+  (currentPage - 1) * rowsPerPage,
+  currentPage * rowsPerPage
+);
+useEffect(() => {
+  setCurrentPage(1);
+}, [searchUser]);
+const psychologists = Array.from(
+  new Map(
+    reports
+      .filter((r) => r.validatedBy) // pastikan tidak null
+      .map((r) => [r.validatedBy!.fullName, r.validatedBy!]) // pakai "!" karena sudah difilter
+  ).values()
+);
+
 
   // 🔹 Cek user login
   useEffect(() => {
@@ -102,10 +219,12 @@ export default function DashboardKeseluruhan() {
             startDate: startDate || undefined,
             endDate: endDate || undefined,
             status: statusFilter !== "all" ? statusFilter : undefined,
+            
           },
           withCredentials: true,
         });
         setReports(res.data);
+        
         // Statistik keseluruhan per sumber
 const groupedOverallBySource: Record<string, number> = {};
 res.data.forEach((r: Report) => {
@@ -306,10 +425,11 @@ setOverallStatsBySource(
             </SelectTrigger>
             <SelectContent className="max-h-48 overflow-y-auto">
               <SelectItem value="all">Semua Tes</SelectItem>
-              {testTypes.map((t) => (
-                <SelectItem key={t.id} value={t.id.toString()}>
-                  {t.name}
-                </SelectItem>
+                  {filteredTestTypes.map((name) => (
+
+                <SelectItem key={name} value={name}>
+        {name}
+      </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -323,17 +443,15 @@ setOverallStatsBySource(
             <SelectTrigger className="w-5 h-5 p-0 bg-transparent border-none shadow-none hover:bg-gray-200 rounded-full">
               <span className="material-icons text-sm"></span>
             </SelectTrigger>
-            <SelectContent className="max-h-48 overflow-y-auto">
-              <SelectItem value="all">Semua</SelectItem>
-              {companies
-                .filter((c) => c.role === "PERUSAHAAN")
-                .map((c) => (
-                  <SelectItem key={c.id} value={c.id.toString()}>
-                    {c.fullName}
-                  </SelectItem>
-                ))}
-              <SelectItem value="self">Sendiri (User)</SelectItem>
-            </SelectContent>
+           <SelectContent className="max-h-48 overflow-y-auto">
+  <SelectItem value="all">Semua</SelectItem>
+  {filteredCompanies.map((name) => (
+    <SelectItem key={name} value={name === "self" ? "self" : name}>
+      {name === "self" ? "Sendiri (User)" : name}
+    </SelectItem>
+  ))}
+</SelectContent>
+
           </Select>
         </div>
       </th>
@@ -352,56 +470,116 @@ setOverallStatsBySource(
           </Select>
         </div>
       </th>
+<th className="p-4 font-semibold text-center">
+  <div className="flex items-center justify-center gap-2">
+    <span>Psikolog</span>
+    <Select value={filterPsychologist} onValueChange={setFilterPsychologist}>
+      <SelectTrigger className="w-5 h-5 p-0 bg-transparent border-none shadow-none hover:bg-gray-200 rounded-full">
+        <span className="material-icons text-sm"></span>
+      </SelectTrigger>
+      <SelectContent className="max-h-48 overflow-y-auto">
+        <SelectItem value="all">Semua Psikolog</SelectItem>
+        {psychologists.map((p, idx) => (
+          <SelectItem key={idx} value={p.fullName}>
+            {p.fullName}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+</th>
+
+<th className="p-4 font-semibold text-center">Report</th>
+
     </tr>
   </thead>
-  <tbody>
-    {reports.length > 0 ? (
-      reports.map((report, idx) => (
-        <tr
-          key={report.id}
-          className={`transition-colors ${
-            idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-          } hover:bg-indigo-50`}
-        >
-          <td className="p-4 text-gray-700 font-medium">
-            {report.User?.fullName || "—"}
-          </td>
-          <td className="p-4 text-gray-600">{report.TestType?.name || "—"}</td>
-          <td className="p-4 text-gray-600">
-            {report.Attempt?.startedAt
-              ? new Date(report.Attempt.startedAt).toLocaleDateString()
-              : "—"}
-          </td>
-          <td className="p-4 text-gray-600">
-            {report.Company?.fullName || (
-              <span className="italic text-gray-400">Sendiri</span>
-            )}
-          </td>
-          <td className="p-4">
-            {report.validated ? (
-              <span className="px-3 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">
-                ✅ Selesai
-              </span>
-            ) : (
-              <span className="px-3 py-1 text-xs font-semibold text-yellow-700 bg-yellow-100 rounded-full">
-                ⏳ Pending
-              </span>
-            )}
-          </td>
-        </tr>
-      ))
-    ) : (
-      <tr>
-        <td colSpan={5} className="p-6 text-center text-gray-500 italic">
-          Tidak ada data
+ <tbody>
+  {paginatedReports.length > 0 ? (
+    paginatedReports.map((report, idx) => (
+      <tr key={report.id} className={`transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-indigo-50`}>
+        <td className="p-4 text-gray-700 font-medium">{report.User?.fullName || "—"}</td>
+        <td className="p-4 text-gray-600">{report.TestType?.name || "—"}</td>
+        <td className="p-4 text-gray-600">{report.Attempt?.startedAt ? new Date(report.Attempt.startedAt).toLocaleDateString() : "—"}</td>
+        <td className="p-4 text-gray-600">{report.Company?.fullName || <span className="italic text-gray-400">Sendiri</span>}</td>
+        <td className="p-4">
+          {report.validated ? (
+            <span className="px-3 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">✅ Selesai</span>
+          ) : (
+            <span className="px-3 py-1 text-xs font-semibold text-yellow-700 bg-yellow-100 rounded-full">⏳ Pending</span>
+          )}
         </td>
+        <td className="p-4 text-gray-700 text-center">
+  {report.validatedBy?.fullName || <span className="italic text-gray-400">—</span>}
+</td>
+<td className="p-4 text-gray-700 text-center">
+  {report.validated && report.result ? (
+    <a
+      href={report.result}
+      target="_blank"
+      className="text-indigo-600 hover:underline"
+    >
+      Lihat Report
+    </a>
+  ) : (
+    <span className="italic text-gray-400">Belum Divalidasi</span>
+  )}
+</td>
+
+
       </tr>
-    )}
-  </tbody>
+    ))
+  ) : (
+    
+    <tr>
+      <td colSpan={5} className="p-6 text-center text-gray-500 italic">Tidak ada data</td>
+    </tr>
+  )}
+</tbody>
+
 </table>
 
 
           )}
+          <div className="flex items-center justify-between mt-4">
+  {/* Pilihan jumlah baris per halaman */}
+  <div>
+    <label className="mr-2 text-gray-700">Tampilkan:</label>
+    <select
+      value={rowsPerPage}
+      onChange={(e) => {
+        setRowsPerPage(Number(e.target.value));
+        setCurrentPage(1); // reset ke halaman 1
+      }}
+      className="p-1 border rounded-md"
+    >
+      <option value={10}>10</option>
+      <option value={20}>20</option>
+      <option value={30}>30</option>
+    </select>
+  </div>
+
+  {/* Navigasi halaman */}
+  <div className="flex items-center gap-2">
+    <button
+      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+      disabled={currentPage === 1}
+      className="px-3 py-1 border rounded-md disabled:opacity-50"
+    >
+      ← Prev
+    </button>
+    <span className="text-gray-700">
+      Hal {currentPage} dari {totalPages || 1}
+    </span>
+    <button
+      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+      disabled={currentPage === totalPages}
+      className="px-3 py-1 border rounded-md disabled:opacity-50"
+    >
+      Next →
+    </button>
+  </div>
+</div>
+
         </div>
       </div>
     </main>

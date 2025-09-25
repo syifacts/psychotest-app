@@ -23,6 +23,10 @@ async function getLoggedUserId(req: NextRequest) {
 // === GET untuk filter reports (Pending & History) ===
 export async function GET(req: NextRequest) {
   try {
+        const userId = await getLoggedUserId(req);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const url = new URL(req.url);
     const companyId = url.searchParams.get("companyId");
     const testTypeId = url.searchParams.get("testTypeId");
@@ -69,11 +73,17 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Filter Status
-    if (status && status !== "all") {
-      if (status === "pending") whereClause.AND.push({ validated: false });
-      if (status === "selesai") whereClause.AND.push({ validated: true });
-    }
+   // Filter Status
+if (status && status !== "all") {
+  if (status === "pending") {
+    whereClause.AND.push({ validated: false });
+  }
+  if (status === "selesai") {
+    whereClause.AND.push({ validated: true });
+    // 🔹 filter psikolog yang login
+    whereClause.AND.push({ validatedById: userId });
+  }
+}
 
     // Filter Tanggal Pemeriksaan (validatedAt)
     if (validatedAt) {
@@ -237,13 +247,16 @@ export async function POST(req: NextRequest) {
 
     console.log("🔥 validator ttdHash:", result?.ValidatedBy?.ttdHash);
     console.log("🔥 validator ttdUrl:", result?.ValidatedBy?.ttdUrl);
-
+const validatorUser = await prisma.user.findUnique({
+  where: { id: userId },
+  select: { ttdHash: true },
+});
     // === Generate QR dari ttdHash psikolog ===
-    let barcodettd: string | null = null;
-    if (result?.ValidatedBy?.ttdHash) {
-      barcodettd = await QRCode.toDataURL(result.ValidatedBy.ttdHash.toString());
-      console.log("✅ Generated barcodettd:", barcodettd.substring(0, 50));
-    }
+let barcodettd: string | null = null;
+if (validatorUser?.ttdHash) {
+  barcodettd = await QRCode.toDataURL(validatorUser.ttdHash);
+  console.log("✅ Generated barcodettd:", barcodettd.substring(0, 50));
+}
 
     // Update data sesuai source
     let updated;

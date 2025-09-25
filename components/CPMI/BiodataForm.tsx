@@ -20,6 +20,8 @@ const BiodataForm: React.FC<Props> = ({ onSaved }) => {
   const [gender, setGender] = useState<typeof genders[number] | "">("");
   const [tujuan, setTujuan] = useState("");
   const [loading, setLoading] = useState(false);
+  const [education, setEducation] = useState("");
+
 
   // Ambil token dari URL dan fetch data token / user
  useEffect(() => {
@@ -54,6 +56,7 @@ const BiodataForm: React.FC<Props> = ({ onSaved }) => {
                     : ""
                 );
                 setTujuan(userData.user.tujuan ?? "");
+                 setEducation(userData.user.education ?? "");
               }
             } catch (err) {
               console.error("Gagal fetch data user:", err);
@@ -86,6 +89,7 @@ const BiodataForm: React.FC<Props> = ({ onSaved }) => {
               };
               setGender(genderMap[userData.user.gender] ?? "");
               setTujuan(userData.user.tujuan ?? "");
+               setEducation(userData.user.education ?? "");
             }
           }
         }
@@ -124,6 +128,7 @@ const BiodataForm: React.FC<Props> = ({ onSaved }) => {
           birthDate,
           gender,
           tujuan,
+          education,
         }),
       });
 
@@ -183,6 +188,20 @@ const BiodataForm: React.FC<Props> = ({ onSaved }) => {
           </option>
         ))}
       </select>
+<label className="block mb-2 font-semibold">Pendidikan</label>
+<select
+  value={education}
+  onChange={(e) => setEducation(e.target.value)}
+  className="w-full p-2 mb-4 border rounded"
+>
+  <option value="">-- Pilih Pendidikan --</option>
+  <option value="SMA/SMK">SMA/SMK</option>
+  <option value="Diploma">Diploma</option>
+  <option value="Sarjana">Sarjana (S1)</option>
+  <option value="Magister">Magister (S2)</option>
+  <option value="Doktor">Doktor (S3)</option>
+</select>
+
 
       <label className="block mb-2 font-semibold">Melamar Untuk</label>
       <input

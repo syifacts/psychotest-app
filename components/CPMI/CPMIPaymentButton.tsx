@@ -141,85 +141,77 @@ useEffect(() => {
   // ---------------------------
  // console.log("Render -> user:", user, "hasAccess:", hasAccess, "tokenCompleted:", tokenCompleted);
 
-// ---------------------------
-// Render
-// ---------------------------
+  if (checkingToken) {
+    return <p>Memeriksa status tes...</p>;
+  }
 
-if (checkingToken) {
-  return <p>Memeriksa status tes...</p>;
-}
-
-if (tokenCompleted) {
-  return (
-    <p style={{ color: "red", fontWeight: 500 }}>
-      ✅ Tes sudah selesai, tidak bisa mengerjakan lagi.
-    </p>
-  );
-}
-
-// Jika user GUEST tapi token valid
-if (user?.role === "GUEST" && hasAccess) {
-  return (
-    <div>
-      <p>
-        ✅ Sudah didaftarkan oleh perusahaan: <b>{user.name}</b>
+  if (tokenCompleted) {
+    return (
+      <p style={{ color: "red", fontWeight: 500 }}>
+        ✅ Tes sudah selesai, tidak bisa mengerjakan lagi.
       </p>
-      <button className={styles.btn} onClick={startAttempt}>
-        Mulai Tes
-      </button>
-    </div>
-  );
-}
+    );
+  }
 
-// Hanya tampilkan tombol Mulai Tes untuk user biasa (USER) atau karyawan dengan token
-if (hasAccess && user?.role !== "PERUSAHAAN") {
+  if (user?.role === "GUEST" && hasAccess) {
+    return (
+      <div>
+        <p>
+          ✅ Sudah didaftarkan oleh perusahaan: <b>{user.name}</b>
+        </p>
+        <button className={styles.btn} onClick={startAttempt}>
+          Mulai Tes
+        </button>
+      </div>
+    );
+  }
+
+  if (hasAccess) {
+    return (
+      <div>
+        <button className={styles.btn} onClick={startAttempt} disabled={!user}>
+          Mulai Tes
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <button className={styles.btn} onClick={startAttempt} disabled={!user}>
-        Mulai Tes
-      </button>
-    </div>
-  );
-}
+      {user?.role === "PERUSAHAAN" && (
+        <div style={{ marginBottom: "12px" }}>
+          <label
+            style={{ display: "block", marginBottom: "4px", fontWeight: 500 }}
+          >
+            Jumlah Kuantitas
+          </label>
+          <input
+            type="number"
+            min={1}
+            value={quantity}
+            onChange={(e) => setQuantity(Number(e.target.value))}
+            className={styles.input}
+            style={{
+              padding: "8px",
+              border: "1px solid #ccc",
+              borderRadius: "6px",
+              width: "120px",
+            }}
+          />
+        </div>
+      )}
 
-// Render tombol pembayaran untuk PERUSAHAAN
-return (
-  <div>
-    {user?.role === "PERUSAHAAN" && (
-      <div style={{ marginBottom: "12px" }}>
-        <label
-          style={{ display: "block", marginBottom: "4px", fontWeight: 500 }}
-        >
-          Jumlah Kuantitas
-        </label>
-        <input
-          type="number"
-          min={1}
-          value={quantity}
-          onChange={(e) => setQuantity(Number(e.target.value))}
-          className={styles.input}
-          style={{
-            padding: "8px",
-            border: "1px solid #ccc",
-            borderRadius: "6px",
-            width: "120px",
-          }}
-        />
-      </div>
-    )}
-
-    {user?.role === "PERUSAHAAN" && (
       <button
         className={styles.btn}
         onClick={handlePayment}
         disabled={!user || loading}
       >
-        Beli Tes (dengan Kuantitas)
+        {user?.role === "PERUSAHAAN"
+          ? "Beli Tes (dengan Kuantitas)"
+          : "Bayar untuk Ikut Tes"}
       </button>
-    )}
-  </div>
-);
-
+    </div>
+  );
 };
 
 export default CPMIPaymentButton;

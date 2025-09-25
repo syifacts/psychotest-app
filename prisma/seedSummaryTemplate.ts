@@ -9,35 +9,54 @@ async function main() {
   // === CPMI (IQ) ===
   const summaryTemplatesCPMI = [
     {
-      minScore: 78,
-      maxScore: 84,
-      template:
-        "Berdasarkan tes kemampuan intelektual, Sdr. {name} memiliki taraf intelektual (IQ) {scoreiq} atau kategori di bawah rata-rata. Diperlukan bimbingan tambahan agar dapat menyelesaikan tugas-tugas kompleks.",
+      minScore: 59,
+      maxScore: 65,
+          template: "Berdasarkan tes kemampuan intelektual, Sdr. {name} memiliki taraf intelektual (IQ) {scoreiq} atau kategori {keteranganiqCPMI}. Kemampuannya perlu bimbingan tambahan agar dapat menyelesaikan tugas-tugas kompleks. Daya tangkapnya terbatas, sehingga perlu pendampingan dalam memahami tugas baru.",
     },
     {
-      minScore: 85,
-      maxScore: 88,
+      minScore: 66,
+      maxScore: 79,
       template:
-        "Berdasarkan tes kemampuan intelektual, Sdr. {name} memiliki taraf intelektual (IQ) {scoreiq} atau kategori sedikit di bawah rata-rata...",
+        "Berdasarkan tes kemampuan intelektual, Sdr. {name} memiliki taraf intelektual (IQ) {scoreiq} atau kategori {keteranganiqCPMI}. Kemampuannya masih dapat dikembangkan sehingga lebih cakap melakukan tugas-tugas yang kompleks. Daya tangkapnya cukup memadai sehingga mudah dalam menguasai tugas baru.",
     },
     {
-      minScore: 89,
-      maxScore: 108,
+      minScore: 80,
+      maxScore: 90,
       template:
-        "Berdasarkan tes kemampuan intelektual, Sdr. {name} memiliki taraf intelektual (IQ) {scoreiq} atau kategori rata-rata...",
+        "Berdasarkan tes kemampuan intelektual, Sdr. {name} memiliki taraf intelektual (IQ) {scoreiq} atau kategori {keteranganiqCPMI}. Kemampuannya baik dan dapat menyelesaikan tugas-tugas dengan cukup mandiri. Daya tangkapnya memadai sehingga mudah dalam menguasai tugas baru.",
     },
     {
-      minScore: 109,
+      minScore: 91,
       maxScore: 110,
       template:
-        "Berdasarkan tes kemampuan intelektual, Sdr. {name} ... di atas rata-rata...",
+        "Berdasarkan tes kemampuan intelektual, Sdr. {name} memiliki taraf intelektual (IQ) {scoreiq} atau kategori {keteranganiqCPMI}. Kemampuannya cukup baik dan mampu menyelesaikan tugas-tugas kompleks secara mandiri. Daya tangkapnya cepat dan adaptif dalam mempelajari hal baru.",
     },
     {
       minScore: 111,
-      maxScore: 120,
+      maxScore: 119,
       template:
-        "Berdasarkan tes kemampuan intelektual, Sdr. {name} ... kategori superior...",
+        "Berdasarkan tes kemampuan intelektual, Sdr. {name} memiliki taraf intelektual (IQ) {scoreiq} atau kategori {keteranganiqCPMI}. Kemampuannya sangat baik dan mampu menguasai tugas-tugas kompleks dengan efisien. Daya tangkapnya cepat dan mudah menyesuaikan diri dengan tugas baru.",
     },
+        {
+      minScore: 120,
+      maxScore: 127,
+      template:
+        "Berdasarkan tes kemampuan intelektual, Sdr. {name} memiliki taraf intelektual (IQ) {scoreiq} atau kategori {keteranganiqCPMI}. Kemampuannya unggul dan dapat menyelesaikan tugas-tugas kompleks dengan cepat dan tepat. Daya tangkapnya sangat baik sehingga mudah menguasai hal-hal baru.",
+    },
+        {
+      minScore: 128,
+      maxScore: 139,
+      template:
+        "Berdasarkan tes kemampuan intelektual, Sdr. {name} memiliki taraf intelektual (IQ) {scoreiq} atau kategori {keteranganiqCPMI}. Kemampuannya sangat unggul dan mampu menyelesaikan tugas-tugas kompleks dengan sangat baik. Daya tangkapnya sangat cepat sehingga mudah mempelajari hal baru secara mandiri.",
+    },
+        {
+      minScore: 140,
+      maxScore: 500,
+      template:
+        "Berdasarkan tes kemampuan intelektual, Sdr. {name} memiliki taraf intelektual (IQ) {scoreiq} atau kategori {keteranganiqCPMI}. Kemampuannya luar biasa dan mampu menyelesaikan tugas-tugas kompleks dengan cemerlang. Daya tangkapnya sangat cepat sehingga dapat menguasai hal-hal baru dengan mudah dan efektif.",
+    },
+    
+    
   ];
 
   for (const tpl of summaryTemplatesCPMI) {

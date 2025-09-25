@@ -285,14 +285,12 @@ const allUsers = [
   // === Paket ===
   ...(packagePurchases ?? []).flatMap((p) =>
     (p.userPackages ?? []).map((u) => {
-      // Cek laporan yang sesuai paket & user
       const attempt = reports.find(
         (r) =>
           r.User?.id === u.id &&
           r.TestType?.id === p.package?.tests[0]?.testType?.id
       );
 
-      // Tentukan status
       let status: string;
       if (!attempt) status = "Belum Tes";
       else if (attempt.validated) status = "Selesai";
@@ -308,8 +306,38 @@ const allUsers = [
         email: u.email ?? "",
         status,
         startedAt: attempt?.Attempt?.startedAt ?? null,
-        token: attempt?.token ?? undefined,
-        result: attempt ?? null, // ✅ sertakan hasil
+       token: (u as any).tokens?.[0]?.token ?? undefined,
+        result: attempt ?? null,
+      };
+    })
+  ),
+
+  // === Test Satuan ===
+  ...(singlePayments ?? []).flatMap((p) =>
+    (p.userPackages ?? []).map((u) => {
+      const attempt = reports.find(
+        (r) =>
+          r.User?.id === u.id &&
+          r.TestType?.id === p.TestType?.id
+      );
+
+      let status: string;
+      if (!attempt) status = "Belum Tes";
+      else if (attempt.validated) status = "Selesai";
+      else if (attempt.Attempt?.startedAt) status = "Sedang diverifikasi psikolog";
+      else status = "Belum divalidasi";
+
+      return {
+        ...u,
+        type: "Test Satuan" as const,
+        targetId: p.id,
+        name: p.TestType?.name ?? "",
+        fullName: u.fullName ?? "",
+        email: u.email ?? "",
+        status,
+        startedAt: attempt?.Attempt?.startedAt ?? null,
+     token: (u as any).tokens?.[0]?.token ?? undefined,
+        result: attempt ?? null,
       };
     })
   ),

@@ -15,9 +15,10 @@ function calculateAge(birthDate: Date) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, customId, fullName, birthDate, gender, tujuan } = await req.json();
+const { userId, customId, fullName, birthDate, gender, tujuan, education } = await req.json();
 
-    if ((!userId && !customId) || !fullName || !birthDate || !gender || !tujuan) {
+
+    if ((!userId && !customId) || !fullName || !birthDate || !gender || !tujuan || !education) {
       return NextResponse.json({ error: "Semua field wajib diisi" }, { status: 400 });
     }
 
@@ -47,6 +48,7 @@ else genderEnum = undefined;
         birthDate: birth,
          gender: genderEnum,
         tujuan,
+        education,
       },
     });
 

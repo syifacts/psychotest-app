@@ -44,7 +44,7 @@ model User {
   education String?
   phone     String?
   address   String?
- ttdUrl   String?     
+ ttdUrl   String?     @db.Text
   ttdHash  String? @db.Text // simpan hash SHA256 dari file untuk validasi
   profileImage String?
   tujuan      String?
@@ -244,6 +244,9 @@ model Result {
   aspekSTK         Json?
   url           String? @db.Text 
   kesimpulan    String? @db.Text
+  kesimpulanSikap    String? @db.Text
+  kesimpulanKepribadian    String? @db.Text
+  kesimpulanBelajar    String? @db.Text
   ttd           String? @db.Text
   summaryTemplateId Int?
 
@@ -323,6 +326,7 @@ model SummaryTemplate {
   minScore   Int?
   maxScore   Int?
   category   String?
+  section    String?
   template   String  @db.Text
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
