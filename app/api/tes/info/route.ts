@@ -10,10 +10,25 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Tipe tes wajib diisi" }, { status: 400 });
     }
 
-    const test = await prisma.testType.findUnique({
-      where: { name: type },
-      select: { id: true, name: true, duration: true, price: true },
-    });
+   const test = await prisma.testType.findUnique({
+  where: { name: type },
+  select: {
+    id: true,
+    name: true,
+    duration: true,
+    price: true,
+    judul: true,
+    deskripsijudul: true,
+    juduldesk1: true,
+    desk1: true,
+    juduldesk2: true,
+    desk2: true,
+    judulbenefit: true,
+    pointbenefit: true,
+    cp: true,
+  },
+});
+
 
     if (!test) {
       return NextResponse.json({ error: "Tes tidak ditemukan" }, { status: 404 });

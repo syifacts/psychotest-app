@@ -1,19 +1,33 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
+import React, { useState, useEffect } from "react"; // <- pastikan ini ada
 import { motion } from "framer-motion";
 import styles from "../../app/tes/cpmi/cpmi.module.css";
 import CPMIPaymentButton from "./CPMIPaymentButton";
 import Navbar from "../layout/navbar";
 
 interface Props {
-  testInfo: { id: number; duration: number | null; price?: number | null } | null;
+   testInfo: {
+    id: number;
+    duration: number | null;
+    price?: number | null;
+    judul?: string;
+    deskripsijudul?: string;
+    juduldesk1?: string;
+    desk1?: string;
+    juduldesk2?: string;
+    desk2?: string;
+    judulbenefit?: string;
+    pointbenefit?: string;
+    img?: string;
+    cp?: string;
+  } | null;
   hasAccess: boolean;
   setHasAccess: (val: boolean) => void;
   startAttempt: () => Promise<void>;
   accessReason?: string;
-  role: "USER" | "PERUSAHAAN";
+   role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN"; 
 }
 
 const CPMIIntro: React.FC<Props> = ({
@@ -24,8 +38,17 @@ const CPMIIntro: React.FC<Props> = ({
   role,
   accessReason,
 }) => {
+const [currentRole, setCurrentRole] = useState<"USER" | "PERUSAHAAN" | "SUPERADMIN" | "GUEST">("GUEST");
   const isCompanyAccess = accessReason?.startsWith("Sudah didaftarkan oleh perusahaan");
 
+  useEffect(() => {
+  // misal ambil dari API /auth/me
+  fetch("/api/auth/me", { credentials: "include" })
+    .then(res => res.json())
+    .then(data => {
+      if (data.user?.role) setCurrentRole(data.user.role);
+    });
+}, []);
   return (
     <>
       <Navbar />
@@ -43,45 +66,54 @@ const CPMIIntro: React.FC<Props> = ({
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
         >
-          <header className={styles.header}>
-            <h1 className={styles.title}>Tes CPMI (Calon Pekerja Migran Indonesia)</h1>
-            <p className={styles.subtitle}>
-              Tes ini dirancang untuk mengukur <b>tingkat konsentrasi</b>, <b>pengendalian diri</b>, dan <b>ketahanan kerja</b> sebagai syarat penting
-              dalam kesiapan bekerja di luar negeri.
-            </p>
-          </header>
+         <header className={styles.header}>
+  {testInfo?.judul && (
+    <h1 className={styles.title}>{testInfo.judul}</h1>
+  )}
+  {testInfo?.deskripsijudul && (
+    <p
+      className={styles.subtitle}
+      dangerouslySetInnerHTML={{ __html: testInfo.deskripsijudul }}
+    />
+  )}
+</header>
 
-          <motion.section
-            className={styles.benefitsBox}
-            whileHover={{ scale: 1.02 }}
-            transition={{ type: "spring", stiffness: 200 }}
-          >
-            <h2 className={styles.sectionTitle}>Mengapa Ikut Tes CPMI?</h2>
-            <ul className={styles.benefitList}>
-              <li>✅ Hasil tes <b>tervalidasi</b> & <b>tersertifikasi dokter</b></li>
-              <li>✅ Membantu memastikan kesiapan mental & emosional</li>
-              <li>✅ Salah satu syarat resmi keberangkatan kerja luar negeri</li>
-              <li>✅ Bukti kemampuan konsentrasi & stabilitas kerja</li>
-            </ul>
-          </motion.section>
 
-          <motion.section
-            className={styles.instructions}
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.9 }}
-          >
-            <h2 className={styles.sectionTitle}>Instruksi Tes</h2>
-            <p className={styles.instructionsText}>
-              Terdapat 3 aspek yang diujikan, diantaranya:
-            </p>
-            <ul className={styles.keyPoints}>
-              <li>📌 Tingkat konsentrasi & kecermatan</li>
-              <li>📌 Pengendalian diri & stabilitas emosi</li>
-              <li>📌 Ketahanan kerja</li>
-            </ul>
-          </motion.section>
+         <motion.section
+  className={styles.benefitsBox}
+  whileHover={{ scale: 1.02 }}
+  transition={{ type: "spring", stiffness: 200 }}
+>
+  {testInfo?.juduldesk1 && <h2 className={styles.sectionTitle}>{testInfo.juduldesk1}</h2>}
+  {testInfo?.desk1 && (
+    <ul className={styles.benefitList}>
+      {testInfo.desk1.split("\n").map((line, idx) => (
+        <li key={idx} dangerouslySetInnerHTML={{ __html: line }} />
+      ))}
+    </ul>
+  )}
+</motion.section>
+
+
+        <motion.section
+  className={styles.instructions}
+  initial={{ opacity: 0, y: 50 }}
+  whileInView={{ opacity: 1, y: 0 }}
+  viewport={{ once: true }}
+  transition={{ duration: 0.9 }}
+>
+  {testInfo?.juduldesk2 && (
+    <h2 className={styles.sectionTitle}>{testInfo.juduldesk2}</h2>
+  )}
+  {testInfo?.desk2 && (
+    <ul className={styles.keyPoints}>
+      {testInfo.desk2.split("\n").map((line, idx) => (
+        <li key={idx} dangerouslySetInnerHTML={{ __html: line }} />
+      ))}
+    </ul>
+  )}
+</motion.section>
+
         </motion.div>
 
         {/* RIGHT COLUMN */}
@@ -120,22 +152,32 @@ const CPMIIntro: React.FC<Props> = ({
                 setHasAccess={setHasAccess}
                 startAttempt={startAttempt}
                 testInfo={testInfo}
-                role={role}
+  role={currentRole}
               />
             </div>
 
-            <div className={styles.benefitsMini}>
-              <h3>✨ Keuntungan Ikut Tes:</h3>
-              <ul>
-                <li>Hasil resmi & tervalidasi</li>
-                <li>Meningkatkan peluang kerja</li>
-                <li>Bisa diakses secara online</li>
-              </ul>
-            </div>
+<div className={styles.benefitsMini}>
+  {testInfo?.judulbenefit && <h3>{testInfo.judulbenefit}</h3>}
+  {testInfo?.pointbenefit && (
+    <div>
+      {testInfo.pointbenefit.split("\n").map((line, idx) => (
+        <p
+          key={idx}
+          className={styles.benefitLine}
+          dangerouslySetInnerHTML={{ __html: line }}
+        />
+      ))}
+    </div>
+  )}
+</div>
+
 
             <div className={styles.supportBox}>
-              <p>❓ Butuh bantuan? Hubungi <b>support@cpmi-test.com</b></p>
-            </div>
+  {testInfo?.cp && (
+    <div dangerouslySetInnerHTML={{ __html: testInfo.cp }} />
+  )}
+</div>
+
 
             <div className={styles.backWrapper}>
               <Link href="/dashboard">

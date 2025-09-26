@@ -41,18 +41,24 @@ export async function GET(
       );
     }
 
+    // Buat pesan TTD yang lebih human-readable
+    const ttdValidationMessage = result.validated
+      ? `Dokumen sudah ditandatangani secara elektronik oleh Psikolog ${result.ValidatedBy?.fullName} pada tanggal ${result.validatedAt?.toLocaleDateString("id-ID") || "-"}`
+      : null;
+
     return NextResponse.json({
-  attempt: result.Attempt,
-  result,
-  kesimpulan: result.kesimpulan,
-  ttd: result.User?.ttdUrl,
-  barcode: result.barcode,
-  expiresAt: result.expiresAt,
-  validationNotes: result.validated
-    ? `Hasil divalidasi oleh ${result.ValidatedBy?.fullName || "Psikolog"}, pada ${result.validatedAt ? result.validatedAt.toLocaleDateString("id-ID") : "-"}.
-Berlaku sampai: ${result.expiresAt ? result.expiresAt.toLocaleDateString("id-ID") : "-"}`
-    : null, // 🔥 kalau belum validasi → null aja
-});
+      attempt: result.Attempt,
+      result,
+      kesimpulan: result.kesimpulan,
+      ttd: result.User?.ttdUrl, // optional
+      barcode: result.barcode,
+      expiresAt: result.expiresAt,
+      validationNotes: result.validated
+        ? `Hasil divalidasi oleh ${result.ValidatedBy?.fullName || "Psikolog"}, pada ${result.validatedAt ? result.validatedAt.toLocaleDateString("id-ID") : "-"}.
+Berlaku sampai: ${result.expiresAt ? result.expiresAt.toLocaleDateString("id-ID") : "-"}` 
+        : null,
+      ttdValidationMessage, // 🔥 tambahkan ini
+    });
 
   } catch (err) {
     console.error("Error get report:", err);

@@ -34,6 +34,7 @@ enum Gender {
 // ------------------
 model User {
   id        Int      @id @default(autoincrement())
+ customId String? @unique
   fullName  String
   email     String   @unique
   password  String
@@ -43,10 +44,14 @@ model User {
   education String?
   phone     String?
   address   String?
- ttdUrl   String?     
+ ttdUrl   String?     @db.Text
   ttdHash  String? @db.Text // simpan hash SHA256 dari file untuk validasi
   profileImage String?
   tujuan      String?
+  strNumber   String? // Nomor STR/SIK / Registration Number
+  sippNumber  String? // Nomor SIPP/SIPPK / Licence Number
+  companyId   Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -61,10 +66,30 @@ model User {
   userPackages                 UserPackage[]
   purchasedPackagesAsCompany   PackagePurchase[] @relation("CompanyPackagePurchase")
   purchasedPackagesAsUser      PackagePurchase[] @relation("UserPackagePurchase")
+  companyTokens Token[] @relation("CompanyToken") // tokens yang dibuat perusahaan
   validatedResults             Result[]          @relation("ValidatedResults")
   personalityResults           PersonalityResult[] // Relasi ke hasil personality
   validatedPersonalityResults  PersonalityResult[] @relation("PersonalityValidatedResults")
   companyPayments              Payment[] @relation("CompanyPayments") 
+  tokens      Token[]
+}
+
+model Token {
+  id            Int          @id @default(autoincrement())
+  userId        Int?
+  companyId     Int?  
+  testTypeId    Int
+  token         String       @unique
+  used          Boolean      @default(false)
+  usedAt        DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime     @default(now())
+
+  // Relasi
+  User          User?         @relation(fields: [userId], references: [id])
+   Company       User?        @relation("CompanyToken", fields: [companyId], references: [id])
+  TestType      TestType     @relation(fields: [testTypeId], references: [id])
+  testAttempt   TestAttempt? @relation("TokenTestAttempt") // cukup nama relasi
 }
 
 // ------------------
@@ -73,10 +98,24 @@ model User {
 model TestType {
   id            Int            @id @default(autoincrement())
   name          String         @unique
+  code      String?   @unique // contoh: "CPMI", "IST", "PAULI"
   desc          String?
   createdAt     DateTime       @default(now())
   duration      Int
   price         Int?
+  judul         String?
+  deskripsijudul  String? @db.Text
+  juduldesk1     String?
+  desk1         String? @db.Text
+  juduldesk2    String?
+  desk2         String? @db.Text
+  judulbenefit  String?
+  pointbenefit  String? @db.Text
+  cp            String? @db.Text
+  img2          String?
+  img3          String?
+  img4          String?
+  img5          String?
   img           String?
   subTests      SubTest[]
   questions     Question[]
@@ -84,6 +123,7 @@ model TestType {
   payments      Payment[]
   attempts      TestAttempt[]
   packageTests  PackageTest[]
+  tokens        Token[] 
   preferenceQuestions PreferenceQuestion[]
   personalityDescriptions PersonalityDescription[] // Relasi ke deskripsi personality
   personalityResults      PersonalityResult[]    // Relasi ke hasil personality
@@ -119,6 +159,9 @@ model Question {
   type         String
   answer       Json?
   answerScores Json?
+  notes        String? @db.Text
+  image        String?
+  isScored    Boolean   @default(true) 
   aspek        String?
   SubTest      SubTest? @relation(fields: [subTestId], references: [id])
   TestType     TestType @relation(fields: [testTypeId], references: [id])
@@ -133,22 +176,28 @@ model TestAttempt {
   userId             Int
   testTypeId         Int
   paymentId          Int?
+  packagePurchaseId  Int?
   startedAt          DateTime            @default(now())
   finishedAt         DateTime?
-  isCompleted        Boolean @default(false)
-  packagePurchaseId  Int?          
+  isCompleted        Boolean             @default(false)
+  reservedAt         DateTime            @default(now())
+  status             String              @default("RESERVED") // RESERVED | STARTED | FINISHED | EXPIRED
+
+  // Relasi
   User               User                @relation(fields: [userId], references: [id])
   TestType           TestType            @relation(fields: [testTypeId], references: [id])
   Payment            Payment?            @relation(fields: [paymentId], references: [id])
-  reservedAt  DateTime  @default(now())
-  status      String    @default("RESERVED") // RESERVED | STARTED | FINISHED | EXPIRED
+  PackagePurchase    PackagePurchase?    @relation(fields: [packagePurchaseId], references: [id])
+  token              Token?              @relation("TokenTestAttempt", fields: [tokenId], references: [id])
+  tokenId            Int?                @unique
+  
   answers            Answer[]
   subtestResults     SubtestResult[]
   results            Result[]
   personalityResults PersonalityResult[]
-  PackagePurchase    PackagePurchase? @relation(fields: [packagePurchaseId], references: [id])
-    progress    UserProgress[] // setiap attempt bisa punya banyak subtest progress
+  progress           UserProgress[]
 }
+
 
 // ------------------
 // Jawaban Peserta
@@ -201,13 +250,16 @@ model Result {
   iq            Float?
   keteranganiq  String?
   dominasi      String?
-  kategoriiq    String?
+  //kategoriiq    String?
   jumlahbenar   Int?
   scoreiq       Int?
   keteranganiqCPMI String?
   aspekSTK         Json?
   url           String? @db.Text 
   kesimpulan    String? @db.Text
+  kesimpulanSikap    String? @db.Text
+  kesimpulanKepribadian    String? @db.Text
+  kesimpulanBelajar    String? @db.Text
   ttd           String? @db.Text
   summaryTemplateId Int?
 
@@ -287,6 +339,7 @@ model SummaryTemplate {
   minScore   Int?
   maxScore   Int?
   category   String?
+  section    String?
   template   String  @db.Text
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

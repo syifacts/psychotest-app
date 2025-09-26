@@ -2,19 +2,21 @@
 
 import React, { useState, useEffect } from "react";
 import styles from "../../app/tes/cpmi/cpmi.module.css";
+import { useSearchParams } from "next/navigation";
 
 interface Props {
   hasAccess: boolean;
   setHasAccess: (val: boolean) => void;
   startAttempt: () => Promise<void>;
   testInfo: { id: number; duration: number | null; price?: number | null } | null;
-  role: "USER" | "PERUSAHAAN";
+  role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN";
 }
 
 interface User {
   id: number;
   name: string;
   email: string;
+  role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN";
 }
 
 const CPMIPaymentButton: React.FC<Props> = ({
@@ -24,39 +26,103 @@ const CPMIPaymentButton: React.FC<Props> = ({
   testInfo,
   role,
 }) => {
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
+
   const [quantity, setQuantity] = useState(1);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
+  const [tokenCompleted, setTokenCompleted] = useState(false);
+  const [checkingToken, setCheckingToken] = useState(true);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await fetch("/api/auth/me", { credentials: "include" });
-        const data = await res.json();
-        if (res.ok) setUser(data.user);
-      } catch (err) {
-        console.error("Gagal fetch user:", err);
+  // ---------------------------
+  // Ambil info user / token
+  // ---------------------------
+useEffect(() => {
+  const fetchUser = async () => {
+    try {
+      if (token) {
+        const resToken = await fetch(`/api/token/info?token=${token}`);
+        const dataToken = await resToken.json();
+        console.log("Token API response:", resToken);
+        console.log("Token data:", dataToken);
+
+        if (!resToken.ok) {
+          console.log("Token tidak valid atau sudah digunakan");
+          setTokenCompleted(true); // ✅ tes tidak bisa dikerjakan
+          setCheckingToken(false);
+          return;
+        }
+
+        // Token valid
+        setUser({
+          id: dataToken.userId ?? 0,
+          name: dataToken.companyName ?? "Guest",
+          email: "",
+          role: "GUEST",
+        });
+
+        const completed = Boolean(dataToken.isCompleted) || Boolean(dataToken.used);
+        setTokenCompleted(completed);
+        if (!completed) setHasAccess(true);
+        setCheckingToken(false);
+        return;
       }
-    };
-    fetchUser();
-  }, []);
 
+      // Kalau tidak pakai token, ambil user login
+      const resUser = await fetch("/api/auth/me", { credentials: "include" });
+      const dataUser = await resUser.json();
+    //  console.log("User API response:", resUser);
+     // console.log("User data:", dataUser);
+
+      if (resUser.ok && dataUser.user) {
+        setUser({
+          id: dataUser.user.id,
+          name: dataUser.user.fullName || "",
+          email: dataUser.user.email,
+          role: dataUser.user.role === "PERUSAHAAN" ? "PERUSAHAAN" : "USER",
+        });
+      }
+    } catch (err) {
+      console.error("Gagal fetch user/token info:", err);
+    } finally {
+      setCheckingToken(false);
+    }
+  };
+
+  fetchUser();
+}, [token, setHasAccess]);
+
+
+  // ---------------------------
+  // Handle pembayaran
+  // ---------------------------
   const handlePayment = async () => {
-    if (!user?.id || !testInfo?.id) return;
+      if (role === "SUPERADMIN") return; // SUPERADMIN tidak bisa bayar
+
+    if (!user || user.role === "GUEST") {
+      alert("Silahkan login terlebih dahulu untuk membeli test!");
+      return (window.location.href = "/login");
+    }
+
+    if (!testInfo?.id) return;
 
     setLoading(true);
     try {
+  //    console.log("Memulai pembayaran...");
       const payRes = await fetch("/api/payment/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user.id,
           testTypeId: testInfo.id,
-          quantity: role === "PERUSAHAAN" ? quantity : 1,
+          quantity: user.role === "PERUSAHAAN" ? quantity : 1,
         }),
       });
 
       const payData = await payRes.json();
+    //  console.log("Payment response:", payRes, payData);
+
       if (!payRes.ok || !payData.success) {
         alert("❌ Pembayaran gagal!");
         return;
@@ -72,7 +138,47 @@ const CPMIPaymentButton: React.FC<Props> = ({
     }
   };
 
-  // === Kalau sudah punya akses, tampilkan tombol Mulai Tes ===
+  // ---------------------------
+  // Render
+  // ---------------------------
+ // console.log("Render -> user:", user, "hasAccess:", hasAccess, "tokenCompleted:", tokenCompleted);
+
+  if (checkingToken) {
+    return <p>Memeriksa status tes...</p>;
+  }
+
+  // Superadmin: hanya lihat, tidak ada tombol sama sekali
+if (role === "SUPERADMIN") {
+  return (
+    <p style={{ fontWeight: 500, color: "#555" }}>
+      Anda login sebagai Superadmin. Hanya bisa melihat status tes.
+    </p>
+  );
+}
+
+
+  if (tokenCompleted) {
+    return (
+      <p style={{ color: "red", fontWeight: 500 }}>
+        ✅ Tes sudah selesai, tidak bisa mengerjakan lagi.
+      </p>
+    );
+  }
+  
+
+  if (user?.role === "GUEST" && hasAccess) {
+    return (
+      <div>
+        <p>
+          ✅ Sudah didaftarkan oleh perusahaan: <b>{user.name}</b>
+        </p>
+        <button className={styles.btn} onClick={startAttempt}>
+          Mulai Tes
+        </button>
+      </div>
+    );
+  }
+
   if (hasAccess) {
     return (
       <div>
@@ -83,12 +189,13 @@ const CPMIPaymentButton: React.FC<Props> = ({
     );
   }
 
-  // === Kalau belum punya akses, tampilkan tombol Bayar / Beli Lagi ===
   return (
     <div>
-      {role === "PERUSAHAAN" && (
+      {user?.role === "PERUSAHAAN" && (
         <div style={{ marginBottom: "12px" }}>
-          <label style={{ display: "block", marginBottom: "4px", fontWeight: "500" }}>
+          <label
+            style={{ display: "block", marginBottom: "4px", fontWeight: 500 }}
+          >
             Jumlah Kuantitas
           </label>
           <input
@@ -107,11 +214,15 @@ const CPMIPaymentButton: React.FC<Props> = ({
         </div>
       )}
 
-      <button className={styles.btn} onClick={handlePayment} disabled={!user || loading}>
-        {role === "PERUSAHAAN" ? "Beli Tes (dengan Kuantitas)" : "Bayar untuk Ikut Tes"}
+      <button
+        className={styles.btn}
+        onClick={handlePayment}
+        disabled={!user || loading}
+      >
+        {user?.role === "PERUSAHAAN"
+          ? "Beli Tes (dengan Kuantitas)"
+          : "Bayar untuk Ikut Tes"}
       </button>
-
-
     </div>
   );
 };

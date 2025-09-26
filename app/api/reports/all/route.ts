@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const startDate = url.searchParams.get("startDate");
     const endDate = url.searchParams.get("endDate");
     const search = url.searchParams.get("search");
-    const status = url.searchParams.get("status"); // 👈 tambahan
+    const status = url.searchParams.get("status");
 
     const whereClause: any = { AND: [] };
 
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // === Ambil data ===
+    // === Ambil data Result ===
     const results = await prisma.result.findMany({
       where: whereClause.AND.length > 0 ? whereClause : undefined,
       include: {
@@ -102,14 +102,36 @@ export async function GET(req: NextRequest) {
             },
           },
         },
+        ValidatedBy: { select: { id: true, fullName: true } }, 
       },
       orderBy: { createdAt: "desc" },
     });
 
-    // === Mapping Company fallback ke User jika role PERUSAHAAN ===
-    const mapped = results.map((r) => {
-      let company: { id: number; fullName: string } | null = null;
+    // === Ambil data PersonalityResult ===
+    const personalityResults = await prisma.personalityResult.findMany({
+      include: {
+        User: { select: { id: true, fullName: true, role: true } },
+        TestType: { select: { id: true, name: true } },
+        Attempt: {
+          select: {
+            id: true,
+            startedAt: true,
+            PackagePurchase: {
+              select: { company: { select: { id: true, fullName: true } } },
+            },
+            Payment: {
+              select: { company: { select: { id: true, fullName: true } } },
+            },
+          },
+        },
+        ValidatedBy: { select: { id: true, fullName: true } }, 
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
+    // === Mapping Company (Result) ===
+    const mappedResults = results.map((r) => {
+      let company: { id: number; fullName: string } | null = null;
       if (r.Attempt?.PackagePurchase?.company) {
         company = r.Attempt.PackagePurchase.company;
       } else if (r.Attempt?.Payment?.company) {
@@ -117,9 +139,36 @@ export async function GET(req: NextRequest) {
       } else if (r.User && r.User.role === "PERUSAHAAN") {
         company = { id: r.User.id, fullName: r.User.fullName };
       }
-
       return {
         id: r.id,
+        type: "result", // 👈 penanda
+        User: r.User,
+        TestType: r.TestType,
+        Attempt: r.Attempt
+          ? { id: r.Attempt.id, startedAt: r.Attempt.startedAt }
+          : null,
+        Company: company,
+        validated: r.validated,
+         validatedBy: r.ValidatedBy, // ✅ pakai ini untuk nama psikolog
+   result: `/tes/hasil/${r.attemptId}`,  
+        validatedAt: r.validatedAt,
+        createdAt: r.createdAt,
+      };
+    });
+
+    // === Mapping Company (PersonalityResult) ===
+    const mappedPersonality = personalityResults.map((r) => {
+      let company: { id: number; fullName: string } | null = null;
+      if (r.Attempt?.PackagePurchase?.company) {
+        company = r.Attempt.PackagePurchase.company;
+      } else if (r.Attempt?.Payment?.company) {
+        company = r.Attempt.Payment.company;
+      } else if (r.User && r.User.role === "PERUSAHAAN") {
+        company = { id: r.User.id, fullName: r.User.fullName };
+      }
+      return {
+        id: r.id,
+        type: "personality", // 👈 penanda
         User: r.User,
         TestType: r.TestType,
         Attempt: r.Attempt
@@ -129,10 +178,18 @@ export async function GET(req: NextRequest) {
         validated: r.validated,
         validatedAt: r.validatedAt,
         createdAt: r.createdAt,
+        validatedBy: r.ValidatedBy || null,  // ✅ penting
+           result: `/tes/hasil/${r.attemptId}`,  
       };
     });
+    
 
-    return NextResponse.json(mapped);
+    // Gabungkan dua hasil
+    const combined = [...mappedResults, ...mappedPersonality].sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+    );
+
+    return NextResponse.json(combined);
   } catch (err) {
     console.error("❌ Gagal ambil reports:", err);
     return NextResponse.json({ error: "Gagal ambil reports" }, { status: 500 });

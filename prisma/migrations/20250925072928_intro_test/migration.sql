@@ -1,0 +1,14 @@
+-- AlterTable
+ALTER TABLE `TestType` ADD COLUMN `cp` TEXT NULL,
+    ADD COLUMN `desk1` TEXT NULL,
+    ADD COLUMN `desk2` TEXT NULL,
+    ADD COLUMN `deskripsijudul` TEXT NULL,
+    ADD COLUMN `img2` VARCHAR(191) NULL,
+    ADD COLUMN `img3` VARCHAR(191) NULL,
+    ADD COLUMN `img4` VARCHAR(191) NULL,
+    ADD COLUMN `img5` VARCHAR(191) NULL,
+    ADD COLUMN `judul` VARCHAR(191) NULL,
+    ADD COLUMN `judulbenefit` VARCHAR(191) NULL,
+    ADD COLUMN `juduldesk1` VARCHAR(191) NULL,
+    ADD COLUMN `juduldesk2` VARCHAR(191) NULL,
+    ADD COLUMN `pointbenefit` TEXT NULL;

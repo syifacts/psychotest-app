@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
 import QRCode from "qrcode";
-import crypto from "crypto";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -24,6 +23,10 @@ async function getLoggedUserId(req: NextRequest) {
 // === GET untuk filter reports (Pending & History) ===
 export async function GET(req: NextRequest) {
   try {
+        const userId = await getLoggedUserId(req);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const url = new URL(req.url);
     const companyId = url.searchParams.get("companyId");
     const testTypeId = url.searchParams.get("testTypeId");
@@ -70,11 +73,17 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Filter Status
-    if (status && status !== "all") {
-      if (status === "pending") whereClause.AND.push({ validated: false });
-      if (status === "selesai") whereClause.AND.push({ validated: true });
-    }
+   // Filter Status
+if (status && status !== "all") {
+  if (status === "pending") {
+    whereClause.AND.push({ validated: false });
+  }
+  if (status === "selesai") {
+    whereClause.AND.push({ validated: true });
+    // 🔹 filter psikolog yang login
+    whereClause.AND.push({ validatedById: userId });
+  }
+}
 
     // Filter Tanggal Pemeriksaan (validatedAt)
     if (validatedAt) {
@@ -87,35 +96,60 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Ambil data dari DB
-   const results = await prisma.result.findMany({
-  where: whereClause.AND.length > 0 ? whereClause : undefined,
-  include: {
-    User: { select: { id: true, fullName: true, role: true } }, // peserta tes
-    TestType: { select: { id: true, name: true } },
-    Attempt: {
-      select: {
-        id: true,
-        startedAt: true,
-        PackagePurchase: { select: { company: true } },
-        Payment: { select: { company: true } },
+    // === Ambil data dari DB → result
+    const results = await prisma.result.findMany({
+      where: whereClause.AND.length > 0 ? whereClause : undefined,
+      include: {
+        User: { select: { id: true, fullName: true, role: true } },
+        TestType: { select: { id: true, name: true } },
+        Attempt: {
+          select: {
+            id: true,
+            startedAt: true,
+            PackagePurchase: { select: { company: true } },
+            Payment: { select: { company: true } },
+          },
+        },
+        ValidatedBy: {
+          select: {
+            id: true,
+            fullName: true,
+            ttdUrl: true,
+            ttdHash: true,
+          },
+        },
       },
-    },
-    ValidatedBy: { // 🔹 ambil psikolog validator
-      select: {
-        id: true,
-        fullName: true,
-        ttdUrl: true,
-        ttdHash: true,
+      orderBy: { createdAt: "desc" },
+    });
+
+    // === Ambil data dari DB → personalityResult
+    const personalityResults = await prisma.personalityResult.findMany({
+      where: whereClause.AND.length > 0 ? whereClause : undefined,
+      include: {
+        User: { select: { id: true, fullName: true, role: true } },
+        TestType: { select: { id: true, name: true } },
+        Attempt: {
+          select: {
+            id: true,
+            startedAt: true,
+            PackagePurchase: { select: { company: true } },
+            Payment: { select: { company: true } },
+          },
+        },
+        ValidatedBy: {
+          select: {
+            id: true,
+            fullName: true,
+            ttdUrl: true,
+            ttdHash: true,
+          },
+        },
       },
-    },
-  },
-  orderBy: { createdAt: "desc" },
-});
+      orderBy: { createdAt: "desc" },
+    });
 
-
-    // Mapping company fallback ke User jika role PERUSAHAAN
-    const mapped = results.map((r) => {
+    // === Mapping company fallback (untuk result)
+    const mappedResults = results.map((r) => {
       let company = null;
       if (r.Attempt?.PackagePurchase?.company) company = r.Attempt.PackagePurchase.company;
       else if (r.Attempt?.Payment?.company) company = r.Attempt.Payment.company;
@@ -129,36 +163,73 @@ export async function GET(req: NextRequest) {
         Company: company,
         validated: r.validated,
         validatedAt: r.validatedAt,
+        createdAt: r.createdAt,
+        source: "result",
       };
     });
 
-    return NextResponse.json(mapped);
+    // === Mapping company fallback (untuk personalityResult)
+    const mappedPersonality = personalityResults.map((r) => {
+      let company = null;
+      if (r.Attempt?.PackagePurchase?.company) company = r.Attempt.PackagePurchase.company;
+      else if (r.Attempt?.Payment?.company) company = r.Attempt.Payment.company;
+      else if (r.User.role === "PERUSAHAAN") company = { id: r.User.id, fullName: r.User.fullName };
+
+      return {
+        id: r.id,
+        User: r.User,
+        TestType: r.TestType,
+        Attempt: r.Attempt ? { id: r.Attempt.id, startedAt: r.Attempt.startedAt } : null,
+        Company: company,
+        validated: r.validated,
+        validatedAt: r.validatedAt,
+        createdAt: r.createdAt,
+        source: "personalityResult",
+      };
+    });
+
+    // Gabungkan hasil dan sort by createdAt descending
+    const combined = [...mappedResults, ...mappedPersonality];
+    const sortedCombined = combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return NextResponse.json(sortedCombined);
   } catch (err) {
     console.error("❌ Gagal ambil reports:", err);
     return NextResponse.json({ error: "Gagal ambil reports" }, { status: 500 });
   }
 }
 
-// === POST untuk validasi laporan ===
-
+// === POST untuk validasi laporan (result + personalityResult) ===
 export async function POST(req: NextRequest) {
   try {
-    const { reportId, kesimpulan } = await req.json();
+    const { reportId, kesimpulan, source } = await req.json();
     const userId = await getLoggedUserId(req);
-
     if (!reportId || !userId) {
       return NextResponse.json({ error: "Data tidak lengkap" }, { status: 400 });
     }
 
-    const result = await prisma.result.findUnique({
-      where: { id: reportId },
-      include: {
-        User: { select: { id: true, fullName: true, ttdUrl: true, ttdHash: true } }, // ✅ ambil TTD asli + hash
-        ValidatedBy: true,
-      },
-    });
+    let result;
+    if (source === "personalityResult") {
+      result = await prisma.personalityResult.findUnique({
+        where: { id: reportId },
+        include: {
+          User: { select: { id: true, fullName: true, ttdUrl: true, ttdHash: true } },
+          ValidatedBy: true,
+        },
+      });
+    } else {
+      result = await prisma.result.findUnique({
+        where: { id: reportId },
+        include: {
+          User: { select: { id: true, fullName: true, ttdUrl: true, ttdHash: true } },
+          ValidatedBy: true,
+        },
+      });
+    }
 
-    if (!result) return NextResponse.json({ error: "Result tidak ditemukan" }, { status: 404 });
+    if (!result) {
+      return NextResponse.json({ error: "Result tidak ditemukan" }, { status: 404 });
+    }
 
     // Generate barcode ID report
     let barcodeId = result.barcode;
@@ -173,48 +244,66 @@ export async function POST(req: NextRequest) {
 
     const expiry = new Date();
     expiry.setFullYear(expiry.getFullYear() + 1);
-console.log("🔥 validator ttdHash:", result?.ValidatedBy?.ttdHash);
-console.log("🔥 validator ttdUrl:", result?.ValidatedBy?.ttdUrl);
 
-// === Generate QR dari ttdHash psikolog ===
+    console.log("🔥 validator ttdHash:", result?.ValidatedBy?.ttdHash);
+    console.log("🔥 validator ttdUrl:", result?.ValidatedBy?.ttdUrl);
+const validatorUser = await prisma.user.findUnique({
+  where: { id: userId },
+  select: { ttdHash: true },
+});
+    // === Generate QR dari ttdHash psikolog ===
 let barcodettd: string | null = null;
-if (result?.ValidatedBy?.ttdHash) {
-  barcodettd = await QRCode.toDataURL(result.ValidatedBy.ttdHash.toString());
+if (validatorUser?.ttdHash) {
+  barcodettd = await QRCode.toDataURL(validatorUser.ttdHash);
   console.log("✅ Generated barcodettd:", barcodettd.substring(0, 50));
 }
-// // === Generate QR dari TTD URL psikolog (bukan hash) ===
-// let barcodettd: string | null = null;
-// if (result?.ValidatedBy?.ttdUrl) {
-//   barcodettd = await QRCode.toDataURL(result.ValidatedBy.ttdUrl.toString());
-//   console.log("✅ Generated barcodettd pakai URL:", barcodettd.substring(0, 50));
-// }
 
-    // Update result
-    const updated = await prisma.result.update({
-  where: { id: reportId },
-  data: {
-    validated: true,
-    validatedById: result.validated ? result.validatedById : userId,
-    validatedAt: result.validated ? result.validatedAt : new Date(),
-    kesimpulan: kesimpulan ?? result.kesimpulan,
-    barcode: barcodeId,
-    barcodettd,
-    expiresAt: expiry,
-    isCompleted: true,
-  },
-});
+    // Update data sesuai source
+    let updated;
+    if (source === "personalityResult") {
+      updated = await prisma.personalityResult.update({
+        where: { id: reportId },
+        data: {
+          validated: true,
+          validatedById: result.validated ? result.validatedById : userId,
+          validatedAt: result.validated ? result.validatedAt : new Date(),
+          kesimpulan: kesimpulan ?? result.kesimpulan,
+          barcode: barcodeId,
+          barcodettd,
+          expiresAt: expiry,
+          isCompleted: true,
+        },
+      });
+    } else {
+      updated = await prisma.result.update({
+        where: { id: reportId },
+        data: {
+          validated: true,
+          validatedById: result.validated ? result.validatedById : userId,
+          validatedAt: result.validated ? result.validatedAt : new Date(),
+          kesimpulan: kesimpulan ?? result.kesimpulan,
+          barcode: barcodeId,
+          barcodettd,
+          expiresAt: expiry,
+          isCompleted: true,
+        },
+      });
+    }
 
-console.log("✅ saved barcodettd:", updated.barcodettd?.substring(0, 50));
-    
+    console.log("✅ saved barcodettd:", updated.barcodettd?.substring(0, 50));
 
     return NextResponse.json({
       success: true,
       barcodeURL,
       barcodeId,
       expiresAt: expiry,
+      source,
     });
   } catch (err) {
     console.error("Error validating report:", err);
-    return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Terjadi kesalahan server" },
+      { status: 500 }
+    );
   }
 }

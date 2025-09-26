@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
           type: true,
           answer: true,
           answerScores: true,
+          image: true,
         },
         orderBy: { id: "asc" },
       });
@@ -65,6 +66,7 @@ export async function GET(req: NextRequest) {
           type: true,
           answer: true,
           answerScores: true,
+          image: true,
         },
         orderBy: { id: "asc" },
       });

@@ -42,7 +42,7 @@ export default function LoginPage() {
     setIsLoading(false);
 
     setTimeout(() => {
-      if (data.user.role === "SUPERADMIN") router.push("/admin");
+      if (data.user.role === "SUPERADMIN") router.push("/admin/dashboard");
       else if (data.user.role === "PSIKOLOG") router.push("/psikolog/dashboard");
       else if (data.user.role === "PERUSAHAAN") router.push("/company/dashboard");
       else router.push("/");
@@ -75,7 +75,7 @@ export default function LoginPage() {
           <div className="flex-1 flex flex-col justify-center p-8 sm:p-12 lg:p-16">
             <div className="w-full max-w-md mx-auto">
               <h2 className="text-3xl font-bold tracking-tight text-gray-900 text-center">
-                Selamat Datang Kembali
+                Selamat Datang
               </h2>
               <p className="mt-2 text-gray-600 text-center">
                 Silakan masuk untuk melanjutkan ke akun Anda.

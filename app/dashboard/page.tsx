@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 //import Footer from '@/components/layout/footer';
 import AnimatedOnScroll from '@/components/ui/animatedonscroll';
+import { useSearchParams } from "next/navigation";
 
 interface TestType {
   name: string;
@@ -23,6 +24,11 @@ const formatPrice = (price: string | number) => {
 export default function DashboardPage() {
   const [tests, setTests] = useState<TestType[]>([]);
   const [loading, setLoading] = useState(true);
+const searchParams = useSearchParams();
+const searchQuery = searchParams.get("search")?.toLowerCase() || "";
+const filteredTests = tests.filter(t =>
+  t.name.toLowerCase().includes(searchQuery)
+);
 
   useEffect(() => {
     async function fetchTests() {
@@ -50,7 +56,8 @@ export default function DashboardPage() {
         </h1>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-          {tests.map((test, index) => (
+         {filteredTests.map((test, index) => (
+
             <AnimatedOnScroll key={index} delay={0.1 * index} duration={0.8}>
               <Link 
                 href={`/tes/${test.name.toLowerCase().replace(/\s+/g, '-')}`} 

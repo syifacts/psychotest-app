@@ -5,18 +5,29 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, attemptId, answers } = body as {
-      userId: number;
+    const { attemptId, answers } = body as {
       attemptId: number;
       answers: { questionId?: number; preferenceQuestionId?: number; choice: string }[];
     };
 
-    if (!userId || !attemptId || !answers?.length) {
+    if (!attemptId || !answers?.length) {
       return NextResponse.json(
-        { error: "userId, attemptId, dan answers wajib diisi" },
+        { error: "attemptId dan answers wajib diisi" },
         { status: 400 }
       );
     }
+
+    // Ambil userId dari TestAttempt
+    const attempt = await prisma.testAttempt.findUnique({
+      where: { id: attemptId },
+      select: { userId: true },
+    });
+
+    if (!attempt) {
+      return NextResponse.json({ error: "Attempt tidak ditemukan" }, { status: 404 });
+    }
+
+    const userId = attempt.userId;
 
     // Ambil kode & kunci jawaban dari Question
     const questionIds = answers.map((a) => a.questionId).filter(Boolean) as number[];
@@ -33,54 +44,69 @@ export async function POST(req: NextRequest) {
     });
 
     // Bentuk data untuk upsert
-    const answerData = answers.map((a) => {
-      if (a.questionId) {
-        const question = questions.find((q) => q.id === a.questionId);
-        const isCorrect = question ? question.answer === a.choice : null;
-        return {
-          userId,
-          attemptId,
-          questionCode: question?.code ?? null,
-          preferenceQuestionCode: null,
-          choice: a.choice,
-          isCorrect,
-        };
-      } else if (a.preferenceQuestionId) {
-        const pref = prefQuestions.find((p) => p.id === a.preferenceQuestionId);
-        return {
-          userId,
-          attemptId,
-          questionCode: null,
-          preferenceQuestionCode: pref?.code ?? null,
-          choice: a.choice,
-          isCorrect: null, // preference biasanya ga ada benar/salah
-        };
-      }
-      return null;
-    }).filter(Boolean) as any[];
+    const answerData = answers
+      .map((a) => {
+        if (a.questionId) {
+          const question = questions.find((q) => q.id === a.questionId);
+          const normalizedChoice =
+  Array.isArray(a.choice) ? a.choice[0] : String(a.choice);
+const isCorrect = question ? question.answer === normalizedChoice : null;
+
+return {
+  userId,
+  attemptId,
+  questionCode: question?.code ?? null,
+  preferenceQuestionCode: null,
+  choice: normalizedChoice,
+  isCorrect,
+};
+
+        } else if (a.preferenceQuestionId) {
+          const pref = prefQuestions.find((p) => p.id === a.preferenceQuestionId);
+          return {
+            userId,
+            attemptId,
+            questionCode: null,
+            preferenceQuestionCode: pref?.code ?? null,
+            choice: a.choice,
+            isCorrect: null,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean) as any[];
 
     // Simpan jawaban
     await Promise.all(
       answerData.map((a) =>
         prisma.answer.upsert({
           where: a.questionCode
-            ? { attemptId_questionCode: { attemptId: a.attemptId, questionCode: a.questionCode } }
-            : { attemptId_preferenceQuestionCode: { attemptId: a.attemptId, preferenceQuestionCode: a.preferenceQuestionCode } },
+            ? { attemptId_questionCode: { attemptId, questionCode: a.questionCode } }
+            : {
+                attemptId_preferenceQuestionCode: {
+                  attemptId,
+                  preferenceQuestionCode: a.preferenceQuestionCode,
+                },
+              },
           update: { choice: a.choice, isCorrect: a.isCorrect },
-          create: a,
+          create: {
+            userId,
+            attemptId,
+            questionCode: a.questionCode,
+            preferenceQuestionCode: a.preferenceQuestionCode,
+            choice: a.choice,
+            isCorrect: a.isCorrect,
+          },
         })
       )
     );
 
-    return NextResponse.json({
-      message: "Jawaban berhasil disimpan",
-    });
+    return NextResponse.json({ message: "Jawaban berhasil disimpan" });
   } catch (error) {
     console.error("Gagal simpan jawaban:", error);
     return NextResponse.json({ error: "Gagal simpan jawaban" }, { status: 500 });
   }
 }
-
 // === GET: Ambil jawaban user berdasarkan subtest ===
 export async function GET(req: NextRequest) {
   try {

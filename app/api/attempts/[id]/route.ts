@@ -89,9 +89,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         id: cpmiResultRaw.id,
         jumlahbenar: cpmiResultRaw.jumlahbenar ?? 0,
         scoreiq: cpmiResultRaw.scoreiq ?? 0,
-        kategoriiq: cpmiResultRaw.kategoriiq ?? "-",
+       // kategoriiq: cpmiResultRaw.kategoriiq ?? "-",
         keteranganiqCPMI: cpmiResultRaw.keteranganiqCPMI ?? "-",
-        kesimpulan,
+        kesimpulan: cpmiResultRaw.kesimpulan ?? "",
+kesimpulanSikap: cpmiResultRaw.kesimpulanSikap ?? "",
+kesimpulanKepribadian: cpmiResultRaw.kesimpulanKepribadian ?? "",
+kesimpulanBelajar: cpmiResultRaw.kesimpulanBelajar ?? "",
+
         // 🔹 pakai TTD asli dari User
         ttdUrl: attempt.User?.ttdUrl || null,
         ttdHash: attempt.User?.ttdHash || null,

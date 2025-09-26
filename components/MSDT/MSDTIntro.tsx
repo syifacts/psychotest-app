@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react"; // <- pastikan ini ada
 import Link from "next/link";
 import { motion } from "framer-motion";
 import styles from "../../app/tes/msdt/msdt.module.css";
@@ -13,7 +13,7 @@ interface MSDTIntroProps {
   setHasAccess: (val: boolean) => void;
   startAttempt: () => Promise<void>;
   accessReason?: string;
-  role: "USER" | "PERUSAHAAN";
+  role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN";
 }
 
 const MSDTIntro: React.FC<MSDTIntroProps> = ({
@@ -25,7 +25,15 @@ const MSDTIntro: React.FC<MSDTIntroProps> = ({
   role,
 }) => {
   const showAccessBadge = accessReason && accessReason.length > 0;
-
+const [currentRole, setCurrentRole] = useState<"USER" | "PERUSAHAAN" | "SUPERADMIN" | "GUEST">("GUEST");
+useEffect(() => {
+  // misal ambil dari API /auth/me
+  fetch("/api/auth/me", { credentials: "include" })
+    .then(res => res.json())
+    .then(data => {
+      if (data.user?.role) setCurrentRole(data.user.role);
+    });
+}, []);
   return (
     <>
       <Navbar />
@@ -118,7 +126,8 @@ const MSDTIntro: React.FC<MSDTIntroProps> = ({
         setHasAccess={setHasAccess}
         startAttempt={startAttempt}
         testInfo={testInfo}
-        role={role}
+          role={currentRole}
+
       />
     </div>
 

@@ -1,121 +1,163 @@
-// app/api/attempts/route.ts
 import { prisma } from "@/lib/prisma";
+import { PaymentStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
 
-// === POST: buat attempt baru (setelah payment success / assign perusahaan) ===
+const JWT_SECRET = process.env.JWT_SECRET || "secretkey";
+
 export async function POST(req: NextRequest) {
   try {
-    const { userId, testTypeId, paymentId, packagePurchaseId } = await req.json();
+    const { userId: bodyUserId, testTypeId, paymentId, packagePurchaseId, guestToken } = await req.json();
 
-    if (!userId || !testTypeId) {
-      return NextResponse.json({ error: "userId & testTypeId wajib diisi" }, { status: 400 });
+    if (!testTypeId) {
+      return NextResponse.json({ error: "testTypeId wajib diisi" }, { status: 400 });
     }
 
-    // 🔎 Cek apakah user sudah punya attempt aktif untuk testType ini
+    let userId: number | undefined;
+    let role: "USER" | "PERUSAHAAN" | "GUEST" | undefined;
+
+    // ----------------------
+    // 1️⃣ Cek guest token CPMI
+    // ----------------------
+    if (guestToken) {
+      const tokenData = await prisma.token.findUnique({
+        where: { token: guestToken },
+        include: { User: true },
+      });
+
+      if (!tokenData || !tokenData.userId || !tokenData.User) {
+        return NextResponse.json({ error: "Guest token tidak valid" }, { status: 401 });
+      }
+
+      userId = tokenData.userId;
+      role = "GUEST"; // hanya untuk logika, di DB tetap USER
+    } else {
+      // ----------------------
+      // 2️⃣ Cek JWT login
+      // ----------------------
+      const cookie = req.headers.get("cookie");
+      const token = cookie?.split("; ").find(c => c.startsWith("token="))?.split("=")[1];
+
+      if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string };
+        userId = bodyUserId || decoded.id;
+        role = decoded.role as "USER" | "PERUSAHAAN";
+      } catch (err) {
+        return NextResponse.json({ error: "Token invalid atau malformed" }, { status: 401 });
+      }
+    }
+
+    if (!userId) return NextResponse.json({ error: "userId tidak valid" }, { status: 400 });
+
+    // ----------------------
+    // 3️⃣ Cek attempt aktif
+    // ----------------------
     const existingAttempt = await prisma.testAttempt.findFirst({
       where: { userId, testTypeId, finishedAt: null },
     });
+    if (existingAttempt) return NextResponse.json(existingAttempt);
 
-    if (existingAttempt) {
-      return NextResponse.json(existingAttempt); // balikin yg lama, bukan bikin baru
-    }
-
-    // === Cek TestType valid ===
+    // ----------------------
+    // 4️⃣ Cek testType
+    // ----------------------
     const testType = await prisma.testType.findUnique({ where: { id: testTypeId } });
-    if (!testType) {
-      return NextResponse.json({ error: "TestType tidak ditemukan" }, { status: 404 });
-    }
+    if (!testType) return NextResponse.json({ error: "TestType tidak ditemukan" }, { status: 404 });
 
-    // === Jika perusahaan assign dari PackagePurchase ===
+    let assignedPaymentId: number | null = null;
+
+    // ----------------------
+    // 5️⃣ PackagePurchase
+    // ----------------------
     if (packagePurchaseId) {
-      const pkg = await prisma.packagePurchase.findUnique({
-        where: { id: packagePurchaseId },
-      });
-
-      if (!pkg || pkg.quantity <= 0) {
-        return NextResponse.json(
-          { error: "Kuota paket habis atau tidak ditemukan" },
-          { status: 400 }
-        );
-      }
+      const pkg = await prisma.packagePurchase.findUnique({ where: { id: packagePurchaseId } });
+      if (!pkg || pkg.quantity <= 0)
+        return NextResponse.json({ error: "Kuota paket habis atau tidak ditemukan" }, { status: 400 });
 
       const attempt = await prisma.$transaction(async (tx) => {
         const newAttempt = await tx.testAttempt.create({
           data: { userId, testTypeId, packagePurchaseId },
         });
-
         await tx.packagePurchase.update({
           where: { id: packagePurchaseId },
           data: { quantity: { decrement: 1 } },
         });
-
         return newAttempt;
       });
-
       return NextResponse.json(attempt);
     }
 
-    // === Jika perusahaan assign dari Payment (single test) ===
+    // ----------------------
+    // 6️⃣ PaymentId
+    // ----------------------
     if (paymentId) {
       const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
+      if (!payment || payment.quantity <= 0)
+        return NextResponse.json({ error: "Kuota payment habis atau tidak ditemukan" }, { status: 400 });
 
-      if (!payment || payment.quantity <= 0) {
-        return NextResponse.json(
-          { error: "Kuota payment habis atau tidak ditemukan" },
-          { status: 400 }
-        );
+      if (payment.userId === userId || payment.companyId) {
+        assignedPaymentId = payment.id;
+      } else {
+        return NextResponse.json({ error: "Payment tidak valid untuk user ini" }, { status: 400 });
       }
-
-      const attempt = await prisma.$transaction(async (tx) => {
-        const newAttempt = await tx.testAttempt.create({
-          data: { userId, testTypeId, paymentId },
-        });
-
-        await tx.payment.update({
-          where: { id: paymentId },
-          data: { quantity: { decrement: 1 } },
-        });
-
-        return newAttempt;
-      });
-
-      return NextResponse.json(attempt);
     }
 
-    // === Default (USER biasa tanpa payment/paket) ===
+    // ----------------------
+    // 7️⃣ USER / GUEST tanpa paymentId
+    // ----------------------
+    if (!assignedPaymentId && (role === "USER" || role === "GUEST")) {
+      const lastPayment = await prisma.payment.findFirst({
+        where: {
+          userId,
+          testTypeId,
+          status: PaymentStatus.SUCCESS,
+          quantity: { gt: 0 },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (lastPayment) {
+        assignedPaymentId = lastPayment.id;
+      } else {
+        const newPayment = await prisma.payment.create({
+          data: {
+            testTypeId,
+            quantity: 1,
+            amount: testType.price || 0,
+            status: PaymentStatus.SUCCESS,
+            userId,
+          },
+        });
+        assignedPaymentId = newPayment.id;
+      }
+    }
+
+    // ----------------------
+    // 8️⃣ PERUSAHAAN tanpa paymentId → error
+    // ----------------------
+    if (!assignedPaymentId && role === "PERUSAHAAN") {
+      return NextResponse.json({ error: "PERUSAHAAN harus assign melalui payment atau paket" }, { status: 400 });
+    }
+
+    // ----------------------
+    // 9️⃣ Buat attempt
+    // ----------------------
     const attempt = await prisma.testAttempt.create({
-      data: { userId, testTypeId },
+      data: { userId, testTypeId, paymentId: assignedPaymentId },
     });
+
+    // Kurangi kuota payment
+    if (assignedPaymentId) {
+      await prisma.payment.update({
+        where: { id: assignedPaymentId },
+        data: { quantity: { decrement: 1 } },
+      });
+    }
 
     return NextResponse.json(attempt);
   } catch (err) {
     console.error("❌ Gagal membuat attempt:", err);
     return NextResponse.json({ error: "Gagal membuat attempt" }, { status: 500 });
-  }
-}
-// === GET: daftar attempt user ===
-export async function GET(req: NextRequest) {
-  try {
-    const url = new URL(req.url);
-    const userId = Number(url.searchParams.get("userId"));
-
-    if (!userId) {
-      return NextResponse.json({ error: "userId wajib diisi" }, { status: 400 });
-    }
-
-    const attempts = await prisma.testAttempt.findMany({
-      where: { userId },
-      include: {
-        TestType: true,
-        Payment: true,
-        results: true,
-      },
-      orderBy: { startedAt: "desc" },
-    });
-
-    return NextResponse.json(attempts);
-  } catch (err) {
-    console.error("❌ Gagal ambil attempts:", err);
-    return NextResponse.json({ error: "Gagal ambil attempts" }, { status: 500 });
   }
 }
