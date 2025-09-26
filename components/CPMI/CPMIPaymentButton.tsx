@@ -9,14 +9,14 @@ interface Props {
   setHasAccess: (val: boolean) => void;
   startAttempt: () => Promise<void>;
   testInfo: { id: number; duration: number | null; price?: number | null } | null;
-  role: "USER" | "PERUSAHAAN" | "GUEST";
+  role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN";
 }
 
 interface User {
   id: number;
   name: string;
   email: string;
-  role: "USER" | "PERUSAHAAN" | "GUEST";
+  role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN";
 }
 
 const CPMIPaymentButton: React.FC<Props> = ({
@@ -98,6 +98,8 @@ useEffect(() => {
   // Handle pembayaran
   // ---------------------------
   const handlePayment = async () => {
+      if (role === "SUPERADMIN") return; // SUPERADMIN tidak bisa bayar
+
     if (!user || user.role === "GUEST") {
       alert("Silahkan login terlebih dahulu untuk membeli test!");
       return (window.location.href = "/login");
@@ -145,6 +147,16 @@ useEffect(() => {
     return <p>Memeriksa status tes...</p>;
   }
 
+  // Superadmin: hanya lihat, tidak ada tombol sama sekali
+if (role === "SUPERADMIN") {
+  return (
+    <p style={{ fontWeight: 500, color: "#555" }}>
+      Anda login sebagai Superadmin. Hanya bisa melihat status tes.
+    </p>
+  );
+}
+
+
   if (tokenCompleted) {
     return (
       <p style={{ color: "red", fontWeight: 500 }}>
@@ -152,6 +164,7 @@ useEffect(() => {
       </p>
     );
   }
+  
 
   if (user?.role === "GUEST" && hasAccess) {
     return (

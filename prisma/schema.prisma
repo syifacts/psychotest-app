@@ -103,6 +103,19 @@ model TestType {
   createdAt     DateTime       @default(now())
   duration      Int
   price         Int?
+  judul         String?
+  deskripsijudul  String? @db.Text
+  juduldesk1     String?
+  desk1         String? @db.Text
+  juduldesk2    String?
+  desk2         String? @db.Text
+  judulbenefit  String?
+  pointbenefit  String? @db.Text
+  cp            String? @db.Text
+  img2          String?
+  img3          String?
+  img4          String?
+  img5          String?
   img           String?
   subTests      SubTest[]
   questions     Question[]

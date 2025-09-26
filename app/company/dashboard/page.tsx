@@ -28,6 +28,7 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Users, CheckCircle, XCircle, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -342,36 +343,36 @@ const allUsers = [
     })
   ),
 
-  // === Test Satuan ===
-  ...(singlePayments ?? []).flatMap((p) =>
-    (p.userPackages ?? []).map((u) => {
-      const attempt = reports.find(
-        (r) =>
-          r.User?.id === u.id &&
-          r.TestType?.id === p.TestType?.id
-      );
+  // // === Test Satuan ===
+  // ...(singlePayments ?? []).flatMap((p) =>
+  //   (p.userPackages ?? []).map((u) => {
+  //     const attempt = reports.find(
+  //       (r) =>
+  //         r.User?.id === u.id &&
+  //         r.TestType?.id === p.TestType?.id
+  //     );
 
-      // Tentukan status
-      let status: string;
-      if (!attempt) status = "Belum Tes";
-      else if (attempt.validated) status = "Selesai";
-      else if (attempt.Attempt?.startedAt) status = "Sedang diverifikasi psikolog";
-      else status = "Belum divalidasi";
+  //     // Tentukan status
+  //     let status: string;
+  //     if (!attempt) status = "Belum Tes";
+  //     else if (attempt.validated) status = "Selesai";
+  //     else if (attempt.Attempt?.startedAt) status = "Sedang diverifikasi psikolog";
+  //     else status = "Belum divalidasi";
 
-      return {
-        ...u,
-        type: "Test Satuan" as const,
-        targetId: p.id,
-        name: p.TestType?.name ?? "",
-        fullName: u.fullName ?? "",
-        email: u.email ?? "",
-        status,
-        startedAt: attempt?.Attempt?.startedAt ?? null,
-        token: attempt?.token ?? undefined,
-        result: attempt ?? null, // ✅ sertakan hasil
-      };
-    })
-  ),
+  //     return {
+  //       ...u,
+  //       type: "Test Satuan" as const,
+  //       targetId: p.id,
+  //       name: p.TestType?.name ?? "",
+  //       fullName: u.fullName ?? "",
+  //       email: u.email ?? "",
+  //       status,
+  //       startedAt: attempt?.Attempt?.startedAt ?? null,
+  //       token: attempt?.token ?? undefined,
+  //       result: attempt ?? null, // ✅ sertakan hasil
+  //     };
+  //   })
+  // ),
 ];
 
 const testStats = testTypes.map((t) => {
@@ -452,21 +453,42 @@ useEffect(() => {
 </h1>
 
 
-{/* Statistik Dashboard */}
+{/* 📊 Statistik Dashboard */}
 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
-  <div className="bg-white rounded-xl shadow-md p-6 text-center flex flex-col items-center justify-center">
-    <h3 className="text-gray-500 text-sm mb-2">Total User Terdaftar</h3>
-    <p className="text-3xl font-bold text-indigo-600">{totalUsers}</p>
+  {/* Total User Terdaftar */}
+  <div className="bg-white rounded-xl shadow-md p-6 flex items-center gap-4">
+    <div className="p-3 rounded-full bg-indigo-100">
+      <Users className="w-6 h-6 text-indigo-600" />
+    </div>
+    <div>
+      <h3 className="text-gray-500 text-sm">Total User Terdaftar</h3>
+      <p className="text-3xl font-bold text-indigo-600">{totalUsers}</p>
+    </div>
   </div>
-  <div className="bg-white rounded-xl shadow-md p-6 text-center flex flex-col items-center justify-center">
-    <h3 className="text-gray-500 text-sm mb-2">User yang Sudah Tes</h3>
-    <p className="text-3xl font-bold text-green-600">{testedUsers}</p>
+
+  {/* User yang Sudah Tes */}
+  <div className="bg-white rounded-xl shadow-md p-6 flex items-center gap-4">
+    <div className="p-3 rounded-full bg-green-100">
+      <CheckCircle className="w-6 h-6 text-green-600" />
+    </div>
+    <div>
+      <h3 className="text-gray-500 text-sm">User yang Sudah Tes</h3>
+      <p className="text-3xl font-bold text-green-600">{testedUsers}</p>
+    </div>
   </div>
-  <div className="bg-white rounded-xl shadow-md p-6 text-center flex flex-col items-center justify-center">
-    <h3 className="text-gray-500 text-sm mb-2">User Belum Tes</h3>
-    <p className="text-3xl font-bold text-red-500">{notTestedUsers}</p>
+
+  {/* User Belum Tes */}
+  <div className="bg-white rounded-xl shadow-md p-6 flex items-center gap-4">
+    <div className="p-3 rounded-full bg-red-100">
+      <XCircle className="w-6 h-6 text-red-500" />
+    </div>
+    <div>
+      <h3 className="text-gray-500 text-sm">User Belum Tes</h3>
+      <p className="text-3xl font-bold text-red-500">{notTestedUsers}</p>
+    </div>
   </div>
 </div>
+
 
    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 items-stretch">
 
@@ -836,16 +858,40 @@ setGeneratedTestId(testId ?? "");
     Manajemen Karyawan
   </h2>
 
-  {/* Baris kedua: search + button */}
-  <div className="flex items-center justify-between gap-4">
-    {/* Search di kiri */}
-    <div className="flex-1">
+  {/* Baris kedua: search + filter + button */}
+<div className="flex items-center justify-between gap-4">
+  {/* Search di kiri - full width */}
+  <div className="flex-1 relative">
+    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+    <input
+      type="text"
+      placeholder="Cari karyawan..."
+      value={search}
+      onChange={(e) => {
+        setSearch(e.target.value);
+        setCurrentPage(1);
+      }}
+      className="w-full pl-9 pr-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+    />
+  </div>
+
+  {/* Kanan: filter tanggal + button */}
+  <div className="flex items-center gap-3">
+    {/* Filter Tanggal Tes */}
+    <div className="flex items-center gap-2">
+      <span className="text-sm font-medium text-gray-600">Tanggal Tes:</span>
       <input
-        type="text"
-        placeholder="Cari karyawan..."
-        value={search}
-        onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-        className="w-full max-w-lg px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+        type="date"
+        value={startDateFilter}
+        onChange={(e) => { setStartDateFilter(e.target.value); setCurrentPage(1); }}
+        className="p-2 border rounded-md text-sm"
+      />
+      <span className="text-gray-500">s/d</span>
+      <input
+        type="date"
+        value={endDateFilter}
+        onChange={(e) => { setEndDateFilter(e.target.value); setCurrentPage(1); }}
+        className="p-2 border rounded-md text-sm"
       />
     </div>
 
@@ -859,7 +905,7 @@ setGeneratedTestId(testId ?? "");
     </Button>
   </div>
 </div>
-
+</div>
   <table className="min-w-full border-collapse text-sm">
     <thead>
       <tr className="bg-gradient-to-r from-indigo-50 to-indigo-100 text-gray-700">
@@ -935,58 +981,11 @@ setGeneratedTestId(testId ?? "");
           </div>
         </th>
 
-      {/* Tanggal Mulai Tes */}
+{/* Tanggal Mulai Tes */}
 <th className="p-4 font-semibold text-center">
-  <div className="flex items-center justify-center gap-2">
-    <span>Tanggal Tes</span>
-    <Select
-      value={`${startDateFilter}|${endDateFilter}`}
-      onValueChange={(v) => {
-        if (v === "reset") {
-          setStartDateFilter("");
-          setEndDateFilter("");
-        } else {
-          const [start, end] = v.split("|");
-          setStartDateFilter(start);
-          setEndDateFilter(end);
-        }
-        setCurrentPage(1);
-      }}
-    >
-      <SelectTrigger className="w-5 h-5 p-0 bg-transparent border-none shadow-none hover:bg-gray-200 rounded-full">
-        <span className="material-icons text-sm"></span>
-      </SelectTrigger>
-      <SelectContent className="p-2">
-        <div className="flex flex-col gap-1">
-          <input
-            type="date"
-            value={startDateFilter}
-            onChange={(e) => setStartDateFilter(e.target.value)}
-            className="border rounded px-2 py-1 text-sm"
-            placeholder="Mulai tanggal"
-          />
-          <input
-            type="date"
-            value={endDateFilter}
-            onChange={(e) => setEndDateFilter(e.target.value)}
-            className="border rounded px-2 py-1 text-sm"
-            placeholder="Sampai tanggal"
-          />
-          <button
-            onClick={() => {
-              setStartDateFilter("");
-              setEndDateFilter("");
-              setCurrentPage(1);
-            }}
-            className="mt-1 text-xs text-indigo-600 hover:underline"
-          >
-            Hapus Filter
-          </button>
-        </div>
-      </SelectContent>
-    </Select>
-  </div>
+  Tanggal Tes
 </th>
+
 <th className="p-4 font-semibold text-center">Hasil</th>
 
 
@@ -1003,7 +1002,8 @@ setGeneratedTestId(testId ?? "");
 
       return (
         <tr
-          key={`${u.type}-${u.id}-${u.name}`}
+         // key={`${u.type}-${u.id}-${u.name}`}
+           key={`${u.type}-${u.id}-${u.targetId}`} 
           className={`transition-colors hover:bg-indigo-50 ${
             paginatedUsers.indexOf(u) % 2 === 0 ? "bg-white" : "bg-gray-50"
           }`}

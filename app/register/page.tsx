@@ -140,12 +140,12 @@ export default function RegisterPage() {
 
             {/* Pilih Role */}
             <div className="flex justify-center gap-4 mt-6">
-              <button
+              {/* <button
                 className={`px-4 py-2 rounded ${roleSelected === "USER" ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"}`}
                 onClick={() => setRoleSelected("USER")}
               >
                 User
-              </button>
+              </button> */}
 
               {/*
               <button

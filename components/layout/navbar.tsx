@@ -11,6 +11,8 @@ const Navbar = () => {
 
   const [role, setRole] = useState<string>("GUEST");
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -42,7 +44,7 @@ const Navbar = () => {
   const handleLogin = () => router.push("/login");
   const handleSignup = () => router.push("/register");
 
-  const hideSearch = ["/login", "/register", "/account"].includes(pathname);
+  const hideSearch = ["/","/login", "/register", "/account", "/admin/master-test", "/psikolog/validasi", "/company/dashboard", "/admin/dashboard"].includes(pathname);
 
   // Config menu per role
   const menuConfig: Record<string, { href: string; label: string }[]> = {
@@ -61,8 +63,10 @@ const Navbar = () => {
       { href: "/account", label: "Akun" },
     ],
     SUPERADMIN: [
-      { href: "/", label: "Beranda" },
-      { href: "/admin", label: "Dashboard Admin" },
+      //{ href: "/", label: "Beranda" },
+      { href: "/admin/dashboard", label: "Dashboard" },
+      { href: "/admin/tes", label: "Layanan Tes" },
+      { href: "/admin/master-test", label: "Master Tes" },
       { href: "/account", label: "Akun" },
     ],
     PERUSAHAAN: [
@@ -85,8 +89,20 @@ const Navbar = () => {
         </div>
         {!hideSearch && role !== "PSIKOLOG" && (
           <div className="search">
-            <input type="text" placeholder="Cari tes..." />
-          </div>
+  <input
+  type="text"
+  placeholder="Cari tes..."
+  value={searchQuery}
+  onChange={(e) => {
+    setSearchQuery(e.target.value);
+    // Push ke halaman saat ini, jangan hardcode /dashboard
+    const query = e.target.value ? `?search=${encodeURIComponent(e.target.value)}` : "";
+    router.push(`${pathname}${query}`);
+  }}
+/>
+
+</div>
+
         )}
       </div>
 

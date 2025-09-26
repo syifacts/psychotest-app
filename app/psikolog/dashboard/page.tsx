@@ -15,6 +15,7 @@ import {
   Legend,
 } from "recharts";
 
+import { Users, Building, User, FileText, Clock, Search } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -52,6 +53,7 @@ export default function DashboardKeseluruhan() {
 
   const [todayStatsByTest, setTodayStatsByTest] = useState<any[]>([]);
   const [todayStatsBySource, setTodayStatsBySource] = useState<any[]>([]);
+  
 
   // Filters
   const [filterTestType, setFilterTestType] = useState<string>("all");
@@ -297,38 +299,68 @@ setOverallStatsBySource(
       <div className="p-6 max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold mb-6 text-gray-800">Dashboard</h1>
 
-        {/* 🔹 Summary Cards (2x2 Grid) */}
+
+{/* 🔹 Summary Cards (2x2 Grid) */}
 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
-  <div className="bg-white p-6 rounded-xl shadow text-center">
-    <h2 className="text-gray-500 text-sm">Total Tes Hari Ini</h2>
-    <p className="text-3xl font-bold text-indigo-600">
-      {todayStatsByTest.reduce((acc, item) => acc + item.value, 0)}
-    </p>
+  {/* Total Tes Hari Ini */}
+  <div className="bg-white p-6 rounded-xl shadow flex items-center gap-4 hover:shadow-lg transition">
+    <div className="p-3 rounded-full bg-indigo-100">
+      <Users className="w-6 h-6 text-indigo-600" />
+    </div>
+    <div>
+      <p className="text-gray-500 text-sm">Total Tes Hari Ini</p>
+      <p className="text-2xl font-bold text-indigo-600">
+        {todayStatsByTest.reduce((acc, item) => acc + item.value, 0)}
+      </p>
+    </div>
   </div>
 
-  <div className="bg-white p-6 rounded-xl shadow text-center">
-    <h2 className="text-gray-500 text-sm">Dari Perusahaan</h2>
-    <p className="text-3xl font-bold text-indigo-600">
-      {todayStatsBySource.find((s) => s.name !== "Sendiri")?.value || 0}
-    </p>
+  {/* Dari Perusahaan */}
+  <div className="bg-white p-6 rounded-xl shadow flex items-center gap-4 hover:shadow-lg transition">
+    <div className="p-3 rounded-full bg-green-100">
+      <Building className="w-6 h-6 text-green-600" />
+    </div>
+    <div>
+      <p className="text-gray-500 text-sm">Dari Perusahaan</p>
+      <p className="text-2xl font-bold text-green-600">
+        {todayStatsBySource.find((s) => s.name !== "Sendiri")?.value || 0}
+      </p>
+    </div>
   </div>
 
-  <div className="bg-white p-6 rounded-xl shadow text-center">
-    <h2 className="text-gray-500 text-sm">Dari User Sendiri</h2>
-    <p className="text-3xl font-bold text-indigo-600">
-      {todayStatsBySource.find((s) => s.name === "Sendiri")?.value || 0}
-    </p>
+  {/* Dari User Sendiri */}
+  <div className="bg-white p-6 rounded-xl shadow flex items-center gap-4 hover:shadow-lg transition">
+    <div className="p-3 rounded-full bg-blue-100">
+      <User className="w-6 h-6 text-blue-600" />
+    </div>
+    <div>
+      <p className="text-gray-500 text-sm">Dari User Sendiri</p>
+      <p className="text-2xl font-bold text-blue-600">
+        {todayStatsBySource.find((s) => s.name === "Sendiri")?.value || 0}
+      </p>
+    </div>
   </div>
 
-  {/* 🔹 Card baru */}
-  <div className="bg-white p-6 rounded-xl shadow text-center">
-    <h2 className="text-gray-500 text-sm">Total Tes Keseluruhan</h2>
-    <p className="text-3xl font-bold text-indigo-600">{reports.length}</p>
+  {/* Total Tes Keseluruhan */}
+  <div className="bg-white p-6 rounded-xl shadow flex items-center gap-4 hover:shadow-lg transition">
+    <div className="p-3 rounded-full bg-purple-100">
+      <FileText className="w-6 h-6 text-purple-600" />
+    </div>
+    <div>
+      <p className="text-gray-500 text-sm">Total Tes Keseluruhan</p>
+      <p className="text-2xl font-bold text-purple-600">{reports.length}</p>
+    </div>
   </div>
-  
-    <div className="bg-white p-6 rounded-xl shadow text-center">
-    <h2 className="text-gray-500 text-sm">Pending Validasi</h2>
-    <p className="text-3xl font-bold text-red-600">{pendingCount}</p>
+
+  {/* Pending Validasi */}
+  <div className="bg-white p-6 rounded-xl shadow flex items-center gap-4 hover:shadow-lg transition">
+    <div className="p-3 rounded-full bg-red-100">
+      <Clock className="w-6 h-6 text-red-600" />
+    </div>
+    <div>
+      <p className="text-gray-500 text-sm">Pending Validasi</p>
+      <p className="text-2xl font-bold text-red-600">{pendingCount}</p>
+    </div>
   </div>
 </div>
 
@@ -384,28 +416,36 @@ setOverallStatsBySource(
 
 
 
-        {/* 🔹 Global Filters */}
-        <div className="bg-white p-4 rounded-xl shadow mb-6 flex flex-wrap gap-4">
-          <input
-            type="text"
-            placeholder="Cari nama user..."
-            value={searchUser}
-            onChange={(e) => setSearchUser(e.target.value)}
-            className="p-2 border rounded-md flex-1"
-          />
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="p-2 border rounded-md"
-          />
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="p-2 border rounded-md"
-          />
-        </div>
+{/* 🔹 Global Filters */}
+<div className="bg-white p-4 rounded-xl shadow mb-6 flex flex-wrap gap-4 items-center">
+  {/* Search bar */}
+  <div className="relative flex-1 min-w-[250px]">
+    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+    <input
+      type="text"
+      placeholder="Cari nama user..."
+      value={searchUser}
+      onChange={(e) => setSearchUser(e.target.value)}
+      className="pl-10 pr-3 py-2 border rounded-md w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+    />
+  </div>
+          <div className="flex items-center gap-2">
+  <span className="text-sm text-gray-600 font-medium">Tanggal Tes:</span>
+  <input
+    type="date"
+    value={startDate}
+    onChange={(e) => setStartDate(e.target.value)}
+    className="p-2 border rounded-md text-sm"
+  />
+  <span className="text-gray-500">-</span>
+  <input
+    type="date"
+    value={endDate}
+    onChange={(e) => setEndDate(e.target.value)}
+    className="p-2 border rounded-md text-sm"
+  />
+</div>
+</div>
 
         {/* 🔹 Table with column filters */}
         <div className="bg-white p-6 rounded-xl shadow overflow-x-auto">

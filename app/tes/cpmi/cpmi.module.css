@@ -423,3 +423,12 @@
   border-color: #4a90e2; /* warna border saat focus */
   box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
 }
+.benefitsMini ul {
+  list-style: none; /* hilangkan bullet default */
+  padding-left: 0;  /* hilangkan indent */
+  margin: 0;
+}
+
+.benefitsMini li {
+  margin-bottom: 6px; /* spasi antar baris */
+}

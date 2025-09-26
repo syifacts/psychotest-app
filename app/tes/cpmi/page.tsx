@@ -49,13 +49,21 @@ const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(30 * 60);
 
   const [exampleQuestions, setExampleQuestions] = useState<Question[]>([]);
-  const [endTime, setEndTime] = useState<Date | null>(() => {
+//   const [endTime, setEndTime] = useState<Date | null>(() => {
+//   const saved = localStorage.getItem("endTime");
+//   return saved ? new Date(saved) : null;
+// });
+
+//   useEffect(() => {
+//   const saved = localStorage.getItem("endTime");
+//   if (saved) setEndTime(new Date(saved));
+// }, []);
+
+const [endTime, setEndTime] = useState<Date | null>(null);
+useEffect(() => {
   const saved = localStorage.getItem("endTime");
-  return saved ? new Date(saved) : null;
-});
-
-  
-
+  if (saved) setEndTime(new Date(saved));
+}, []);
   // Step: intro -> biodata -> instruction -> questions
   const [step, setStep] = useState<"intro" | "biodata" | "instruction" | "questions">("intro");
 
