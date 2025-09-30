@@ -77,7 +77,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 
     // --- SubtestResults
-    const subtestResults = attempt.subtestResults.map((s) => ({
+    const subtestResults = attempt.subtestResults.map((s:any) => ({
       ...s,
       rw: s.rw ?? 0,
       sw: s.sw ?? 0,
@@ -85,7 +85,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }));
 
     // --- IST result (selain CPMI)
-    const istResultRaw = attempt.results.find(r => r.testTypeId !== 30);
+    //const istResultRaw = attempt.results.find(r => r.testTypeId !== 30);
+    const istResultRaw = attempt.results.find((r: any) => r.testTypeId !== 30);
     const totalResult = istResultRaw
       ? {
           totalRw: istResultRaw.totalRw ?? 0,
@@ -109,7 +110,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       : null;
 
    // --- CPMI result (testTypeId = 30)
-const cpmiResultRaw = attempt.results.find(r => r.testTypeId === 30);
+const cpmiResultRaw = attempt.results.find((r:any) => r.testTypeId === 30);
 let cpmiResult = null;
 
 if (cpmiResultRaw) {
@@ -254,7 +255,7 @@ saranpengembangan: saranPengembangan,
   };
 }
 
-    const msdtResultRaw = attempt.results.find(r => r.testTypeId !== 30); // sama seperti istResultRaw
+    const msdtResultRaw = attempt.results.find((r:any) => r.testTypeId !== 30); // sama seperti istResultRaw
 
 const msdtResult = msdtResultRaw
   ? {

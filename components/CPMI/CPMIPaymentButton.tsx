@@ -34,128 +34,153 @@ const CPMIPaymentButton: React.FC<Props> = ({
   const [loading, setLoading] = useState(false);
   const [tokenCompleted, setTokenCompleted] = useState(false);
   const [checkingToken, setCheckingToken] = useState(true);
+  const [paymentStatus, setPaymentStatus] = useState<"PENDING" | "FREE" | "SUCCESS" | null>(null);
 
   // ---------------------------
   // Ambil info user / token
   // ---------------------------
-useEffect(() => {
-  const fetchUser = async () => {
-    try {
-      if (token) {
-        const resToken = await fetch(`/api/token/info?token=${token}`);
-        const dataToken = await resToken.json();
-        console.log("Token API response:", resToken);
-        console.log("Token data:", dataToken);
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        if (token) {
+          const resToken = await fetch(`/api/token/info?token=${token}`);
+          const dataToken = await resToken.json();
 
-        if (!resToken.ok) {
-          console.log("Token tidak valid atau sudah digunakan");
-          setTokenCompleted(true); // ✅ tes tidak bisa dikerjakan
+          if (!resToken.ok) {
+            setTokenCompleted(true);
+            setCheckingToken(false);
+            return;
+          }
+
+          setUser({
+            id: dataToken.userId ?? 0,
+            name: dataToken.companyName ?? "Guest",
+            email: "",
+            role: "GUEST",
+          });
+
+          const completed = Boolean(dataToken.isCompleted) || Boolean(dataToken.used);
+          setTokenCompleted(completed);
+          if (!completed) setHasAccess(true);
           setCheckingToken(false);
           return;
         }
 
-        // Token valid
-        setUser({
-          id: dataToken.userId ?? 0,
-          name: dataToken.companyName ?? "Guest",
-          email: "",
-          role: "GUEST",
-        });
+        const resUser = await fetch("/api/auth/me", { credentials: "include" });
+        const dataUser = await resUser.json();
 
-        const completed = Boolean(dataToken.isCompleted) || Boolean(dataToken.used);
-        setTokenCompleted(completed);
-        if (!completed) setHasAccess(true);
+        if (resUser.ok && dataUser.user) {
+          setUser({
+            id: dataUser.user.id,
+            name: dataUser.user.fullName || "",
+            email: dataUser.user.email,
+            role: dataUser.user.role === "PERUSAHAAN" ? "PERUSAHAAN" : "USER",
+          });
+        }
+      } catch (err) {
+        console.error("Gagal fetch user/token info:", err);
+      } finally {
         setCheckingToken(false);
-        return;
       }
+    };
 
-      // Kalau tidak pakai token, ambil user login
-      const resUser = await fetch("/api/auth/me", { credentials: "include" });
-      const dataUser = await resUser.json();
-    //  console.log("User API response:", resUser);
-     // console.log("User data:", dataUser);
+    fetchUser();
+  }, [token, setHasAccess]);
 
-      if (resUser.ok && dataUser.user) {
-        setUser({
-          id: dataUser.user.id,
-          name: dataUser.user.fullName || "",
-          email: dataUser.user.email,
-          role: dataUser.user.role === "PERUSAHAAN" ? "PERUSAHAAN" : "USER",
-        });
+  // ---------------------------
+  // Cek status payment terakhir
+  // ---------------------------
+  useEffect(() => {
+    const checkPayment = async () => {
+      if (!user || !testInfo?.id) return;
+
+      try {
+        const res = await fetch(
+          `/api/payment/latest?testTypeId=${testInfo.id}&userId=${user.id}`
+        );
+        const data = await res.json();
+
+        if (data.payment && !data.payment.attemptUsed) {
+          setHasAccess(true);
+          setPaymentStatus(data.payment.status);
+        } else {
+          setHasAccess(false);
+          setPaymentStatus(null);
+        }
+      } catch (err) {
+        console.error("Gagal cek payment terakhir:", err);
       }
-    } catch (err) {
-      console.error("Gagal fetch user/token info:", err);
-    } finally {
-      setCheckingToken(false);
-    }
-  };
+    };
 
-  fetchUser();
-}, [token, setHasAccess]);
-
+    checkPayment();
+  }, [user, testInfo, setHasAccess]);
 
   // ---------------------------
   // Handle pembayaran
   // ---------------------------
   const handlePayment = async () => {
-      if (role === "SUPERADMIN") return; // SUPERADMIN tidak bisa bayar
+  if (role === "SUPERADMIN") return;
+  if (!user || user.role === "GUEST") {
+    alert("Silahkan login terlebih dahulu untuk membeli test!");
+    return (window.location.href = "/login");
+  }
+  if (!testInfo?.id) return;
 
-    if (!user || user.role === "GUEST") {
-      alert("Silahkan login terlebih dahulu untuk membeli test!");
-      return (window.location.href = "/login");
+  setLoading(true);
+  try {
+    const res = await fetch("/api/payment/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user.id,
+        testTypeId: testInfo.id,
+        quantity: user.role === "PERUSAHAAN" ? quantity : 1,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      return alert(data.error || "❌ Pembayaran gagal!");
     }
 
-    if (!testInfo?.id) return;
-
-    setLoading(true);
-    try {
-  //    console.log("Memulai pembayaran...");
-      const payRes = await fetch("/api/payment/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.id,
-          testTypeId: testInfo.id,
-          quantity: user.role === "PERUSAHAAN" ? quantity : 1,
-        }),
-      });
-
-      const payData = await payRes.json();
-    //  console.log("Payment response:", payRes, payData);
-
-      if (!payRes.ok || !payData.success) {
-        alert("❌ Pembayaran gagal!");
-        return;
-      }
-
-      alert("✅ Pembayaran berhasil! Silakan klik 'Mulai Tes' untuk memulai.");
+    // Sudah bayar / gratis → langsung mulai tes
+    if (data.startTest || data.payment.status === "FREE") {
       setHasAccess(true);
-    } catch (err) {
-      console.error(err);
-      alert("❌ Terjadi kesalahan saat pembayaran.");
-    } finally {
-      setLoading(false);
+      setPaymentStatus(data.payment.status);
+      if (data.attempt?.id) {
+        return startAttempt(); // Bisa pakai attempt.id kalau perlu
+      }
     }
-  };
+
+    // Kalau perlu bayar via Tripay → buka di tab baru
+    if (data.payment.paymentUrl) {
+      window.open(data.payment.paymentUrl, "_blank");
+    }
+
+    setPaymentStatus(data.payment.status);
+
+  } catch (err) {
+    console.error(err);
+    alert("❌ Terjadi kesalahan saat pembayaran.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // ---------------------------
   // Render
   // ---------------------------
- // console.log("Render -> user:", user, "hasAccess:", hasAccess, "tokenCompleted:", tokenCompleted);
+  if (checkingToken) return <p>Memeriksa status tes...</p>;
 
-  if (checkingToken) {
-    return <p>Memeriksa status tes...</p>;
+  if (role === "SUPERADMIN") {
+    return (
+      <p style={{ fontWeight: 500, color: "#555" }}>
+        Anda login sebagai Superadmin. Hanya bisa melihat status tes.
+      </p>
+    );
   }
-
-  // Superadmin: hanya lihat, tidak ada tombol sama sekali
-if (role === "SUPERADMIN") {
-  return (
-    <p style={{ fontWeight: 500, color: "#555" }}>
-      Anda login sebagai Superadmin. Hanya bisa melihat status tes.
-    </p>
-  );
-}
-
 
   if (tokenCompleted) {
     return (
@@ -164,7 +189,6 @@ if (role === "SUPERADMIN") {
       </p>
     );
   }
-  
 
   if (user?.role === "GUEST" && hasAccess) {
     return (
@@ -179,10 +203,10 @@ if (role === "SUPERADMIN") {
     );
   }
 
-  if (hasAccess) {
+  if (hasAccess && paymentStatus) {
     return (
       <div>
-        <button className={styles.btn} onClick={startAttempt} disabled={!user}>
+        <button className={styles.btn} onClick={startAttempt}>
           Mulai Tes
         </button>
       </div>

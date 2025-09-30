@@ -373,19 +373,30 @@ model NormaIq {
 // Pembayaran Tes
 // ------------------
 model Payment {
-  id         Int           @id @default(autoincrement())
-  userId     Int?
-  testTypeId Int
-  amount     Int
-  quantity   Int           @default(1)
-  companyId  Int?
-  status     PaymentStatus @default(PENDING)
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-  User       User?         @relation(fields: [userId], references: [id])
-  TestType   TestType      @relation(fields: [testTypeId], references: [id])
-  attempts   TestAttempt[]
-  company    User?         @relation("CompanyPayments", fields: [companyId], references: [id])
+  id          Int           @id @default(autoincrement())
+  userId      Int?
+  testTypeId  Int
+  companyId   Int?
+  
+  // Informasi transaksi
+  amount      Int
+  quantity    Int           @default(1)
+  method      String?       // metode pembayaran: VA_BCA, QRIS, dll; nullable untuk gratis
+  reference   String?       @unique // reference dari Tripay; nullable untuk gratis
+  status      String        @default("pending") // pending | SUCCESS | FAILED | FREE
+  paymentUrl  String?       // URL pembayaran dari Tripay (opsional)
+  payload     Json?         // response lengkap dari Tripay (opsional)
+  paidAt      DateTime?    
+  expiredAt   DateTime?    
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relasi
+  User        User?         @relation(fields: [userId], references: [id])
+  TestType    TestType      @relation(fields: [testTypeId], references: [id])
+  attempts    TestAttempt[]
+  company     User?         @relation("CompanyPayments", fields: [companyId], references: [id])
 }
 
 // ------------------
