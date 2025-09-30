@@ -1,6 +1,7 @@
 -- CreateTable
 CREATE TABLE `User` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `customId` VARCHAR(191) NULL,
     `fullName` VARCHAR(191) NOT NULL,
     `email` VARCHAR(191) NOT NULL,
     `password` VARCHAR(191) NOT NULL,
@@ -10,14 +11,35 @@ CREATE TABLE `User` (
     `education` VARCHAR(191) NULL,
     `phone` VARCHAR(191) NULL,
     `address` VARCHAR(191) NULL,
-    `ttd` TEXT NULL,
+    `ttdUrl` TEXT NULL,
+    `ttdHash` TEXT NULL,
     `profileImage` VARCHAR(191) NULL,
     `tujuan` VARCHAR(191) NULL,
+    `strNumber` VARCHAR(191) NULL,
+    `sippNumber` VARCHAR(191) NULL,
+    `companyId` INTEGER NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
     `lembagalayanan` VARCHAR(191) NULL,
 
+    UNIQUE INDEX `User_customId_key`(`customId`),
     UNIQUE INDEX `User_email_key`(`email`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Token` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `userId` INTEGER NULL,
+    `companyId` INTEGER NULL,
+    `testTypeId` INTEGER NOT NULL,
+    `token` VARCHAR(191) NOT NULL,
+    `used` BOOLEAN NOT NULL DEFAULT false,
+    `usedAt` DATETIME(3) NULL,
+    `expiresAt` DATETIME(3) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    UNIQUE INDEX `Token_token_key`(`token`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -25,13 +47,28 @@ CREATE TABLE `User` (
 CREATE TABLE `TestType` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(191) NOT NULL,
+    `code` VARCHAR(191) NULL,
     `desc` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `duration` INTEGER NOT NULL,
     `price` INTEGER NULL,
+    `judul` VARCHAR(191) NULL,
+    `deskripsijudul` TEXT NULL,
+    `juduldesk1` VARCHAR(191) NULL,
+    `desk1` TEXT NULL,
+    `juduldesk2` VARCHAR(191) NULL,
+    `desk2` TEXT NULL,
+    `judulbenefit` VARCHAR(191) NULL,
+    `pointbenefit` TEXT NULL,
+    `cp` TEXT NULL,
+    `img2` VARCHAR(191) NULL,
+    `img3` VARCHAR(191) NULL,
+    `img4` VARCHAR(191) NULL,
+    `img5` VARCHAR(191) NULL,
     `img` VARCHAR(191) NULL,
 
     UNIQUE INDEX `TestType_name_key`(`name`),
+    UNIQUE INDEX `TestType_code_key`(`code`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -40,7 +77,7 @@ CREATE TABLE `SubTest` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `testTypeId` INTEGER NOT NULL,
     `name` VARCHAR(191) NOT NULL,
-    `desc` VARCHAR(191) NULL,
+    `desc` TEXT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `duration` INTEGER NULL,
 
@@ -59,6 +96,9 @@ CREATE TABLE `Question` (
     `type` VARCHAR(191) NOT NULL,
     `answer` JSON NULL,
     `answerScores` JSON NULL,
+    `notes` TEXT NULL,
+    `image` VARCHAR(191) NULL,
+    `isScored` BOOLEAN NOT NULL DEFAULT true,
     `aspek` VARCHAR(191) NULL,
 
     UNIQUE INDEX `Question_code_key`(`code`),
@@ -71,13 +111,15 @@ CREATE TABLE `TestAttempt` (
     `userId` INTEGER NOT NULL,
     `testTypeId` INTEGER NOT NULL,
     `paymentId` INTEGER NULL,
+    `packagePurchaseId` INTEGER NULL,
     `startedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `finishedAt` DATETIME(3) NULL,
     `isCompleted` BOOLEAN NOT NULL DEFAULT false,
-    `packagePurchaseId` INTEGER NULL,
     `reservedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `status` VARCHAR(191) NOT NULL DEFAULT 'RESERVED',
+    `tokenId` INTEGER NULL,
 
+    UNIQUE INDEX `TestAttempt_tokenId_key`(`tokenId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -123,19 +165,46 @@ CREATE TABLE `Result` (
     `iq` DOUBLE NULL,
     `keteranganiq` VARCHAR(191) NULL,
     `dominasi` VARCHAR(191) NULL,
-    `kategoriiq` VARCHAR(191) NULL,
     `jumlahbenar` INTEGER NULL,
     `scoreiq` INTEGER NULL,
     `keteranganiqCPMI` VARCHAR(191) NULL,
-    `aspekSTK` JSON NULL,
+    `aspek1` JSON NULL,
+    `aspek2` JSON NULL,
+    `aspek3` JSON NULL,
+    `aspek4` JSON NULL,
     `url` TEXT NULL,
     `kesimpulan` TEXT NULL,
+    `kesimpulanSikap` TEXT NULL,
+    `kesimpulanKepribadian` TEXT NULL,
+    `kesimpulanBelajar` TEXT NULL,
     `ttd` TEXT NULL,
     `summaryTemplateId` INTEGER NULL,
-    `jumlahA` INTEGER NULL,
-    `jumlahB` INTEGER NULL,
-    `jumlahAkor` INTEGER NULL,
-    `jumlahBkor` INTEGER NULL,
+    `saranpengembangan` TEXT NULL,
+    `kesimpulanumum` TEXT NULL,
+    `jumlahA1` INTEGER NULL,
+    `jumlahA2` INTEGER NULL,
+    `jumlahA3` INTEGER NULL,
+    `jumlahA4` INTEGER NULL,
+    `jumlahA5` INTEGER NULL,
+    `jumlahA6` INTEGER NULL,
+    `jumlahA7` INTEGER NULL,
+    `jumlahA8` INTEGER NULL,
+    `jumlahB1` INTEGER NULL,
+    `jumlahB2` INTEGER NULL,
+    `jumlahB3` INTEGER NULL,
+    `jumlahB4` INTEGER NULL,
+    `jumlahB5` INTEGER NULL,
+    `jumlahB6` INTEGER NULL,
+    `jumlahB7` INTEGER NULL,
+    `jumlahB8` INTEGER NULL,
+    `jumlahkor1` INTEGER NULL,
+    `jumlahkor2` INTEGER NULL,
+    `jumlahkor3` INTEGER NULL,
+    `jumlahkor4` INTEGER NULL,
+    `jumlahkor5` INTEGER NULL,
+    `jumlahkor6` INTEGER NULL,
+    `jumlahkor7` INTEGER NULL,
+    `jumlahkor8` INTEGER NULL,
     `Ds` INTEGER NULL,
     `Mi` INTEGER NULL,
     `Au` INTEGER NULL,
@@ -152,15 +221,9 @@ CREATE TABLE `Result` (
     `konversiRO` DOUBLE NULL,
     `konversiE` DOUBLE NULL,
     `konversiO` DOUBLE NULL,
-    `hasilDS` VARCHAR(191) NULL,
-    `hasilMI` VARCHAR(191) NULL,
-    `hasilAU` VARCHAR(191) NULL,
-    `hasilCO` VARCHAR(191) NULL,
-    `hasilBU` VARCHAR(191) NULL,
-    `hasilDV` VARCHAR(191) NULL,
-    `hasilBA` VARCHAR(191) NULL,
-    `hasilE` VARCHAR(191) NULL,
+    `hasilAkhir` VARCHAR(191) NULL,
     `barcode` VARCHAR(30) NULL,
+    `barcodettd` TEXT NULL,
     `validated` BOOLEAN NOT NULL DEFAULT false,
     `validatedById` INTEGER NULL,
     `validatedAt` DATETIME(3) NULL,
@@ -179,6 +242,8 @@ CREATE TABLE `SummaryTemplate` (
     `testTypeId` INTEGER NOT NULL,
     `minScore` INTEGER NULL,
     `maxScore` INTEGER NULL,
+    `category` VARCHAR(191) NULL,
+    `section` VARCHAR(191) NULL,
     `template` TEXT NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -276,6 +341,7 @@ CREATE TABLE `PersonalityResult` (
     `editSuggestion` TEXT NULL,
     `editProfession` TEXT NULL,
     `barcode` VARCHAR(30) NULL,
+    `barcodettd` TEXT NULL,
     `validated` BOOLEAN NOT NULL DEFAULT false,
     `validatedById` INTEGER NULL,
     `validatedAt` DATETIME(3) NULL,
@@ -346,6 +412,15 @@ CREATE TABLE `PersonalityDescription` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
+ALTER TABLE `Token` ADD CONSTRAINT `Token_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Token` ADD CONSTRAINT `Token_companyId_fkey` FOREIGN KEY (`companyId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Token` ADD CONSTRAINT `Token_testTypeId_fkey` FOREIGN KEY (`testTypeId`) REFERENCES `TestType`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `SubTest` ADD CONSTRAINT `SubTest_testTypeId_fkey` FOREIGN KEY (`testTypeId`) REFERENCES `TestType`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -365,6 +440,9 @@ ALTER TABLE `TestAttempt` ADD CONSTRAINT `TestAttempt_paymentId_fkey` FOREIGN KE
 
 -- AddForeignKey
 ALTER TABLE `TestAttempt` ADD CONSTRAINT `TestAttempt_packagePurchaseId_fkey` FOREIGN KEY (`packagePurchaseId`) REFERENCES `PackagePurchase`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `TestAttempt` ADD CONSTRAINT `TestAttempt_tokenId_fkey` FOREIGN KEY (`tokenId`) REFERENCES `Token`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Answer` ADD CONSTRAINT `Answer_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

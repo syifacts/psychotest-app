@@ -54,10 +54,24 @@ export async function POST(req: NextRequest) {
     // ----------------------
     // 3️⃣ Cek attempt aktif
     // ----------------------
-    const existingAttempt = await prisma.testAttempt.findFirst({
-      where: { userId, testTypeId, finishedAt: null },
-    });
-    if (existingAttempt) return NextResponse.json(existingAttempt);
+    // const existingAttempt = await prisma.testAttempt.findFirst({
+    //   where: { userId, testTypeId, finishedAt: null },
+    // });
+    // if (existingAttempt) return NextResponse.json(existingAttempt);
+    // ----------------------
+// 3️⃣ Cek attempt aktif
+// ----------------------
+const existingAttempt = await prisma.testAttempt.findFirst({
+  where: { userId, testTypeId, finishedAt: null },
+});
+
+if (existingAttempt) {
+  await prisma.testAttempt.update({
+    where: { id: existingAttempt.id },
+    data: { finishedAt: new Date() },
+  });
+}
+
 
     // ----------------------
     // 4️⃣ Cek testType

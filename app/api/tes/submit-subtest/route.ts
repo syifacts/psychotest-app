@@ -114,7 +114,15 @@ function swCategory(sw: number): string {
   create: { attemptId: attempt.id, subTestId: subtestEntity.id, rw, sw, kategori: swCategory(sw), isCompleted: true },
 });
 
-
+// ✅ Tambahan: update userProgress jadi selesai
+await prisma.userProgress.updateMany({
+  where: {
+    userId,
+    attemptId: attempt.id,
+    subtest: subtest, // sesuai nama subtest
+  },
+  data: { isCompleted: true },
+});
     // Cek semua subtest selesai
     const subTestResults = await prisma.subtestResult.findMany({ where: { attemptId: attempt.id } });
     const subTests = await prisma.subTest.findMany({ where: { testTypeId: attempt.testTypeId } });

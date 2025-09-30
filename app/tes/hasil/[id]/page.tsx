@@ -24,13 +24,51 @@ const [kesimpulan, setKesimpulan] = useState({
   kesimpulan: '',
   kesimpulanSikap: '',
   kesimpulanKepribadian: '',
-  kesimpulanBelajar: ''
+  kesimpulanBelajar: '',
+  saranpengembangan: '',
+  kesimpulanumum: ''
 });
+
  // ✅ Tambah
   const [ttd, setTtd] = useState('');                 // ✅ Tambah
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+//   useEffect(() => {
+//   if (!id) return;
+
+//   const fetchReport = async () => {
+//     try {
+//       const res = await fetch(`/api/attempts/${id}`);
+//       if (!res.ok) throw new Error("Gagal ambil data report");
+//       const data = await res.json();
+
+//       console.log("📌 Full API response:", data);
+
+//       setAttempt(data.attempt);
+//       setSubtestResults(data.subtestResults || []);
+//       setResult(data.result || null);
+//       setCpmiResult(data.cpmiResult || null);
+
+//       if (data.cpmiResult) {
+//         console.log("✅ CPMI TTD dari API:", data.cpmiResult.ttd);
+//         setKesimpulan(data.cpmiResult.kesimpulan || "");
+//         setTtd(data.cpmiResult.ttd || "");
+//       } else if (data.result) {
+//         console.log("✅ IST TTD dari API:", data.result.ttd);
+//         setKesimpulan(data.result.kesimpulan || "");
+//         setTtd(data.result.ttd || "");
+//       }
+//     } catch (err) {
+//       console.error("❌ Error fetching report:", err);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   fetchReport();
+// }, [id]);
+
+useEffect(() => {
   if (!id) return;
 
   const fetchReport = async () => {
@@ -46,15 +84,20 @@ const [kesimpulan, setKesimpulan] = useState({
       setResult(data.result || null);
       setCpmiResult(data.cpmiResult || null);
 
-      if (data.cpmiResult) {
-        console.log("✅ CPMI TTD dari API:", data.cpmiResult.ttd);
-        setKesimpulan(data.cpmiResult.kesimpulan || "");
-        setTtd(data.cpmiResult.ttd || "");
-      } else if (data.result) {
-        console.log("✅ IST TTD dari API:", data.result.ttd);
-        setKesimpulan(data.result.kesimpulan || "");
-        setTtd(data.result.ttd || "");
-      }
+      // Ambil source data: CPMI kalau ada, kalau tidak pakai result
+      const source = data.cpmiResult || data.result || {};
+
+      setKesimpulan({
+        kesimpulan: source.kesimpulan || '',
+        kesimpulanSikap: source.kesimpulanSikap || '',
+        kesimpulanKepribadian: source.kesimpulanKepribadian || '',
+        kesimpulanBelajar: source.kesimpulanBelajar || '',
+        saranpengembangan: source.saranpengembangan || '',
+        kesimpulanumum: source.kesimpulanumum || '',
+      });
+
+      setTtd(source.ttd || '');
+      
     } catch (err) {
       console.error("❌ Error fetching report:", err);
     } finally {
@@ -95,7 +138,13 @@ const [kesimpulan, setKesimpulan] = useState({
       return {
         attempt,
         result: cpmiResult,
-        kesimpulan,   // ✅ sekarang sudah ada
+        kesimpulan: kesimpulan.kesimpulan,
+kesimpulanSikap: kesimpulan.kesimpulanSikap,
+kesimpulanKepribadian: kesimpulan.kesimpulanKepribadian,
+kesimpulanBelajar: kesimpulan.kesimpulanBelajar,
+saranpengembangan: kesimpulan.saranpengembangan,
+kesimpulanumum: kesimpulan.kesimpulanumum,
+  // ✅ sekarang sudah ada
         ttd,          // ✅ sekarang sudah ada
         barcode: cpmiResult.barcode,
       };

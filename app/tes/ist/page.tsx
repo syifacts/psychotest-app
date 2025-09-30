@@ -9,6 +9,8 @@ import UserProfileForm from "@/components/IST/UserProfileForm";
 import SubtestDetail from "@/components/IST/SubtestDetail";
 import QuestionCard from "@/components/IST/QuestionCard";
 import AnswerSummary from "@/components/IST/AnswerSummary";
+import { useRef } from "react";
+
 
 interface Question {
   id: number;
@@ -22,6 +24,8 @@ interface SubtestInfo {
   name: string;
   description: string;
   durationMinutes: number;
+  hapalan?: string; // optional
+
 }
 
 type AnswerMap = Record<number, string | string[]>;
@@ -31,7 +35,16 @@ const TesISTPage = () => {
 
   // ------------------------- STATE -------------------------
   const [user, setUser] = useState<{ id: number; role: string } | null>(null);
-  const [testInfo, setTestInfo] = useState<{ id: number; name: string; duration: number; price: number | null } | null>(null);
+  const [testInfo, setTestInfo] = useState<{
+  id: number;
+  name: string;
+  duration: number;
+  price: number | null;
+  subTests: { name: string; description: string; durationMinutes: number;   hapalan?: string; // optional
+ }[];
+} | null>(null);
+
+  //const [testInfo, setTestInfo] = useState<{ id: number; name: string; duration: number; price: number | null } | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [alreadyTaken, setAlreadyTaken] = useState(false);
 
@@ -52,6 +65,30 @@ const TesISTPage = () => {
   const [testDate, setTestDate] = useState("");
   const [checkReason, setCheckReason] = useState(""); // ✅
   const [attemptId, setAttemptId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+const [showHapalanME, setShowHapalanME] = useState(false);
+const [showInstructionsME, setShowInstructionsME] = useState(false);
+
+
+function parseDescription(desc: any): string {
+  if (!desc) return "";
+  if (typeof desc === "string") {
+    try {
+      const parsed = JSON.parse(desc);
+      if (Array.isArray(parsed)) {
+        // jika array of string
+        return parsed.map(item => (typeof item === "string" ? item : JSON.stringify(item))).join("\n");
+      }
+      return typeof parsed === "object" ? JSON.stringify(parsed) : String(parsed);
+    } catch {
+      return desc;
+    }
+  } else if (Array.isArray(desc)) {
+    return desc.map(item => (typeof item === "string" ? item : JSON.stringify(item))).join("\n");
+  } else {
+    return String(desc);
+  }
+}
 
 
 
@@ -74,83 +111,108 @@ const TesISTPage = () => {
 useEffect(() => {
   const fetchUserAndTest = async () => {
     try {
+      // 1️⃣ Ambil user
       const userRes = await fetch("/api/auth/me", { credentials: "include" });
-if (!userRes.ok) return router.push("/login");
-
-const userData = await userRes.json();
-
-// **GUEST boleh lanjut**
-if (!userData.user && !window.location.pathname.startsWith("/tes")) {
-  return router.push("/login");
-}
-
-setUser(userData.user); // bisa { role: "GUEST" }
-
-
+      if (!userRes.ok) {
+        setLoading(false);
+        return router.push("/login");
+      }
+      const userData = await userRes.json();
       setUser(userData.user);
       setFullName(userData.user.fullName || "");
-      setBirthDate(userData.user.birthDate ? new Date(userData.user.birthDate).toISOString().split("T")[0] : "");
+      setBirthDate(
+        userData.user.birthDate
+          ? new Date(userData.user.birthDate).toISOString().split("T")[0]
+          : ""
+      );
       setTestDate(new Date().toLocaleDateString("id-ID"));
 
-      // fetch test info
+      // 2️⃣ Ambil test info
       const testRes = await fetch("/api/tes/info?type=IST");
       const testData = await testRes.json();
       setTestInfo(testData);
 
-      // check access
-      const accessRes = await fetch(`/api/tes/check-access?userId=${userData.user.id}&type=IST`);
+      // 3️⃣ Cek akses
+      const accessRes = await fetch(
+        `/api/tes/check-access?userId=${userData.user.id}&type=IST`
+      );
       const accessData = await accessRes.json();
       setHasAccess(accessData.access);
       setCheckReason(accessData.reason || "");
+      if (!accessData.access) {
+        setLoading(false);
+        return;
+      }
 
-      if (!accessData.access) return;
+      // 4️⃣ Ambil progress & attemptId
+      const progressRes = await fetch(
+        `/api/tes/progress?userId=${userData.user.id}&type=IST`
+      );
+      const progress = await progressRes.json();
+      console.log("Progress:", progress);
 
-      // ambil attempt terakhir
-      const attemptRes = await fetch(`/api/attempts?userId=${userData.user.id}&testTypeId=${testData.id}`);
-      const attempts = await attemptRes.json();
-      const activeAttempt = attempts.find((a: any) => !a.isCompleted); // pilih attempt yg belum selesai
-      if (activeAttempt) {
-        setAttemptId(activeAttempt.id); // simpan attempt aktif
+      if (progress.isCompleted) {
+        setAlreadyTaken(true);
+        setShowIntro(true);
+        setLoading(false);
+        return;
+      }
 
-        // ambil progress
-        const progressRes = await fetch(`/api/tes/progress?userId=${userData.user.id}&type=IST`);
-        const progress = await progressRes.json();
+      if (progress.nextSubtest && progress.attemptId) {
+        const subtestData = testData.subTests.find(
+          (st: SubtestInfo) =>
+            st.name?.trim().toLowerCase() ===
+            progress.nextSubtest.trim().toLowerCase()
+        );
 
-        if (progress.isCompleted) {
-          setAlreadyTaken(true);
-          return;
-        }
+        const duration = subtestData?.durationMinutes || 6;
 
-        if (progress.nextSubtest) {
-          setCurrentSubtest({
-            name: progress.nextSubtest,
-            description: "Deskripsi subtest...",
-            durationMinutes: progress.durationMinutes || 6,
-          });
+        setCurrentSubtest({
+          name: subtestData?.name || progress.nextSubtest,
+          description: subtestData?.description || "Deskripsi subtest...",
+          durationMinutes: duration,
+          hapalan: subtestData?.hapalan || "",
+        });
 
-          // load soal & jawaban lama
-          await loadQuestions(progress.nextSubtest, userData.user.id, activeAttempt.id);
+        setAttemptId(progress.attemptId);
+        setCurrentIndex(progress.nextQuestionIndex || 0);
 
-          // atur timer
-          if (progress.startTime) {
-            const endTime = new Date(progress.startTime);
-            endTime.setMinutes(endTime.getMinutes() + (progress.durationMinutes || 6));
-            const secondsLeft = Math.floor((endTime.getTime() - Date.now()) / 1000);
-            setTimeLeft(secondsLeft > 0 ? secondsLeft : 0);
-          }
+        const startSeconds =
+          progress.startTime &&
+          Math.floor(
+            (new Date(progress.startTime).getTime() - Date.now()) / 1000 +
+              duration * 60
+          );
+        setTimeLeft(startSeconds > 0 ? startSeconds : duration * 60);
 
-          // set index soal terakhir
-          setCurrentIndex(progress.nextQuestionIndex || 0);
-
-          // tampilkan soal
+        if (progress.nextSubtest === "HAPALAN_ME") {
+          // --- HAPALAN_ME langsung tampil & timer jalan ---
+          setShowHapalanME(true);
+          setShowSubtestDetail(false);
+          setShowQuestions(false);
+        } else {
+          await loadQuestions(
+            progress.nextSubtest,
+            userData.user.id,
+            progress.attemptId
+          );
+          // langsung ke soal
           setShowIntro(false);
           setShowForm(false);
           setShowSubtestDetail(false);
           setShowQuestions(true);
         }
+
+        setLoading(false);
+        return;
       }
+
+      // Default: tampilkan intro
+      setShowIntro(true);
+      setLoading(false);
     } catch (err) {
       console.error(err);
+      setLoading(false);
     }
   };
 
@@ -239,73 +301,194 @@ const handlePayAndFollow = async () => {
   // -------------------------
   // Timer
   // -------------------------
-  useEffect(() => {
-    if (!showQuestions) return;
+  const timeLeftRef = useRef(timeLeft);
+useEffect(() => { timeLeftRef.current = timeLeft }, [timeLeft]);
 
-    const timer = setInterval(() => {
-      setTimeLeft(t => {
-        if (t <= 1) {
+const currentSubtestRef = useRef(currentSubtest);
+useEffect(() => { currentSubtestRef.current = currentSubtest }, [currentSubtest]);
+useEffect(() => {
+  if (!showQuestions) return;
+
+  const timer = setInterval(() => {
+    setTimeLeft((prev) => {
+      if (prev <= 1) {
+        clearInterval(timer);
+        // 🛑 Jangan submit kalau belum ada jawaban sama sekali
+        if (attemptId && Object.keys(answers).length > 0) {
           handleSubmit();
-          clearInterval(timer);
-          return 0;
+        } else {
+          console.warn("Timer habis tapi tidak ada jawaban, skip submit.");
         }
-        return t - 1;
-      });
-    }, 1000);
+        return 0;
+      }
+      return prev - 1;
+    });
+  }, 1000);
 
-    return () => clearInterval(timer);
-  }, [showQuestions]);
+  return () => clearInterval(timer);
+}, [showQuestions, attemptId, answers]);
+
+useEffect(() => {
+  if (!showHapalanME) return;
+
+  const timer = setInterval(() => {
+    setTimeLeft(prev => {
+      if (prev <= 1) {
+        clearInterval(timer);
+        setShowHapalanME(false); // tutup hapalan
+
+        // lanjut ke instruksi ME
+        const meSubtest = testInfo?.subTests?.find(st => st.name === "ME");
+        if (meSubtest) {
+          setCurrentSubtest({
+            name: meSubtest.name,
+            description: meSubtest.description || "",
+            durationMinutes: meSubtest.durationMinutes || 3,
+            hapalan: "",
+          });
+          setShowInstructionsME(true);  // tampilkan instruksi ME
+          setShowQuestions(false);
+        }
+        return 0;
+      }
+      return prev - 1;
+    });
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, [showHapalanME, testInfo]);
 
   // -------------------------
   // Handlers
   // -------------------------
-  const handleFollowTest = () => {
-    setShowIntro(false);
-    setShowForm(true);
-    if (!currentSubtest && testInfo?.id) {
-      setCurrentSubtest({
-        name: "SE",
-        description: "Deskripsi subtest pertama...",
-        durationMinutes: 6,
-      });
+ const handleFollowTest = async () => {
+  if (!user?.id) {
+    alert("User belum terdeteksi, silakan login ulang.");
+    return;
+  }
+
+  setShowIntro(false);
+  setShowForm(true);
+
+  if (!currentSubtest && testInfo?.subTests?.length) {
+    try {
+      const progressRes = await fetch(`/api/tes/progress?userId=${user.id}&type=IST`);
+      const progress = await progressRes.json();
+
+      // Tentukan subtest yang akan dijalankan
+      let subtestToSet: typeof testInfo.subTests[0] | undefined;
+
+      if (progress.nextSubtest) {
+        subtestToSet = testInfo.subTests.find(
+          st => st.name.toLowerCase() === progress.nextSubtest.toLowerCase()
+        );
+      }
+
+      if (!subtestToSet) {
+        subtestToSet = testInfo.subTests[0]; // user baru
+      }
+
+      // --- HAPALAN_ME khusus ---
+   if (subtestToSet.name === "HAPALAN_ME") {
+  const hapalanDesc = parseDescription(subtestToSet.description);
+  setCurrentSubtest({
+    ...subtestToSet,
+    durationMinutes: 3, // timer 3 menit
+    description: hapalanDesc,
+    hapalan: subtestToSet.hapalan || "[]", // pastikan string JSON valid
+  });
+  setTimeLeft(3 * 60);   // langsung start timer
+  setShowHapalanME(true); 
+  setShowQuestions(false);
+  setShowSubtestDetail(false);
+}
+else {
+        // Subtest biasa
+        setCurrentSubtest({
+          name: subtestToSet.name,
+          description: parseDescription(subtestToSet.description),
+          durationMinutes: subtestToSet.durationMinutes || 6,
+          hapalan: subtestToSet.hapalan || "",
+        });
+        setShowForm(false);
+        setShowSubtestDetail(true);
+        setShowQuestions(false);
+      }
+
+    } catch (err: any) {
+      alert(err.message);
     }
-  };
+  }
+};
+
+useEffect(() => {
+  if (showHapalanME && timeLeft <= 0) {
+    setShowHapalanME(false);
+    // Ambil subtest ME
+    const meSubtest = testInfo?.subTests?.find(st => st.name === "ME");
+    if (meSubtest) {
+      setCurrentSubtest({
+        name: meSubtest.name,
+        description: meSubtest.description || "",
+        durationMinutes: meSubtest.durationMinutes || 3,
+        hapalan: "", // hapalan kosong
+      });
+      setShowInstructionsME(true); // tampilkan instruksi ME
+      setShowQuestions(false);
+    }
+  }
+}, [showHapalanME, timeLeft]);
+
 
 const handleStartSubtest = async () => {
   if (!currentSubtest || !user || !testInfo) return;
 
   try {
-    // 1️⃣ Buat attempt baru
+    // 1️⃣ Buat attempt baru hanya jika belum ada attemptId
+   if (!attemptId) {
+  // ✅ Cek attempt aktif
+  const activeRes = await fetch(`/api/attempts/active?userId=${user.id}&testTypeId=${testInfo.id}`);
+  const activeData = await activeRes.json();
+
+  if (activeData?.id) {
+    setAttemptId(activeData.id);
+  } else {
+    // ✅ Buat attempt baru
     const attemptRes = await fetch("/api/attempts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: user.id,
-        testTypeId: testInfo.id,
-      }),
+      body: JSON.stringify({ userId: user.id, testTypeId: testInfo.id }),
     });
-
     const newAttempt = await attemptRes.json();
     if (!attemptRes.ok || !newAttempt.id) throw new Error("Gagal buat attempt baru");
+    setAttemptId(newAttempt.id);
+  }
+}
+ else {
+      // 2️⃣ Ambil progress subtest dari backend
+      const progressRes = await fetch(`/api/tes/progress?userId=${user.id}&type=IST`);
+      const progress = await progressRes.json();
 
-    setAttemptId(newAttempt.id); // simpan attempt baru di state
+if (progress.startTime && progress.nextSubtest === currentSubtest.name) {
+  // ⏳ Hitung dari DB
+  const start = new Date(progress.startTime);
+  const end = new Date(start);
+  end.setMinutes(end.getMinutes() + currentSubtest.durationMinutes);
+  const secondsLeft = Math.floor((end.getTime() - Date.now()) / 1000);
+  setTimeLeft(secondsLeft > 0 ? secondsLeft : currentSubtest.durationMinutes * 60); // fallback
+} else {
+  // Subtest baru → durasi penuh
+  setTimeLeft(currentSubtest.durationMinutes * 60);
+}
 
-    // 2️⃣ Load soal
-    await loadQuestions(currentSubtest.name, user.id, newAttempt.id);
+    }
 
-    // 3️⃣ Atur timer
-    setTimeLeft(currentSubtest.durationMinutes * 60);
+    // 3️⃣ Load soal dari backend, jawaban lama akan tetap ada
+    await loadQuestions(currentSubtest.name, user.id, attemptId || undefined);
 
     // 4️⃣ Tampilkan soal
     setShowSubtestDetail(false);
     setShowQuestions(true);
-
-    // 5️⃣ Simpan start time di backend
-    await fetch("/api/tes/start", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, attemptId: newAttempt.id, subtest: currentSubtest.name }),
-    });
 
   } catch (err) {
     console.error(err);
@@ -370,6 +553,7 @@ const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         userId: user.id,
+        attemptId,
         type: "IST",
         subtest: currentSubtest.name,
         answers: payload,
@@ -383,38 +567,56 @@ const saveAnswerToBackend = async (qid: number, choice: string | string[]) => {
     setAnswers({});
     setCurrentIndex(0);
 
-    // 2️⃣ Ambil progress terbaru untuk tahu subtest berikutnya
+    // -------------------------------
+    // Ambil progress terbaru
     const progressRes = await fetch(`/api/tes/progress?userId=${user.id}&type=IST`);
     const progress = await progressRes.json();
 
-    if (progress.nextSubtest) {
-      // set subtest berikutnya
-      setCurrentSubtest({
-        name: progress.nextSubtest,
-        description: "Deskripsi subtest...",
-        durationMinutes: progress.durationMinutes || 6,
-      });
-      setShowSubtestDetail(true);
-      setShowQuestions(false);
-    } else {
-      // semua subtest selesai
-      await fetch("/api/tes/submit-finish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, type: "IST" }),
-      });
-      alert("🎉 Tes IST selesai! Hasil ada di Dashboard.");
-      router.push("/dashboard");
+    if (progress.nextSubtest && testInfo?.subTests) {
+      // Masih ada subtest berikutnya
+      const nextSubtestData = testInfo.subTests.find(
+        st => st.name.toLowerCase() === progress.nextSubtest.toLowerCase()
+      );
+
+      if (nextSubtestData) {
+        setShowSubtestDetail(false);
+        setCurrentSubtest({
+          name: nextSubtestData.name,
+         // description: (nextSubtestData.description || "").replace(/\\n/g, "\n"),
+           description: parseDescription(nextSubtestData.description),
+
+          durationMinutes: nextSubtestData.durationMinutes || 6,
+            hapalan: nextSubtestData.hapalan || "", // ✅ ambil dari DB
+
+        });
+        setShowQuestions(false);
+        setShowSubtestDetail(true);
+        return;
+      }
     }
+
+    // -------------------------------
+    // Jika tidak ada nextSubtest = semua selesai
+    await fetch("/api/tes/submit-finish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, type: "IST", attemptId }),
+    });
+    alert("🎉 Tes IST selesai! Hasil ada di Dashboard.");
+    router.push("/dashboard");
+
   } catch (err: any) {
     alert(err.message);
   }
 };
 
 
+
 // -------------------------
 // Render
 // -------------------------
+if (loading) return <div>Loading...</div>; // atau skeleton
+
 if (showIntro)
   return (
     <TestIntro
@@ -441,27 +643,121 @@ if (showForm)
     />
   );
 
-if (showSubtestDetail && currentSubtest)
+if (showSubtestDetail && currentSubtest) {
   return <SubtestDetail subtest={currentSubtest} onStart={handleStartSubtest} />;
+}
+if (showHapalanME && currentSubtest) {
+  console.log(
+    "showHapalanME",
+    showHapalanME,
+    "timeLeft",
+    timeLeft,
+    "currentSubtest",
+    currentSubtest
+  );
+  const hapalanList = currentSubtest.hapalan
+    ? JSON.parse(currentSubtest.hapalan) // <-- parse JSON
+    : [];
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Hapalan Subtest {currentSubtest.name}</h1>
+        <div className={styles.timer}>⏳ {formatTime(timeLeft)}</div>
+      </div>
+      <div className={styles.mainContent}>
+        <p>Kamu punya waktu {currentSubtest.durationMinutes} menit untuk menghapal teks berikut:</p>
+        {hapalanList.length > 0 ? (
+          hapalanList.map((cat: any) => (
+            <div key={cat.category} className={styles.hapalanBox}>
+              <strong>{cat.category}:</strong> {cat.words.join(", ")}
+            </div>
+          ))
+        ) : (
+          <div className={styles.hapalanBox}>Tidak ada hapalan tersedia</div>
+        )}
+        <button
+  onClick={() => {
+    setShowHapalanME(false);
+    const meSubtest = testInfo?.subTests?.find(st => st.name === "ME");
+    if (meSubtest) {
+      setCurrentSubtest({
+        name: meSubtest.name,
+        description: meSubtest.description || "",
+        durationMinutes: meSubtest.durationMinutes || 3,
+        hapalan: "",
+      });
+      setShowInstructionsME(true);
+      setShowQuestions(false);
+    }
+  }}
+>
+  Skip
+</button>
+
+      </div>
+    </div>
+  );
+}
+
+if (showInstructionsME && currentSubtest) {
+  const instructions = parseDescription(currentSubtest.description);
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Instruksi Subtest {currentSubtest.name}</h1>
+      </div>
+      <div className={styles.mainContent}>
+        <p>{instructions}</p>
+        <button
+          className={styles.btn}
+          onClick={() => {
+            setShowInstructionsME(false);
+            handleStartSubtest(); // lanjut ke soal ME
+          }}
+        >
+          Mulai Soal
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
 if (showQuestions && currentSubtest) {
   const currentQuestion = questions[currentIndex];
+  let instructions = "";
+  if (currentSubtest.name === "ME" && currentSubtest.description) {
+    try {
+      const parsed = JSON.parse(currentSubtest.description);
+      instructions = Array.isArray(parsed) ? parsed.join("\n") : String(parsed);
+    } catch {
+      instructions = String(currentSubtest.description);
+    }
+  }
+
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <h1 className={styles.title}>Soal IST - {currentSubtest.name}</h1>
         <div className={styles.timer}>⏳ {formatTime(timeLeft)}</div>
       </div>
-
       <div className={styles.mainContent}>
+        {instructions && <p>{instructions}</p>}
         <div style={{ flex: 3, display: "flex", flexDirection: "column", gap: "20px" }}>
-          {currentQuestion && (
-            <QuestionCard
-              question={currentQuestion}
-              answer={answers[currentQuestion.id]}
-              onAnswer={handleSelectAnswer}
-            />
-          )}
+          <QuestionCard
+            question={currentQuestion}
+            answer={answers[currentQuestion.id]}
+            onAnswer={handleSelectAnswer}
+            subtestDesc={currentSubtest.description}
+            onShowSubtestDetail={() => {
+              setShowQuestions(false);
+              setShowSubtestDetail(true);
+            }}
+          />
+
 
           <div className={styles.navButtons}>
             <button

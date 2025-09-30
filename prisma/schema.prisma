@@ -136,7 +136,7 @@ model SubTest {
   id             Int             @id @default(autoincrement())
   testTypeId     Int
   name           String
-  desc           String?
+  desc           String? @db.Text
   createdAt      DateTime        @default(now())
   duration       Int?
   questions      Question[]
@@ -254,7 +254,10 @@ model Result {
   jumlahbenar   Int?
   scoreiq       Int?
   keteranganiqCPMI String?
-  aspekSTK         Json?
+  aspek1         Json?
+  aspek2         Json?
+  aspek3         Json?
+  aspek4         Json?
   url           String? @db.Text 
   kesimpulan    String? @db.Text
   kesimpulanSikap    String? @db.Text
@@ -262,6 +265,8 @@ model Result {
   kesimpulanBelajar    String? @db.Text
   ttd           String? @db.Text
   summaryTemplateId Int?
+  saranpengembangan   String? @db.Text
+  kesimpulanumum       String? @db.Text
 
   // jumlah jawaban
 jumlahA1   Int?
@@ -411,7 +416,8 @@ model UserProgress {
   User        User     @relation(fields: [userId], references: [id])
   TestAttempt TestAttempt? @relation(fields: [attemptId], references: [id])
 
-  @@unique([userId, subtest, attemptId]) // ⚡ kombinasi unik baru
+ @@unique([userId, subtest, attemptId])
+
 }
 
 

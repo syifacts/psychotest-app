@@ -9,27 +9,50 @@ export async function POST(req: NextRequest) {
   try {
     const { testTypeId, quantity = 1, userId: targetUserId } = await req.json();
 
-    // Ambil token dari cookie
+    // Validasi testTypeId
+    if (!testTypeId) {
+      return NextResponse.json(
+        { error: "testTypeId wajib" },
+        { status: 400 }
+      );
+    }
+
     const cookie = req.headers.get("cookie");
     const token = cookie
       ?.split("; ")
       .find((c) => c.startsWith("token="))
       ?.split("=")[1];
 
-    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!token)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string };
 
+    // Cek role GUEST
+    if (decoded.role === "GUEST") {
+      return NextResponse.json({ error: "Role GUEST tidak bisa bayar" }, { status: 403 });
+    }
+
+    // Cast ke number
+    const testTypeIdNum = Number(testTypeId);
+    if (isNaN(testTypeIdNum)) {
+      return NextResponse.json({ error: "testTypeId tidak valid" }, { status: 400 });
+    }
+
     // Ambil harga dari TestType
-    const test = await prisma.testType.findUnique({ where: { id: testTypeId } });
-    if (!test) return NextResponse.json({ error: "Tes tidak ditemukan" }, { status: 404 });
+    const test = await prisma.testType.findUnique({
+      where: { id: testTypeIdNum },
+    });
+    if (!test) {
+      return NextResponse.json({ error: "Tes tidak ditemukan" }, { status: 404 });
+    }
 
     const qty = quantity > 0 ? quantity : 1;
     const totalAmount = (test.price || 0) * qty;
 
     // Siapkan data payment
     const paymentData: any = {
-      testTypeId,
+      testTypeId: testTypeIdNum,
       quantity: qty,
       amount: totalAmount,
       status: PaymentStatus.SUCCESS,

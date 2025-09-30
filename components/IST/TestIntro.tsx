@@ -1,15 +1,17 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react"; // <- pastikan ini ada
 import Link from "next/link";
 import { motion } from "framer-motion";
 import styles from "../../app/tes/msdt/msdt.module.css";
+import ISTPaymentButton from "./ISTPaymentButton";
+
 
 interface Props {
-  testInfo: { price: number | null; duration: number } | null;
+  testInfo: {id: number; price: number | null; duration: number } | null;
   hasAccess: boolean;
   alreadyTaken: boolean;
   checkReason?: string;
-  role?: "USER" | "PERUSAHAAN";
+  role?: "USER" | "PERUSAHAAN" | "GUEST" |"SUPERADMIN";
   quantity: number;
   setQuantity: (q: number) => void;
   onFollowTest: () => void;
@@ -27,6 +29,15 @@ const ISTIntro: React.FC<Props> = ({
   onFollowTest,
   onPayAndFollow,
 }) => {
+  const [currentRole, setCurrentRole] = useState<"USER" | "PERUSAHAAN" | "SUPERADMIN" | "GUEST">("GUEST");
+  useEffect(() => {
+  // misal ambil dari API /auth/me
+  fetch("/api/auth/me", { credentials: "include" })
+    .then(res => res.json())
+    .then(data => {
+      if (data.user?.role) setCurrentRole(data.user.role);
+    });
+}, []);
   return (
     <div className={styles.pageWrapper}>
       {/* LEFT COLUMN */}
@@ -100,7 +111,14 @@ const ISTIntro: React.FC<Props> = ({
               <p className={styles.accessReasonBadge}>🏢 {checkReason}</p>
             )}
 
-            {!hasAccess ? (
+ <ISTPaymentButton
+    hasAccess={hasAccess}
+    setHasAccess={() => { /* state dari parent */ }}
+    startTest={onFollowTest} // sebelumnya onFollowTest
+    testInfo={testInfo}
+  role={currentRole} // ← pakai currentRole yang sudah di-fetch
+  />
+            {/* {!hasAccess ? (
               <div>
                 {role === "PERUSAHAAN" && (
                   <div style={{ marginBottom: "12px" }}>
@@ -123,7 +141,7 @@ const ISTIntro: React.FC<Props> = ({
               </div>
             ) : (
               <button className={styles.btn} onClick={onFollowTest}>Ikuti Tes</button>
-            )}
+            )} */}
           </div>
 
           <div className={styles.benefitsMini}>
