@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
       birthDate,
       gender,
       education,
+      lembagalayanan,
       organization,
       address,
     } = await req.json();
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
     };
 
     if (role === "PSIKOLOG") {
-      newUser.lembagalayanan = organization || null;
+      newUser.lembagalayanan = lembagalayanan || null;
       newUser.phone = phone || null;
       newUser.birthDate = birthDate ? new Date(birthDate) : null;
       newUser.gender = gender || null;
