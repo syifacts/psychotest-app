@@ -1,3 +1,63 @@
+// import { prisma } from "@/lib/prisma";
+// import { NextRequest, NextResponse } from "next/server";
+
+// export async function GET(req: NextRequest) {
+//   try {
+//     const url = new URL(req.url);
+//     const type = url.searchParams.get("type"); // contoh: "IST"
+
+//     if (!type) {
+//       return NextResponse.json({ error: "Tipe tes wajib diisi" }, { status: 400 });
+//     }
+
+//     const test = await prisma.testType.findUnique({
+//       where: { name: type },
+//       select: {
+//         id: true,
+//         name: true,
+//         duration: true,
+//         price: true,
+//         judul: true,
+//         deskripsijudul: true,
+//         juduldesk1: true,
+//         desk1: true,
+//         juduldesk2: true,
+//         desk2: true,
+//         judulbenefit: true,
+//         pointbenefit: true,
+//         cp: true,
+//         subTests: {
+//           select: {
+//             id: true,
+//             name: true,
+//             desc: true,
+//             duration: true,
+//           },
+//         },
+//       },
+//     });
+
+//     if (!test) {
+//       return NextResponse.json({ error: "Tes tidak ditemukan" }, { status: 404 });
+//     }
+
+//     // ✅ Map subTests agar frontend pakai "description" & "durationMinutes"
+//     const mappedTest = {
+//       ...test,
+//       subTests: test.subTests.map(st => ({
+//         id: st.id,
+//         name: st.name,
+//         description: st.desc ?? "Deskripsi subtest belum tersedia",
+//         durationMinutes: st.duration ?? 6,
+//       })),
+//     };
+
+//     return NextResponse.json(mappedTest);
+//   } catch (err) {
+//     return NextResponse.json({ error: "Gagal ambil info tes" }, { status: 500 });
+//   }
+// }
+
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -10,32 +70,63 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Tipe tes wajib diisi" }, { status: 400 });
     }
 
-   const test = await prisma.testType.findUnique({
-  where: { name: type },
-  select: {
-    id: true,
-    name: true,
-    duration: true,
-    price: true,
-    judul: true,
-    deskripsijudul: true,
-    juduldesk1: true,
-    desk1: true,
-    juduldesk2: true,
-    desk2: true,
-    judulbenefit: true,
-    pointbenefit: true,
-    cp: true,
-  },
-});
-
+    const test = await prisma.testType.findUnique({
+      where: { name: type },
+      select: {
+        id: true,
+        name: true,
+        duration: true,
+        price: true,
+        judul: true,
+        deskripsijudul: true,
+        juduldesk1: true,
+        desk1: true,
+        juduldesk2: true,
+        desk2: true,
+        judulbenefit: true,
+        pointbenefit: true,
+        cp: true,
+        subTests: {
+          select: {
+            id: true,
+            name: true,
+            desc: true,
+            duration: true,
+          },
+        },
+      },
+    });
 
     if (!test) {
       return NextResponse.json({ error: "Tes tidak ditemukan" }, { status: 404 });
     }
 
-    return NextResponse.json(test);
+    // ✅ Map subTests agar HAPALAN_ME diparse sebagai array
+    const mappedTest = {
+      ...test,
+      subTests: test.subTests.map(st => {
+        let parsedDesc: any = st.desc ?? "Deskripsi subtest belum tersedia";
+
+        if (st.name === "HAPALAN_ME" && st.desc) {
+          try {
+            parsedDesc = JSON.parse(st.desc); // array kategori + kata
+          } catch {
+            parsedDesc = [];
+          }
+        }
+
+        return {
+          id: st.id,
+          name: st.name,
+          description: parsedDesc,
+          durationMinutes: st.duration ?? 6,
+        };
+      }),
+    };
+
+    return NextResponse.json(mappedTest);
   } catch (err) {
+    console.error("❌ Error GET test info:", err);
     return NextResponse.json({ error: "Gagal ambil info tes" }, { status: 500 });
   }
 }

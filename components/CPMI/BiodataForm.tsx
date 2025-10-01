@@ -102,6 +102,7 @@ const BiodataForm: React.FC<Props> = ({ onSaved }) => {
   fetchBiodata();
 }, []);
 
+if (loading) return <p>Memuat data...</p>;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

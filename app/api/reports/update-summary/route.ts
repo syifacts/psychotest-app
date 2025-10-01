@@ -11,6 +11,8 @@ interface UpdateSummaryBody {
   kesimpulanKepribadian?: string;
   kesimpulanBelajar?: string;
   ttd?: string;
+  saranpengembangan?: string;
+  kesimpulanumum?: string;
 }
 
 const body: UpdateSummaryBody = await req.json();
@@ -38,6 +40,10 @@ const { attemptId, kesimpulan, kesimpulanSikap, kesimpulanKepribadian, kesimpula
         kesimpulanKepribadian: kesimpulanKepribadian ?? result.kesimpulanKepribadian,
         kesimpulanBelajar: kesimpulanBelajar ?? result.kesimpulanBelajar,
         ttd: ttd ?? result.ttd,
+        saranpengembangan: body.saranpengembangan ?? result.saranpengembangan,
+        kesimpulanumum: body.kesimpulanumum ?? result.kesimpulanumum
+
+
       },
     });
 

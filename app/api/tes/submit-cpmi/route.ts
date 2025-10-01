@@ -261,6 +261,7 @@ const rsToIq: Record<number, number> = {
   35: 128, 36: 130, 37: 132, 38: 134, 39: 136, 40: 138, 41: 140, 42: 142,
   43: 143, 44: 146, 45: 146, 46: 146, 47: 146, 48: 146, 49: 146, 50: 146,
 };
+
 function getKeteranganIq(score: number) {
   if (score <= 65) return "Mentally Defective";
   if (score <= 79) return "Borderline Defective";
@@ -271,6 +272,180 @@ function getKeteranganIq(score: number) {
   if (score <= 139) return "Very Superior";
   return "Genius";
 }
+
+// Mapping aspek → nomor soal CPMI
+//const aspekQuestionsMap: Record<number, number[]> = {
+const aspekQuestionsMap: Record<string, number[]> = {
+
+  // 1: [16, 23, 29,50],
+  // 2: [6, 10, 19, 34, 41, 43, 45],
+  // 3: [15, 18, 24, 27, 30, 32, 33, 37, 38, 39, 40, 46, 48, 53],
+  // 4: [5, 8, 9, 12, 13, 14, 17, 20, 21, 22, 25, 26, 28, 31, 35, 36, 42, 44, 47, 49, 52],
+
+  A: [16, 23, 29,50], 
+  // (16+325, 23+325, 29+325, 50+325) [341, 348, 354, 375]
+
+  B: [6, 10, 19, 34, 41, 43, 45], 
+  // (6,10,19,34,41,43,45) 331, 335, 344, 359, 366, 368, 370
+
+  C: [15, 18, 24, 27, 30, 32, 33, 37, 38, 39, 40, 46, 48, 53], 
+  // (15,18,24,27,30,32,33,37,38,39,40,46,48,53)340, 343, 349, 352, 355, 357, 358, 362, 363, 364, 365, 371, 373, 378
+
+  D: [5, 8, 9, 12, 13, 14, 17, 20, 21, 22, 25, 26, 28, 31, 35, 36, 42, 44, 47, 49, 52], 
+  // (5,8,9,12,13,14,17,20,21,22,25,26,28,31,35,36,42,44,47,49,52)330, 333, 334, 337, 338, 339, 342, 345, 346, 347, 350, 351, 353, 356, 360, 361, 367, 369, 372, 374, 377
+};
+
+//const kategoriAspekMap: Record<number, { R: number[]; K: number[]; C: number[]; B: number[]; T: number[] }> = {
+const kategoriAspekMap: Record<string, { R: number[]; K: number[]; C: number[]; B: number[]; T: number[] }> = {
+
+  A: { R: [0], K: [1], C: [2], B: [3], T: [4] },       // Logika Berpikir
+  B: { R: [0, 1], K: [2], C: [3, 4], B: [5, 6], T: [7] }, // Daya Analisis
+  C: { R: [0, 1, 2], K: [3, 4], C: [5, 6, 7], B: [8, 9, 10], T: [11, 12, 13] }, // Numerikal
+  D: { R: [0, 1, 2, 3], K: [4, 5, 6], C: [7, 8, 9, 10], B: [11, 12, 13, 14, 15], T: [16, 17, 18, 19, 20] }, // Verbal
+};
+
+// // Hitung kategori tiap aspek
+// function getKategoriAspek(aspekNo: number, total: number) {
+//   const map = kategoriAspekMap[aspekNo];
+//   if (!map) return "-";
+
+//   if (map.R.includes(total)) return "R";
+//   if (map.K.includes(total)) return "K";
+//   if (map.C.includes(total)) return "C";
+//   if (map.B.includes(total)) return "B";
+//   if (map.T.includes(total)) return "T";
+//   return "-";
+// }
+// Hitung kategori tiap aspek
+function getKategoriAspek(aspekKey: string, total: number) {
+  const map = kategoriAspekMap[aspekKey];
+  if (!map) return "-";
+
+  if (map.R.includes(total)) return "R";
+  if (map.K.includes(total)) return "K";
+  if (map.C.includes(total)) return "C";
+  if (map.B.includes(total)) return "B";
+  if (map.T.includes(total)) return "T";
+  return "-";
+}
+
+const aspekQuestionsMap2: Record<string, number[]> = {
+  // 1: [15, 18, 24, 30, 32, 33],
+  // 2: [12, 26, 31, 36, 44, 47],
+  // 3 : [10, 19, 34, 40, 41, 45, 52],
+    A: [15, 18, 24, 30, 32, 33], 
+  // (15, 18, 24, 30, 32, 33)340, 343, 349, 355, 357, 358
+
+  B: [12, 26, 31, 36, 44, 47], 
+  // (12, 26, 31, 36, 44, 47)337, 351, 356, 361, 369, 372
+
+  C: [10, 19, 34, 40, 41, 45, 52], 
+  // (10, 19, 34, 40, 41, 45, 52)335, 344, 359, 365, 366, 370, 377
+};
+
+const kategoriAspekMap2: Record<string, { R: number[]; K: number[]; C: number[]; B: number[]; T: number[] }> = {
+  A: { R: [0,1], K: [2], C: [3], B: [4,5], T: [6] },
+  B: { R: [0,1], K: [2], C: [3], B: [4,5], T: [6] },
+  C: { R: [0, 1], K: [2], C: [3, 4], B: [5, 6], T: [7] },
+};
+
+function getKategoriAspek2(aspekKey: string, total: number) {
+  const map = kategoriAspekMap2[aspekKey];
+  if (!map) return "-";
+
+  if (map.R.includes(total)) return "R";
+  if (map.K.includes(total)) return "K";
+  if (map.C.includes(total)) return "C";
+  if (map.B.includes(total)) return "B";
+  if (map.T.includes(total)) return "T";
+  return "-";
+}
+
+const aspekQuestionsMap3: Record<string, number[]> = {
+//  1: [16, 23, 29,50],
+//   2: [26, 44, 47],
+//   3 : [5, 8, 12, 13, 22, 28, 31, 36, 42, 49],
+//   4 : [9, 14, 17, 25, 35, 52],
+  A: [16, 23, 29,50], 
+  // (16, 23, 29, 50)341, 348, 354, 375
+
+  B: [26, 44, 47], 
+  // (26, 44, 47)351, 369, 372
+
+  C: [5, 8, 12, 13, 22, 28, 31, 36, 42, 49], 
+  // (5, 8, 12, 13, 22, 28, 31, 36, 42, 49)330, 333, 337, 338, 347, 353, 356, 361, 367, 374
+
+  D: [9, 14, 17, 25, 35, 52], 
+  // (9, 14, 17, 25, 35, 52)334, 339, 342, 350, 360, 377
+};
+
+const kategoriAspekMap3: Record<string, { R: number[]; K: number[]; C: number[]; B: number[]; T: number[] }> = {
+  A: { R: [0], K: [1], C: [2], B: [3], T: [4] },  
+  B: { R: [0], K: [1], C: [2], B: [], T: [3] },
+  C: { R: [0, 1,2], K: [3,4], C: [5,6], B: [7,8], T: [9,10] },
+  D: { R: [0,1], K: [2], C: [3], B: [4,5], T: [6] },
+};
+
+function getKategoriAspek3(aspekKey: string, total: number) {
+  const map = kategoriAspekMap3[aspekKey];
+  if (!map) return "-";
+
+  if (map.R.includes(total)) return "R";
+  if (map.K.includes(total)) return "K";
+  if (map.C.includes(total)) return "C";
+  if (map.B.includes(total)) return "B";
+  if (map.T.includes(total)) return "T";
+  return "-";
+}
+
+const aspekQuestionsMap4: Record<string, number[]> = {
+//  1: [10, 19, 34, 40, 41, 45, 52],
+//   2: [24, 27, 30, 32, 33, 37, 38, 39, 46, 48, 53],
+  A: [10, 19, 34, 40, 41, 45, 52], 
+  // (10, 19, 34, 40, 41, 45, 52)335, 344, 359, 365, 366, 370, 377
+
+  B: [24, 27, 30, 32, 33, 37, 38, 39, 46, 48, 53], 
+  // (24, 27, 30, 32, 33, 37, 38, 39, 46, 48, 53)349, 352, 355, 357, 358, 362, 363, 364, 371, 373, 378
+
+};
+
+const kategoriAspekMap4: Record<string, { R: number[]; K: number[]; C: number[]; B: number[]; T: number[] }> = {
+A: { R: [0, 1], K: [2], C: [3, 4], B: [5, 6], T: [7] },
+B: { R: [0,1,2], K: [3,4], C: [5,6], B: [7,8,9], T: [10,11] },
+};
+
+function getKategoriAspek4(aspekKey: string, total: number) {
+  const map = kategoriAspekMap4[aspekKey];
+  if (!map) return "-";
+
+  if (map.R.includes(total)) return "R";
+  if (map.K.includes(total)) return "K";
+  if (map.C.includes(total)) return "C";
+  if (map.B.includes(total)) return "B";
+  if (map.T.includes(total)) return "T";
+  return "-";
+}
+function getDominantKategori(aspekResults: { aspek: string; total: number; kategori: string }[]) {
+  const countMap: Record<string, number> = {};
+
+  aspekResults.forEach(r => {
+    if (!countMap[r.kategori]) countMap[r.kategori] = 0;
+    countMap[r.kategori]++;
+  });
+
+  // Cari kategori dengan jumlah terbanyak
+  let dominant = "-";
+  let max = -1;
+  for (const [kategori, count] of Object.entries(countMap)) {
+    if (count > max) {
+      dominant = kategori;
+      max = count;
+    }
+  }
+
+  return dominant;
+}
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -290,7 +465,8 @@ export async function POST(req: NextRequest) {
     // Ambil userId & testTypeId dari TestAttempt
     const attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
-      select: { userId: true, testTypeId: true },
+      select: { userId: true, testTypeId: true,  isCompleted: true,
+    status: true },
     });
 
     if (!attempt) {
@@ -307,36 +483,184 @@ export async function POST(req: NextRequest) {
     });
 
     // Hitung jumlah jawaban benar
-   let jumlahBenar = 0;
+    let jumlahBenar = 0;
 
-const answerData = answers.map(a => {
-  const question = questions.find(q => q.id === a.questionId);
-  const normalizedChoice = String(a.choice).trim();
+    const answerData = answers.map(a => {
+      const question = questions.find(q => q.id === a.questionId);
+      const normalizedChoice = String(a.choice).trim();
 
-  let isCorrect: boolean | null = null;
-  if (question?.answer) {
+      let isCorrect: boolean | null = null;
+      if (question?.answer) {
+        if (Array.isArray(question.answer)) {
+          const arr = question.answer
+            .filter(ans => ans != null)
+            .map(ans => String(ans).trim().toLowerCase());
+          isCorrect = arr.includes(normalizedChoice.toLowerCase());
+        } else {
+          isCorrect = normalizedChoice.toLowerCase() === String(question.answer).trim().toLowerCase();
+        }
+      }
+
+      if (isCorrect) jumlahBenar += 1;
+
+      return {
+        userId,
+        attemptId,
+        questionCode: question?.code ?? null,
+        choice: normalizedChoice,
+        isCorrect,
+      };
+    });
+
+    // Hitung skor tiap aspek
+  const aspekScores = Object.entries(aspekQuestionsMap).map(([key, soalNums]) => {
+  const totalAspek = soalNums.reduce((sum, qNum) => {
+    const ans = answers.find(a => a.questionId === qNum);
+    const question = questions.find(q => q.id === qNum);
+    if (!ans || !question?.answer) return sum;
+
+    let score = 0;
     if (Array.isArray(question.answer)) {
-      // essay case-insensitive
       const arr = question.answer
-        .filter(ans => ans != null)
-        .map(ans => String(ans).trim().toLowerCase());
-      isCorrect = arr.includes(normalizedChoice.toLowerCase());
+        .filter(a => a != null)
+        .map(a => String(a).trim().toLowerCase());
+      if (arr.includes(String(ans.choice).trim().toLowerCase())) score = 1;
     } else {
-      // single/mc
-      isCorrect = normalizedChoice.toLowerCase() === String(question.answer).trim().toLowerCase();
+      if (
+        String(ans.choice).trim().toLowerCase() ===
+        String(question.answer).trim().toLowerCase()
+      )
+        score = 1;
     }
-  }
 
-  if (isCorrect) jumlahBenar += 1;
+    return sum + score;
+  }, 0);
 
   return {
-    userId,
-    attemptId,
-    questionCode: question?.code ?? null,
-    choice: normalizedChoice, // tetap simpan apa yang diketik user
-    isCorrect,
+    aspek: key, // sekarang string, misal "A", "B", "C"
+    total: totalAspek,
+    kategori: getKategoriAspek(key, totalAspek), // fungsi versi string
   };
 });
+
+// const aspekScores2 = Object.entries(aspekQuestionsMap2).map(([no, soalNums]) => {
+//   const totalAspek = soalNums.reduce((sum, qNum) => {
+//     const ans = answers.find(a => a.questionId === qNum);
+//     const question = questions.find(q => q.id === qNum);
+//     if (!ans || !question?.answer) return sum;
+
+//     let score = 0;
+//     if (Array.isArray(question.answer)) {
+//       const arr = question.answer.filter(a => a != null).map(a => String(a).trim().toLowerCase());
+//       if (arr.includes(String(ans.choice).trim().toLowerCase())) score = 1;
+//     } else {
+//       if (String(ans.choice).trim().toLowerCase() === String(question.answer).trim().toLowerCase())
+//         score = 1;
+//     }
+
+//     return sum + score;
+//   }, 0);
+
+//   return {
+//     no: Number(no),
+//     total: totalAspek,
+//     kategori: getKategoriAspek2(Number(no), totalAspek),
+//   };
+// });
+const aspekScores2 = Object.entries(aspekQuestionsMap2).map(([key, soalNums]) => {
+  const totalAspek = soalNums.reduce((sum, qNum) => {
+    const ans = answers.find(a => a.questionId === qNum);
+    const question = questions.find(q => q.id === qNum);
+    if (!ans || !question?.answer) return sum;
+
+    let score = 0;
+    if (Array.isArray(question.answer)) {
+      const arr = question.answer
+        .filter(a => a != null)
+        .map(a => String(a).trim().toLowerCase());
+      if (arr.includes(String(ans.choice).trim().toLowerCase())) score = 1;
+    } else {
+      if (
+        String(ans.choice).trim().toLowerCase() ===
+        String(question.answer).trim().toLowerCase()
+      )
+        score = 1;
+    }
+
+    return sum + score;
+  }, 0);
+
+  return {
+    aspek: key, // "1", "2", "3" -> nanti bisa dipetakan ke "A", "B", "C"
+    total: totalAspek,
+    kategori: getKategoriAspek2(key, totalAspek), // fungsi versi string
+  };
+});
+
+// Versi 3
+const aspekScores3 = Object.entries(aspekQuestionsMap3).map(([key, soalNums]) => {
+  const totalAspek = soalNums.reduce((sum, qNum) => {
+    const ans = answers.find(a => a.questionId === qNum);
+    const question = questions.find(q => q.id === qNum);
+    if (!ans || !question?.answer) return sum;
+
+    let score = 0;
+    if (Array.isArray(question.answer)) {
+      const arr = question.answer
+        .filter(a => a != null)
+        .map(a => String(a).trim().toLowerCase());
+      if (arr.includes(String(ans.choice).trim().toLowerCase())) score = 1;
+    } else {
+      if (
+        String(ans.choice).trim().toLowerCase() ===
+        String(question.answer).trim().toLowerCase()
+      )
+        score = 1;
+    }
+
+    return sum + score;
+  }, 0);
+
+  return {
+    aspek: key, // "1", "2", "3", "4"
+    total: totalAspek,
+    kategori: getKategoriAspek3(key, totalAspek), // fungsi harus terima string key
+  };
+});
+
+
+// Versi 4
+const aspekScores4 = Object.entries(aspekQuestionsMap4).map(([key, soalNums]) => {
+  const totalAspek = soalNums.reduce((sum, qNum) => {
+    const ans = answers.find(a => a.questionId === qNum);
+    const question = questions.find(q => q.id === qNum);
+    if (!ans || !question?.answer) return sum;
+
+    let score = 0;
+    if (Array.isArray(question.answer)) {
+      const arr = question.answer
+        .filter(a => a != null)
+        .map(a => String(a).trim().toLowerCase());
+      if (arr.includes(String(ans.choice).trim().toLowerCase())) score = 1;
+    } else {
+      if (
+        String(ans.choice).trim().toLowerCase() ===
+        String(question.answer).trim().toLowerCase()
+      ) {
+        score = 1;
+      }
+    }
+
+    return sum + score;
+  }, 0);
+
+  return {
+    aspek: key, // langsung pakai key dari aspekQuestionsMap4 ("A", "B", ...)
+    total: totalAspek,
+    kategori: getKategoriAspek4(key, totalAspek), // fungsi versi string
+  };
+});
+
 
 
     // Simpan jawaban
@@ -353,28 +677,36 @@ const answerData = answers.map(a => {
     const now = new Date();
 
     // Cari IQ dari jumlahBenar
-    const scoreIq = rsToIq[jumlahBenar] ?? 59; // default 59 kalau RS > 50
-const keteranganiqCPMI = getKeteranganIq(scoreIq);
-// Ambil template summary sesuai scoreIq
-const template = await prisma.summaryTemplate.findFirst({
-  where: {
-    testTypeId: attempt.testTypeId,
-    minScore: { lte: scoreIq },
-    maxScore: { gte: scoreIq },
-  },
-});
+    const scoreIq = rsToIq[jumlahBenar] ?? 59;
+    const keteranganiqCPMI = getKeteranganIq(scoreIq);
 
-let kesimpulan = "";
-let summaryTemplateId: number | null = null;
+    // Ambil template summary sesuai scoreIq
+    const template = await prisma.summaryTemplate.findFirst({
+      where: {
+        testTypeId: attempt.testTypeId,
+        minScore: { lte: scoreIq },
+        maxScore: { gte: scoreIq },
+      },
+    });
 
-if (template) {
-    summaryTemplateId = template.id; // simpan ID template
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { fullName: true } });
-  kesimpulan = template.template
-    .replace("{name}", user?.fullName || "Peserta")
-    .replace("{scoreiq}", scoreIq.toString())
-    .replace("{keteranganiqCPMI}", keteranganiqCPMI);
-}
+    let kesimpulan = "";
+    let summaryTemplateId: number | null = null;
+
+    if (template) {
+      summaryTemplateId = template.id;
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { fullName: true } });
+      kesimpulan = template.template
+        .replace("{name}", user?.fullName || "Peserta")
+        .replace("{scoreiq}", scoreIq.toString())
+        .replace("{keteranganiqCPMI}", keteranganiqCPMI);
+    }
+// Hitung dominan per tabel
+const dominantAspek2 = getDominantKategori(aspekScores2);
+const dominantAspek3 = getDominantKategori(aspekScores3);
+const dominantAspek4 = getDominantKategori(aspekScores4);
+
+// Misal mau masukin ke kesimpulan
+
 
     // Update Result & TestAttempt
     await prisma.result.upsert({
@@ -387,10 +719,14 @@ if (template) {
       update: {
         jumlahbenar: jumlahBenar,
         scoreiq: scoreIq,
-        keteranganiqCPMI: getKeteranganIq(scoreIq),
-         kesimpulan,
-         summaryTemplateId,
+        keteranganiqCPMI,
+        kesimpulan,
+        summaryTemplateId,
         isCompleted: true,
+        aspek1: aspekScores,
+        aspek2: aspekScores2,
+        aspek3: aspekScores3,
+        aspek4: aspekScores4,
       },
       create: {
         userId,
@@ -398,38 +734,73 @@ if (template) {
         testTypeId: attempt.testTypeId,
         jumlahbenar: jumlahBenar,
         scoreiq: scoreIq,
-        keteranganiqCPMI: getKeteranganIq(scoreIq),
-        isCompleted: true,
+        keteranganiqCPMI,
         kesimpulan,
-    summaryTemplateId, 
+        summaryTemplateId,
+        isCompleted: true,
+        aspek1: aspekScores,
+        aspek2: aspekScores2,
+        aspek3: aspekScores3,
+        aspek4: aspekScores4,
       },
     });
+let status: string;
 
-    await prisma.testAttempt.update({
-      where: { id: attemptId },
-      data: { isCompleted: true, finishedAt: now },
-    });
-    // Cari token yang terkait attempt
-const token = await prisma.token.findFirst({
+const result = await prisma.result.findUnique({
   where: {
-    testTypeId: attempt.testTypeId,
-    testAttempt: { id: attemptId }, // pastikan di schema token ada kolom FK testAttemptId
-  },
+    attemptId_testTypeId: {
+      attemptId,
+      testTypeId: attempt.testTypeId
+    }
+  }
 });
 
-if (token) {
-  await prisma.token.update({
-    where: { id: token.id },
-    data: {
-      used: true,
-      usedAt: new Date(),
-    },
-  });
+const personalityResult = await prisma.personalityResult.findUnique({
+  where: { attemptId }
+});
+
+if (personalityResult) {
+  status = personalityResult.validated ? "Selesai" : "Sedang diverifikasi psikolog";
+} else if (result) {
+  status = result.validated ? "Selesai" : "Sedang diverifikasi psikolog";
+} else {
+  status = attempt.isCompleted ? "Sedang diverifikasi psikolog" : "Belum selesai";
 }
 
 
+    await prisma.testAttempt.update({
+      where: { id: attemptId },
+      data: { isCompleted: true, finishedAt: now, status },
+    });
 
-    return NextResponse.json({ message: "Jawaban berhasil disimpan", jumlahBenar, scoreIq });
+    // Cari token yang terkait attempt
+    const token = await prisma.token.findFirst({
+      where: {
+        testTypeId: attempt.testTypeId,
+        testAttempt: { id: attemptId },
+      },
+    });
+
+    if (token) {
+      await prisma.token.update({
+        where: { id: token.id },
+        data: {
+          used: true,
+          usedAt: new Date(),
+        },
+      });
+    }
+
+    return NextResponse.json({ 
+  message: "Jawaban berhasil disimpan", 
+  jumlahBenar, 
+  scoreIq, 
+  aspek1: aspekScores,
+  aspek2: aspekScores2,
+  aspek3: aspekScores3,
+  aspek4: aspekScores4
+});
+
   } catch (err) {
     console.error("Gagal submit CPMI:", err);
     return NextResponse.json({ error: "Gagal submit CPMI" }, { status: 500 });

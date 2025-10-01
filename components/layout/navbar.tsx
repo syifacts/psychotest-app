@@ -142,12 +142,12 @@ const Navbar = () => {
           height: 90px;
         }
 
-        .left {
-          display: flex;
-          align-items: center;
-          gap: 20px;
-          flex: 1;
-        }
+       .left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex: 1;
+}
 
         .right {
           display: flex;
@@ -167,15 +167,17 @@ const Navbar = () => {
           font-weight: bold;
           font-family: "Poppins", sans-serif;
         }
-
+.search {
+  flex: 1;
+  display: flex;
+}
         .search input {
-          padding: 8px 12px;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          width: 300px;
-          max-width: 100%;
-          margin-left: 40px;
-        }
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  width: 100%;   /* penuh */
+  max-width: 100%;
+}
 
         .nav-links {
           display: flex;

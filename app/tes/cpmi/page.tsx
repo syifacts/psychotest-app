@@ -528,7 +528,22 @@ case "questions":
       );
     })}
   </ul>
+  
 ) : (
+   <div>
+    {/* Gambar referensi untuk essay */}
+    {currentQuestion.options?.length > 0 && (
+      <div style={{ marginBottom: "10px" }}>
+        {currentQuestion.options.map((opt, idx) => (
+          <img
+            key={idx}
+            src={opt.trim()}
+            alt={`Referensi ${idx + 1}`}
+            style={{ maxWidth: "200px", display: "block", margin: "8px 0" }}
+          />
+        ))}
+      </div>
+    )}
   <textarea
     className={styles.essayInput}
     value={answers[currentQuestion.code] || ""}
@@ -538,7 +553,7 @@ case "questions":
     placeholder="Tuliskan jawaban Anda di sini..."
     rows={5}
   />
-
+ </div>
           )}
 
           {/* Navigasi Back / Next / Submit */}

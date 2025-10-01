@@ -84,6 +84,182 @@ async function main() {
       });
     }
   }
+  
+  const summaryTemplatesCPMISikap = [
+    {
+      section: "Sikap & Cara Kerja",
+      category: "R",
+      template:
+        "Berdasarkan tes sikap dan cara kerja, Sdr. {name} menunjukkan kesulitan dalam mengikuti instruksi, kecepatan kerja kurang, dan memerlukan bimbingan intensif.",
+    },
+    {
+      section: "Sikap & Cara Kerja",
+      category: "K",
+      template:
+        "Berdasarkan tes sikap dan cara kerja, Sdr. {name} menunjukkan usaha namun belum konsisten, sering lambat merespons instruksi, dan masih memerlukan pengawasan lebih.",
+    },
+    {
+      section: "Sikap & Cara Kerja",
+      category: "C",
+      template:
+        "Berdasarkan tes sikap dan cara kerja, Sdr. {name} cukup responsif terhadap instruksi dan dapat menyelesaikan tugas dengan standar minimal yang memadai.",
+    },
+    {
+      section: "Sikap & Cara Kerja",
+      category: "B",
+      template:
+        "Berdasarkan tes sikap dan cara kerja, Sdr. {name} bersikap responsif, mampu memanfaatkan sumber daya, dan cukup cepat dalam penyelesaian tugas.",
+    },
+    {
+      section: "Sikap & Cara Kerja",
+      category: "T",
+      template:
+        "Berdasarkan tes sikap dan cara kerja, Sdr. {name} menunjukkan sikap kerja yang sangat baik, responsif, cepat, dan efektif dalam menyelesaikan tugas.",
+    },
+  ];
+ for (const tpl of summaryTemplatesCPMISikap) {
+    const existing = await prisma.summaryTemplate.findFirst({
+      where: {
+        testTypeId: testTypeIdCPMI,
+        section: tpl.section,
+        category: tpl.category,
+      },
+    });
+
+    if (existing) {
+      await prisma.summaryTemplate.update({
+        where: { id: existing.id },
+        data: { template: tpl.template },
+      });
+    } else {
+      await prisma.summaryTemplate.create({
+        data: {
+          testTypeId: testTypeIdCPMI,
+          section: tpl.section,
+          category: tpl.category,
+          template: tpl.template,
+        },
+      });
+    }
+  }
+
+const summaryTemplatesCPMIKepribadian = [
+  {
+    section: "Kepribadian",
+    category: "R",
+    template:
+      "Berdasarkan tes kepribadian, Sdr. {name} menunjukkan motivasi yang masih rendah, cenderung ragu terhadap kemampuannya, dan membutuhkan dorongan dari lingkungan untuk menyelesaikan tugas.",
+  },
+  {
+    section: "Kepribadian",
+    category: "K",
+    template:
+      "Berdasarkan tes kepribadian, Sdr. {name} menunjukkan usaha dalam menyesuaikan diri, namun terkadang kurang yakin dan masih membutuhkan arahan untuk meningkatkan kepercayaan dirinya.",
+  },
+  {
+    section: "Kepribadian",
+    category: "C",
+    template:
+      "Berdasarkan tes kepribadian, Sdr. {name} memiliki konsep diri yang cukup positif, merasa cukup yakin dengan kemampuannya, dan mampu mengambil keputusan sederhana secara mandiri.",
+  },
+  {
+    section: "Kepribadian",
+    category: "B",
+    template:
+      "Berdasarkan tes kepribadian, Sdr. {name} menunjukkan kepercayaan diri yang baik, mampu menilai situasi dengan cukup objektif, dan cenderung mampu bekerja mandiri dengan efektif.",
+  },
+  {
+    section: "Kepribadian",
+    category: "T",
+    template:
+      "Berdasarkan tes kepribadian, Sdr. {name} menunjukkan kepribadian yang matang, sangat yakin dengan kemampuannya, memiliki motivasi tinggi, serta mampu mengambil keputusan dengan tepat dan percaya diri.",
+  },
+];
+
+for (const tpl of summaryTemplatesCPMIKepribadian) {
+  const existing = await prisma.summaryTemplate.findFirst({
+    where: {
+      testTypeId: testTypeIdCPMI,
+      section: tpl.section,
+      category: tpl.category,
+    },
+  });
+
+  if (existing) {
+    await prisma.summaryTemplate.update({
+      where: { id: existing.id },
+      data: { template: tpl.template },
+    });
+  } else {
+    await prisma.summaryTemplate.create({
+      data: {
+        testTypeId: testTypeIdCPMI,
+        section: tpl.section,
+        category: tpl.category,
+        template: tpl.template,
+      },
+    });
+  }
+}
+
+const summaryTemplatesCPMIKemampuanBelajar = [
+  {
+    section: "Kemampuan Belajar",
+    category: "R",
+    template:
+      "Berdasarkan tes kemampuan belajar, Sdr. {name} menunjukkan kesulitan dalam menyerap materi baru, kurang memiliki minat untuk mengembangkan diri, dan membutuhkan banyak arahan dalam proses pembelajaran.",
+  },
+  {
+    section: "Kemampuan Belajar",
+    category: "K",
+    template:
+      "Berdasarkan tes kemampuan belajar, Sdr. {name} menunjukkan usaha untuk belajar, namun belum konsisten. Ia masih perlu dorongan dan bimbingan agar lebih terbuka terhadap hal-hal baru.",
+  },
+  {
+    section: "Kemampuan Belajar",
+    category: "C",
+    template:
+      "Berdasarkan tes kemampuan belajar, Sdr. {name} cukup terbuka terhadap pengetahuan baru, menunjukkan kemauan untuk belajar, dan berusaha meningkatkan keterampilannya meskipun masih bertahap.",
+  },
+  {
+    section: "Kemampuan Belajar",
+    category: "B",
+    template:
+      "Berdasarkan tes kemampuan belajar, Sdr. {name} menunjukkan keinginan yang baik untuk semakin terampil dalam pekerjaannya. Ia terbuka pada hal-hal baru dan berupaya meningkatkan standar kerjanya secara konsisten.",
+  },
+  {
+    section: "Kemampuan Belajar",
+    category: "T",
+    template:
+      "Berdasarkan tes kemampuan belajar, Sdr. {name} sangat antusias dalam mengembangkan diri, cepat menyerap pengetahuan baru, serta memiliki dorongan kuat untuk terus meningkatkan standar dan keterampilannya.",
+  },
+];
+
+for (const tpl of summaryTemplatesCPMIKemampuanBelajar) {
+  const existing = await prisma.summaryTemplate.findFirst({
+    where: {
+      testTypeId: testTypeIdCPMI,
+      section: tpl.section,
+      category: tpl.category,
+    },
+  });
+
+  if (existing) {
+    await prisma.summaryTemplate.update({
+      where: { id: existing.id },
+      data: { template: tpl.template },
+    });
+  } else {
+    await prisma.summaryTemplate.create({
+      data: {
+        testTypeId: testTypeIdCPMI,
+        section: tpl.section,
+        category: tpl.category,
+        template: tpl.template,
+      },
+    });
+  }
+}
 
   // === MSDT (Category) ===
   const summaryTemplatesMSDT = [

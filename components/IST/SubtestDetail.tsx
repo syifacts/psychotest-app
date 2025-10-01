@@ -9,16 +9,17 @@ interface Props {
 
 const SubtestDetail: React.FC<Props> = ({ subtest, onStart }) => {
   return (
-    <div className={styles.introContainer}>
-      <h2 className={styles.title}>Subtest {subtest.name}</h2>
-      <p>{subtest.description}</p>
-      <p>
-        <b>⏳ Durasi subtest:</b> {subtest.durationMinutes} menit
-      </p>
-      <button className={styles.btn} onClick={onStart}>
-        Mulai Mengerjakan
-      </button>
-    </div>
+   <div className={styles.introContainer}>
+  <h2 className={styles.title}>Subtest {subtest.name}</h2>
+  <p className={styles.desc}>{subtest.description}</p>
+  <p>
+    <b>⏳ Durasi subtest:</b> {subtest.durationMinutes} menit
+  </p>
+  <button className={styles.btn} onClick={onStart}>
+    Mulai Mengerjakan
+  </button>
+</div>
+
   );
 };
 

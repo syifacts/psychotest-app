@@ -4,33 +4,70 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { attemptId } = body;
+    const { attemptId, userId, testTypeId } = await req.json();
 
-    if (!attemptId) {
-      return NextResponse.json({ error: "attemptId wajib diisi" }, { status: 400 });
+    if (!userId && !attemptId) {
+      return NextResponse.json({ error: "attemptId atau userId wajib diisi" }, { status: 400 });
     }
 
-    const attempt = await prisma.testAttempt.findUnique({
-      where: { id: attemptId },
-    });
+    let attempt = null;
 
-    if (!attempt) {
-      return NextResponse.json({ error: "Attempt tidak ditemukan" }, { status: 404 });
+    if (attemptId) {
+      attempt = await prisma.testAttempt.findUnique({
+        where: { id: attemptId },
+      });
+      if (!attempt) {
+        return NextResponse.json({ error: "Attempt tidak ditemukan" }, { status: 404 });
+      }
+    } else if (userId && testTypeId) {
+      // Cek apakah user punya attempt RESERVED (untuk karyawan perusahaan)
+      attempt = await prisma.testAttempt.findFirst({
+        where: {
+          userId,
+          testTypeId,
+          status: "RESERVED",
+          finishedAt: null,
+        },
+        orderBy: { startedAt: "asc" },
+      });
     }
 
-    if (attempt.status !== "RESERVED") {
-      return NextResponse.json({ error: "Attempt sudah dimulai / kadaluarsa" }, { status: 400 });
+    // Kalau ada attempt RESERVED → pakai itu
+    if (attempt && attempt.status === "RESERVED") {
+      const updatedAttempt = await prisma.testAttempt.update({
+        where: { id: attempt.id },
+        data: {
+          status: "STARTED",
+          startedAt: new Date(),
+        },
+      });
+
+      return NextResponse.json({
+        message: "Test dimulai",
+        attempt: updatedAttempt,
+      });
     }
 
-    await prisma.testAttempt.update({
-      where: { id: attemptId },
-      data: { status: "STARTED", startedAt: new Date() },
-    });
+    // Kalau tidak ada attempt RESERVED → buat baru (untuk user beli sendiri)
+    if (userId && testTypeId) {
+      const newAttempt = await prisma.testAttempt.create({
+        data: {
+          userId,
+          testTypeId,
+          status: "STARTED",
+          startedAt: new Date(),
+        },
+      });
 
-    return NextResponse.json({ message: "Test dimulai" });
+      return NextResponse.json({
+        message: "Test dimulai",
+        attempt: newAttempt,
+      });
+    }
+
+    return NextResponse.json({ error: "Tidak bisa memulai test" }, { status: 400 });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Error di start-test:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

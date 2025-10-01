@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     }
     if (!token) token = url.searchParams.get("token") ?? undefined;
 
-    console.log("Token yang dipakai:", token);
+    //console.log("Token yang dipakai:", token);
 
     if (token) {
       // 1️⃣ Cek token test di DB

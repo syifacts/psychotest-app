@@ -72,6 +72,8 @@ model User {
   validatedPersonalityResults  PersonalityResult[] @relation("PersonalityValidatedResults")
   companyPayments              Payment[] @relation("CompanyPayments") 
   tokens      Token[]
+    companyAttempts    TestAttempt[]       @relation("CompanyTestAttempt")
+
 }
 
 model Token {
@@ -136,7 +138,7 @@ model SubTest {
   id             Int             @id @default(autoincrement())
   testTypeId     Int
   name           String
-  desc           String?
+  desc           String? @db.Text
   createdAt      DateTime        @default(now())
   duration       Int?
   questions      Question[]
@@ -177,7 +179,8 @@ model TestAttempt {
   testTypeId         Int
   paymentId          Int?
   packagePurchaseId  Int?
-  startedAt          DateTime            @default(now())
+  companyId          Int?                // 🔑 tambahin ini
+  startedAt          DateTime?            //@default(now())
   finishedAt         DateTime?
   isCompleted        Boolean             @default(false)
   reservedAt         DateTime            @default(now())
@@ -190,14 +193,14 @@ model TestAttempt {
   PackagePurchase    PackagePurchase?    @relation(fields: [packagePurchaseId], references: [id])
   token              Token?              @relation("TokenTestAttempt", fields: [tokenId], references: [id])
   tokenId            Int?                @unique
-  
+  Company            User?               @relation("CompanyTestAttempt", fields: [companyId], references: [id]) // 🔑 relasi ke User perusahaan
+
   answers            Answer[]
   subtestResults     SubtestResult[]
   results            Result[]
   personalityResults PersonalityResult[]
   progress           UserProgress[]
 }
-
 
 // ------------------
 // Jawaban Peserta
@@ -254,7 +257,10 @@ model Result {
   jumlahbenar   Int?
   scoreiq       Int?
   keteranganiqCPMI String?
-  aspekSTK         Json?
+  aspek1         Json?
+  aspek2         Json?
+  aspek3         Json?
+  aspek4         Json?
   url           String? @db.Text 
   kesimpulan    String? @db.Text
   kesimpulanSikap    String? @db.Text
@@ -262,6 +268,8 @@ model Result {
   kesimpulanBelajar    String? @db.Text
   ttd           String? @db.Text
   summaryTemplateId Int?
+  saranpengembangan   String? @db.Text
+  kesimpulanumum       String? @db.Text
 
   // jumlah jawaban
 jumlahA1   Int?
@@ -368,19 +376,30 @@ model NormaIq {
 // Pembayaran Tes
 // ------------------
 model Payment {
-  id         Int           @id @default(autoincrement())
-  userId     Int?
-  testTypeId Int
-  amount     Int
-  quantity   Int           @default(1)
-  companyId  Int?
-  status     PaymentStatus @default(PENDING)
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-  User       User?         @relation(fields: [userId], references: [id])
-  TestType   TestType      @relation(fields: [testTypeId], references: [id])
-  attempts   TestAttempt[]
-  company    User?         @relation("CompanyPayments", fields: [companyId], references: [id])
+  id          Int           @id @default(autoincrement())
+  userId      Int?
+  testTypeId  Int
+  companyId   Int?
+  
+  // Informasi transaksi
+  amount      Int
+  quantity    Int           @default(1)
+  method      String?       // metode pembayaran: VA_BCA, QRIS, dll; nullable untuk gratis
+  reference   String?       @unique // reference dari Tripay; nullable untuk gratis
+  status      String        @default("pending") // pending | SUCCESS | FAILED | FREE
+  paymentUrl  String?       // URL pembayaran dari Tripay (opsional)
+  payload     Json?         // response lengkap dari Tripay (opsional)
+  paidAt      DateTime?    
+  expiredAt   DateTime?    
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relasi
+  User        User?         @relation(fields: [userId], references: [id])
+  TestType    TestType      @relation(fields: [testTypeId], references: [id])
+  attempts    TestAttempt[]
+  company     User?         @relation("CompanyPayments", fields: [companyId], references: [id])
 }
 
 // ------------------
@@ -411,7 +430,8 @@ model UserProgress {
   User        User     @relation(fields: [userId], references: [id])
   TestAttempt TestAttempt? @relation(fields: [attemptId], references: [id])
 
-  @@unique([userId, subtest, attemptId]) // ⚡ kombinasi unik baru
+ @@unique([userId, subtest, attemptId])
+
 }
 
 

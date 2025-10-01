@@ -79,11 +79,16 @@ if (status && status !== "all") {
     whereClause.AND.push({ validated: false });
   }
   if (status === "selesai") {
-    whereClause.AND.push({ validated: true });
-    // 🔹 filter psikolog yang login
-    whereClause.AND.push({ validatedById: userId });
+    whereClause.AND.push({
+       validatedById: userId,
+      OR: [
+        { validated: true },
+        { Attempt: { status: "FINISHED" } }
+      ],
+    });
   }
 }
+
 
     // Filter Tanggal Pemeriksaan (validatedAt)
     if (validatedAt) {
@@ -106,6 +111,7 @@ if (status && status !== "all") {
           select: {
             id: true,
             startedAt: true,
+            status: true, // tambahkan ini
             PackagePurchase: { select: { company: true } },
             Payment: { select: { company: true } },
           },
@@ -132,6 +138,7 @@ if (status && status !== "all") {
           select: {
             id: true,
             startedAt: true,
+            status: true,
             PackagePurchase: { select: { company: true } },
             Payment: { select: { company: true } },
           },
@@ -159,7 +166,8 @@ if (status && status !== "all") {
         id: r.id,
         User: r.User,
         TestType: r.TestType,
-        Attempt: r.Attempt ? { id: r.Attempt.id, startedAt: r.Attempt.startedAt } : null,
+        Attempt: r.Attempt ? { id: r.Attempt.id, startedAt: r.Attempt.startedAt,status: r.Attempt.status ?? null // tambahkan ini
+ } : null,
         Company: company,
         validated: r.validated,
         validatedAt: r.validatedAt,
@@ -179,7 +187,8 @@ if (status && status !== "all") {
         id: r.id,
         User: r.User,
         TestType: r.TestType,
-        Attempt: r.Attempt ? { id: r.Attempt.id, startedAt: r.Attempt.startedAt } : null,
+        Attempt: r.Attempt ? { id: r.Attempt.id, startedAt: r.Attempt.startedAt, status: r.Attempt.status ?? null // tambahkan ini
+ } : null,
         Company: company,
         validated: r.validated,
         validatedAt: r.validatedAt,
@@ -187,10 +196,12 @@ if (status && status !== "all") {
         source: "personalityResult",
       };
     });
+// console.log("🔍 Hasil mapping:", mappedResults, mappedPersonality);
 
     // Gabungkan hasil dan sort by createdAt descending
     const combined = [...mappedResults, ...mappedPersonality];
     const sortedCombined = combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+// console.log("🔍 sortedCombined:", sortedCombined);
 
     return NextResponse.json(sortedCombined);
   } catch (err) {
@@ -245,8 +256,8 @@ export async function POST(req: NextRequest) {
     const expiry = new Date();
     expiry.setFullYear(expiry.getFullYear() + 1);
 
-    console.log("🔥 validator ttdHash:", result?.ValidatedBy?.ttdHash);
-    console.log("🔥 validator ttdUrl:", result?.ValidatedBy?.ttdUrl);
+    // console.log("🔥 validator ttdHash:", result?.ValidatedBy?.ttdHash);
+    // console.log("🔥 validator ttdUrl:", result?.ValidatedBy?.ttdUrl);
 const validatorUser = await prisma.user.findUnique({
   where: { id: userId },
   select: { ttdHash: true },
@@ -255,7 +266,7 @@ const validatorUser = await prisma.user.findUnique({
 let barcodettd: string | null = null;
 if (validatorUser?.ttdHash) {
   barcodettd = await QRCode.toDataURL(validatorUser.ttdHash);
-  console.log("✅ Generated barcodettd:", barcodettd.substring(0, 50));
+  // console.log("✅ Generated barcodettd:", barcodettd.substring(0, 50));
 }
 
     // Update data sesuai source
@@ -290,7 +301,17 @@ if (validatorUser?.ttdHash) {
       });
     }
 
-    console.log("✅ saved barcodettd:", updated.barcodettd?.substring(0, 50));
+    // console.log("✅ saved barcodettd:", updated.barcodettd?.substring(0, 50));
+
+    // === Tambahkan update testAttempt di sini ===
+await prisma.testAttempt.update({
+  where: { id: result.attemptId },
+  data: {
+    status: "FINISHED", // bisa jadi logika lain jika perlu
+    finishedAt: new Date(),
+    isCompleted: true,
+  },
+});
 
     return NextResponse.json({
       success: true,
