@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   try {
     const attempts = await prisma.testAttempt.findMany({
       where: { userId },
-      include: { TestType: true, results: true,  personalityResults: true 
+      include: { TestType: true, results: true,  personalityResults: true, User: true,
  },
       orderBy: { startedAt: "desc" },
     });

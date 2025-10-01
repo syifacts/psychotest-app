@@ -16,9 +16,7 @@ export async function POST(req: NextRequest) {
     let userId: number | undefined;
     let role: "USER" | "PERUSAHAAN" | "GUEST" | undefined;
 
-    // ----------------------
-    // 1️⃣ Cek guest token CPMI
-    // ----------------------
+    // 1️⃣ Cek guest token
     if (guestToken) {
       const tokenData = await prisma.token.findUnique({
         where: { token: guestToken },
@@ -30,64 +28,36 @@ export async function POST(req: NextRequest) {
       }
 
       userId = tokenData.userId;
-      role = "GUEST"; // hanya untuk logika, di DB tetap USER
+      role = "GUEST";
     } else {
-      // ----------------------
       // 2️⃣ Cek JWT login
-      // ----------------------
       const cookie = req.headers.get("cookie");
       const token = cookie?.split("; ").find(c => c.startsWith("token="))?.split("=")[1];
-
       if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
       try {
         const decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string };
         userId = bodyUserId || decoded.id;
         role = decoded.role as "USER" | "PERUSAHAAN";
-      } catch (err) {
+      } catch {
         return NextResponse.json({ error: "Token invalid atau malformed" }, { status: 401 });
       }
     }
 
     if (!userId) return NextResponse.json({ error: "userId tidak valid" }, { status: 400 });
 
-    // ----------------------
-    // 3️⃣ Cek attempt aktif
-    // ----------------------
-    // const existingAttempt = await prisma.testAttempt.findFirst({
-    //   where: { userId, testTypeId, finishedAt: null },
-    // });
-    // if (existingAttempt) return NextResponse.json(existingAttempt);
-    // ----------------------
-// 3️⃣ Cek attempt aktif
-// ----------------------
-const existingAttempt = await prisma.testAttempt.findFirst({
-  where: { userId, testTypeId, finishedAt: null },
-});
-
-if (existingAttempt) {
-  await prisma.testAttempt.update({
-    where: { id: existingAttempt.id },
-    data: { finishedAt: new Date() },
-  });
-}
-
-
-    // ----------------------
-    // 4️⃣ Cek testType
-    // ----------------------
+    // 3️⃣ Cek testType
     const testType = await prisma.testType.findUnique({ where: { id: testTypeId } });
     if (!testType) return NextResponse.json({ error: "TestType tidak ditemukan" }, { status: 404 });
 
     let assignedPaymentId: number | null = null;
 
-    // ----------------------
-    // 5️⃣ PackagePurchase
-    // ----------------------
+    // 4️⃣ PackagePurchase
     if (packagePurchaseId) {
       const pkg = await prisma.packagePurchase.findUnique({ where: { id: packagePurchaseId } });
-      if (!pkg || pkg.quantity <= 0)
+      if (!pkg || pkg.quantity <= 0) {
         return NextResponse.json({ error: "Kuota paket habis atau tidak ditemukan" }, { status: 400 });
+      }
 
       const attempt = await prisma.$transaction(async (tx) => {
         const newAttempt = await tx.testAttempt.create({
@@ -102,9 +72,7 @@ if (existingAttempt) {
       return NextResponse.json(attempt);
     }
 
-    // ----------------------
-    // 6️⃣ PaymentId
-    // ----------------------
+    // 5️⃣ PaymentId
     if (paymentId) {
       const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
       if (!payment || payment.quantity <= 0)
@@ -117,17 +85,10 @@ if (existingAttempt) {
       }
     }
 
-    // ----------------------
-    // 7️⃣ USER / GUEST tanpa paymentId
-    // ----------------------
+    // 6️⃣ USER/GUEST tanpa paymentId
     if (!assignedPaymentId && (role === "USER" || role === "GUEST")) {
       const lastPayment = await prisma.payment.findFirst({
-        where: {
-          userId,
-          testTypeId,
-          status: PaymentStatus.SUCCESS,
-          quantity: { gt: 0 },
-        },
+        where: { userId, testTypeId, status: PaymentStatus.SUCCESS, quantity: { gt: 0 } },
         orderBy: { createdAt: "desc" },
       });
 
@@ -135,41 +96,70 @@ if (existingAttempt) {
         assignedPaymentId = lastPayment.id;
       } else {
         const newPayment = await prisma.payment.create({
-          data: {
-            testTypeId,
-            quantity: 1,
-            amount: testType.price || 0,
-            status: PaymentStatus.SUCCESS,
-            userId,
-          },
+          data: { testTypeId, quantity: 1, amount: testType.price || 0, status: PaymentStatus.SUCCESS, userId },
         });
         assignedPaymentId = newPayment.id;
       }
     }
 
-    // ----------------------
-    // 8️⃣ PERUSAHAAN tanpa paymentId → error
-    // ----------------------
+    // 7️⃣ PERUSAHAAN tanpa paymentId → error
     if (!assignedPaymentId && role === "PERUSAHAAN") {
       return NextResponse.json({ error: "PERUSAHAAN harus assign melalui payment atau paket" }, { status: 400 });
     }
 
-    // ----------------------
-    // 9️⃣ Buat attempt
-    // ----------------------
-    const attempt = await prisma.testAttempt.create({
-      data: { userId, testTypeId, paymentId: assignedPaymentId },
+    // 8️⃣ Cek attempt aktif
+ // 8️⃣ Cek attempt aktif
+const existingAttempt = await prisma.testAttempt.findFirst({
+  where: { userId, testTypeId, finishedAt: null },
+});
+
+let attempt;
+
+if (existingAttempt) {
+  if (!existingAttempt.startedAt) {
+    // Kalau sudah ada attempt tapi belum mulai → update startedAt dan status
+    attempt = await prisma.testAttempt.update({
+      where: { id: existingAttempt.id },
+      data: {
+        startedAt: new Date(),
+        status: "STARTED",
+      },
     });
+  } else {
+    // Sudah ada attempt dan sudah mulai → pakai attempt lama tanpa perubahan
+    attempt = existingAttempt;
+  }
+} else {
+  // Kalau belum ada attempt sama sekali → buat attempt baru
+const now = new Date();
+let companyId = null;
+if (role === "PERUSAHAAN") {
+  companyId = (await prisma.user.findUnique({ where: { id: userId } }))?.companyId || null;
+}
 
-    // Kurangi kuota payment
-    if (assignedPaymentId) {
-      await prisma.payment.update({
-        where: { id: assignedPaymentId },
-        data: { quantity: { decrement: 1 } },
-      });
-    }
+attempt = await prisma.testAttempt.create({
+  data: {
+    userId,
+    testTypeId,
+    paymentId: assignedPaymentId,
+    companyId,
+    status: role === "USER" || role === "GUEST" ? "STARTED" : "RESERVED",
+    startedAt: role === "USER" || role === "GUEST" ? now : null,
+  },
+});
 
-    return NextResponse.json(attempt);
+
+  // Kurangi kuota payment
+  if (assignedPaymentId) {
+    await prisma.payment.update({
+      where: { id: assignedPaymentId },
+      data: { quantity: { decrement: 1 } },
+    });
+  }
+}
+
+return NextResponse.json(attempt);
+
   } catch (err) {
     console.error("❌ Gagal membuat attempt:", err);
     return NextResponse.json({ error: "Gagal membuat attempt" }, { status: 500 });

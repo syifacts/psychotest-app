@@ -150,3 +150,19 @@
 .animation-delay-4000 {
   animation-delay: 4s;
 }
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  25% { background-position: 50% 50%; }
+  50% { background-position: 100% 50%; }
+  75% { background-position: 50% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-text {
+  background-size: 300% 300%; /* lebih besar supaya perpindahan lebih terlihat */
+  animation: gradientShift 3s ease-in-out infinite; /* lebih cepat & smooth */
+}
+
+.animate-gradient-hover:hover {
+  animation-duration: 1.5s; /* saat hover lebih cepat */
+}

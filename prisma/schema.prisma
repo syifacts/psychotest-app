@@ -72,6 +72,8 @@ model User {
   validatedPersonalityResults  PersonalityResult[] @relation("PersonalityValidatedResults")
   companyPayments              Payment[] @relation("CompanyPayments") 
   tokens      Token[]
+    companyAttempts    TestAttempt[]       @relation("CompanyTestAttempt")
+
 }
 
 model Token {
@@ -177,7 +179,8 @@ model TestAttempt {
   testTypeId         Int
   paymentId          Int?
   packagePurchaseId  Int?
-  startedAt          DateTime            @default(now())
+  companyId          Int?                // 🔑 tambahin ini
+  startedAt          DateTime?            //@default(now())
   finishedAt         DateTime?
   isCompleted        Boolean             @default(false)
   reservedAt         DateTime            @default(now())
@@ -190,14 +193,14 @@ model TestAttempt {
   PackagePurchase    PackagePurchase?    @relation(fields: [packagePurchaseId], references: [id])
   token              Token?              @relation("TokenTestAttempt", fields: [tokenId], references: [id])
   tokenId            Int?                @unique
-  
+  Company            User?               @relation("CompanyTestAttempt", fields: [companyId], references: [id]) // 🔑 relasi ke User perusahaan
+
   answers            Answer[]
   subtestResults     SubtestResult[]
   results            Result[]
   personalityResults PersonalityResult[]
   progress           UserProgress[]
 }
-
 
 // ------------------
 // Jawaban Peserta

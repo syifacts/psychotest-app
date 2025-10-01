@@ -465,7 +465,8 @@ export async function POST(req: NextRequest) {
     // Ambil userId & testTypeId dari TestAttempt
     const attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
-      select: { userId: true, testTypeId: true },
+      select: { userId: true, testTypeId: true,  isCompleted: true,
+    status: true },
     });
 
     if (!attempt) {
@@ -743,10 +744,33 @@ const dominantAspek4 = getDominantKategori(aspekScores4);
         aspek4: aspekScores4,
       },
     });
+let status: string;
+
+const result = await prisma.result.findUnique({
+  where: {
+    attemptId_testTypeId: {
+      attemptId,
+      testTypeId: attempt.testTypeId
+    }
+  }
+});
+
+const personalityResult = await prisma.personalityResult.findUnique({
+  where: { attemptId }
+});
+
+if (personalityResult) {
+  status = personalityResult.validated ? "Selesai" : "Sedang diverifikasi psikolog";
+} else if (result) {
+  status = result.validated ? "Selesai" : "Sedang diverifikasi psikolog";
+} else {
+  status = attempt.isCompleted ? "Sedang diverifikasi psikolog" : "Belum selesai";
+}
+
 
     await prisma.testAttempt.update({
       where: { id: attemptId },
-      data: { isCompleted: true, finishedAt: now },
+      data: { isCompleted: true, finishedAt: now, status },
     });
 
     // Cari token yang terkait attempt

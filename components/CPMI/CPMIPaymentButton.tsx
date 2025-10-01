@@ -35,6 +35,8 @@ const CPMIPaymentButton: React.FC<Props> = ({
   const [tokenCompleted, setTokenCompleted] = useState(false);
   const [checkingToken, setCheckingToken] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState<"PENDING" | "FREE" | "SUCCESS" | null>(null);
+  const [tokenUser, setTokenUser] = useState<User | null>(null);
+
 
   // ---------------------------
   // Ambil info user / token
@@ -42,28 +44,32 @@ const CPMIPaymentButton: React.FC<Props> = ({
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        if (token) {
-          const resToken = await fetch(`/api/token/info?token=${token}`);
-          const dataToken = await resToken.json();
+       if (token) {
+  const resToken = await fetch(`/api/token/info?token=${token}`);
+  const dataToken = await resToken.json();
 
-          if (!resToken.ok) {
-            setTokenCompleted(true);
-            setCheckingToken(false);
-            return;
-          }
+  if (!resToken.ok) {
+    setTokenCompleted(true);
+    setCheckingToken(false);
+    return;
+  }
 
-          setUser({
-            id: dataToken.userId ?? 0,
-            name: dataToken.companyName ?? "Guest",
-            email: "",
-            role: "GUEST",
-          });
+const guestUser: User = {
+  id: dataToken.userId ?? 0,
+  name: dataToken.companyName ?? "Guest",
+  email: "",
+  role: "GUEST" as "GUEST", // <-- paksa literal type
+};
 
-          const completed = Boolean(dataToken.isCompleted) || Boolean(dataToken.used);
-          setTokenCompleted(completed);
-          if (!completed) setHasAccess(true);
-          setCheckingToken(false);
-          return;
+  setTokenUser(guestUser); // <-- tambahkan ini
+  setUser(guestUser);
+
+  const completed = Boolean(dataToken.isCompleted) || Boolean(dataToken.used);
+  setTokenCompleted(completed);
+  if (!completed) setHasAccess(true);
+  setCheckingToken(false);
+  return;
+
         }
 
         const resUser = await fetch("/api/auth/me", { credentials: "include" });
@@ -91,39 +97,55 @@ const CPMIPaymentButton: React.FC<Props> = ({
   // Cek status payment terakhir
   // ---------------------------
   useEffect(() => {
-    const checkPayment = async () => {
-      if (!user || !testInfo?.id) return;
+  const checkPayment = async () => {
+    if (!user || !testInfo?.id) return;
 
-      try {
-        const res = await fetch(
-          `/api/payment/latest?testTypeId=${testInfo.id}&userId=${user.id}`
+    try {
+      const res = await fetch(
+        `/api/payment/latest?testTypeId=${testInfo.id}&userId=${user.id}`
+      );
+      const data = await res.json();
+
+      if (data.payment) {
+        const hasReservedAttempt = data.payment.attempts?.some(
+          (a: any) => a.status === "RESERVED"
         );
-        const data = await res.json();
 
-        if (data.payment && !data.payment.attemptUsed) {
-          setHasAccess(true);
+        if (user.role === "PERUSAHAAN") {
+          // PERUSAHAAN hanya bisa beli, tidak langsung mengerjakan
+          setHasAccess(false);
           setPaymentStatus(data.payment.status);
         } else {
-          setHasAccess(false);
-          setPaymentStatus(null);
+          // USER / GUEST
+          if (!data.payment.attemptUsed || hasReservedAttempt || data.payment.status === "FREE") {
+            setHasAccess(true);
+            setPaymentStatus(data.payment.status);
+          } else {
+            setHasAccess(false);
+            setPaymentStatus(null);
+          }
         }
-      } catch (err) {
-        console.error("Gagal cek payment terakhir:", err);
       }
-    };
+    } catch (err) {
+      console.error("Gagal cek payment terakhir:", err);
+    }
+  };
 
-    checkPayment();
-  }, [user, testInfo, setHasAccess]);
+  checkPayment();
+}, [user, testInfo, setHasAccess]);
 
   // ---------------------------
   // Handle pembayaran
   // ---------------------------
   const handlePayment = async () => {
   if (role === "SUPERADMIN") return;
+
   if (!user || user.role === "GUEST") {
-    alert("Silahkan login terlebih dahulu untuk membeli test!");
-    return (window.location.href = "/login");
+    alert("Silakan login terlebih dahulu untuk membeli test!");
+    window.location.href = "/login";
+    return;
   }
+
   if (!testInfo?.id) return;
 
   setLoading(true);
@@ -138,23 +160,27 @@ const CPMIPaymentButton: React.FC<Props> = ({
       }),
     });
 
+    if (res.status === 401) {
+      alert("Silakan login terlebih dahulu untuk membeli test!");
+      window.location.href = "/login";
+      return;
+    }
+
     const data = await res.json();
 
     if (!res.ok || !data.success) {
       return alert(data.error || "❌ Pembayaran gagal!");
     }
 
-    // Sudah bayar / gratis → langsung mulai tes
-    if (data.startTest || data.payment.status === "FREE") {
+    if (data.startTest || data.payment?.status === "FREE") {
       setHasAccess(true);
       setPaymentStatus(data.payment.status);
       if (data.attempt?.id) {
-        return startAttempt(); // Bisa pakai attempt.id kalau perlu
+        return startAttempt();
       }
     }
 
-    // Kalau perlu bayar via Tripay → buka di tab baru
-    if (data.payment.paymentUrl) {
+    if (data.payment?.paymentUrl) {
       window.open(data.payment.paymentUrl, "_blank");
     }
 
@@ -167,51 +193,68 @@ const CPMIPaymentButton: React.FC<Props> = ({
     setLoading(false);
   }
 };
-
-
   // ---------------------------
   // Render
   // ---------------------------
-  if (checkingToken) return <p>Memeriksa status tes...</p>;
+ if (checkingToken) return <p>Memeriksa status tes...</p>;
 
-  if (role === "SUPERADMIN") {
-    return (
-      <p style={{ fontWeight: 500, color: "#555" }}>
-        Anda login sebagai Superadmin. Hanya bisa melihat status tes.
+if (role === "SUPERADMIN") {
+  return (
+    <p style={{ fontWeight: 500, color: "#555" }}>
+      Anda login sebagai Superadmin. Hanya bisa melihat status tes.
+    </p>
+  );
+}
+
+if (tokenCompleted) {
+  return (
+    <p style={{ color: "red", fontWeight: 500 }}>
+      ✅ Tes sudah selesai, tidak bisa mengerjakan lagi.
+    </p>
+  );
+}
+
+// TOKEN valid → langsung Mulai Tes
+// TOKEN valid → langsung Mulai Tes
+if (tokenUser && !tokenCompleted) {
+  return (
+    <div>
+      <p>
+        ✅ Sudah didaftarkan oleh perusahaan: <b>{tokenUser.name}</b>
       </p>
-    );
-  }
+      <button className={styles.btn} onClick={startAttempt}>
+        Mulai Tes
+      </button>
+    </div>
+  );
+}
 
-  if (tokenCompleted) {
-    return (
-      <p style={{ color: "red", fontWeight: 500 }}>
-        ✅ Tes sudah selesai, tidak bisa mengerjakan lagi.
+
+// GUEST yang sudah didaftarkan → Mulai Tes
+if (user?.role === "GUEST" && hasAccess) {
+  return (
+    <div>
+      <p>
+        ✅ Sudah didaftarkan oleh perusahaan: <b>{user.name}</b>
       </p>
-    );
-  }
+      <button className={styles.btn} onClick={startAttempt}>
+        Mulai Tes
+      </button>
+    </div>
+  );
+}
 
-  if (user?.role === "GUEST" && hasAccess) {
-    return (
-      <div>
-        <p>
-          ✅ Sudah didaftarkan oleh perusahaan: <b>{user.name}</b>
-        </p>
-        <button className={styles.btn} onClick={startAttempt}>
-          Mulai Tes
-        </button>
-      </div>
-    );
-  }
+// USER / PERUSAHAAN yang sudah bayar → Mulai Tes
+if (hasAccess) {
+  return (
+    <div>
+      <button className={styles.btn} onClick={startAttempt}>
+        Mulai Tes
+      </button>
+    </div>
+  );
+}
 
-  if (hasAccess && paymentStatus) {
-    return (
-      <div>
-        <button className={styles.btn} onClick={startAttempt}>
-          Mulai Tes
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div>

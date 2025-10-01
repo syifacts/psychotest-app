@@ -136,12 +136,16 @@ if (paymentId) {
 
   // ✅ Sekarang testTypeId pasti number
   const attempt = await prisma.testAttempt.create({
-    data: {
-      userId: user!.id,
-      testTypeId: payment.testTypeId,
-      paymentId: payment.id,
-    },
-  });
+  data: {
+    userId: user!.id,
+    testTypeId: payment.testTypeId,
+    paymentId: payment.id,
+    companyId: user!.companyId,
+    status: "RESERVED",       // awalnya RESERVED
+    startedAt: null,          // belum mulai
+    finishedAt: null,         // belum selesai
+  },
+});
 
   // 🔹 Generate token otomatis
   const token = await prisma.token.create({

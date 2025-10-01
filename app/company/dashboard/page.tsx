@@ -19,6 +19,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  PieChart, Pie, Cell
 } from "recharts";
 import {
   Dialog,
@@ -28,7 +29,7 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Users, CheckCircle, XCircle, Search } from "lucide-react";
+import { Users, CheckCircle, XCircle, Search, Clock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -93,6 +94,7 @@ const [openDateFilter, setOpenDateFilter] = useState(false);
 
 const [usersPerPage, setUsersPerPage] = useState(10);
 const [allRegisteredUsers, setAllRegisteredUsers] = useState<User[]>([]);
+const [verifyingUsers, setVerifyingUsers] = useState(0);
 
 
 
@@ -160,7 +162,22 @@ const handleGenerate = async () => {
   }
 };
 
+useEffect(() => {
+  if (!companyId) return;
 
+  const fetchVerifyingUsers = async () => {
+    try {
+      const res = await fetch(`/api/reports/verifying?companyId=${companyId}`);
+      if (!res.ok) throw new Error("Gagal ambil data");
+      const data = await res.json();
+      setVerifyingUsers(data.count ?? 0);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  fetchVerifyingUsers();
+}, [companyId]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -283,6 +300,7 @@ const idRes = await fetch(
   // Gabungkan semua user untuk table
 // Gabungkan semua user untuk table
 const allUsers = [
+  
   // === Paket ===
   ...(packagePurchases ?? []).flatMap((p) =>
     (p.userPackages ?? []).map((u) => {
@@ -432,7 +450,12 @@ const paginatedUsers = filteredUsers.slice(
   (currentPage - 1) * USERS_PER_PAGE,
   currentPage * USERS_PER_PAGE
 );
-
+const stats = [
+  { name: "Total User", value: totalUsers, icon: <Users className="w-6 h-6" />, color: "#6366F1" },
+  { name: "Sudah Tes", value: testedUsers, icon: <CheckCircle className="w-6 h-6" />, color: "#10B981" },
+  { name: "Belum Tes", value: notTestedUsers, icon: <XCircle className="w-6 h-6" />, color: "#EF4444" },
+  { name: "Sedang Diverifikasi", value: verifyingUsers, icon: <Clock className="w-6 h-6" />, color: "#F59E0B" },
+];
 const [companyName, setCompanyName] = useState<string>("");
 
 useEffect(() => {
@@ -447,120 +470,179 @@ useEffect(() => {
   return (
     <div>
       <Navbar />
-      <div className="container mx-auto py-8 px-4">
-<h1 className="text-3xl font-bold mb-8 text-center text-gray-800 mt-15 mb-20">
-  Dashboard Perusahaan {companyName && <span className="text-indigo-600">- {companyName}</span>}
-</h1>
+<div className="container mx-auto py-8 px-4">
+  <div className="text-center mb-12">
+    {/* Judul utama */}
+    <h1 className="text-4xl sm:text-5xl font-extrabold mb-2 mt-10 bg-clip-text text-transparent
+      bg-gradient-to-r from-blue-800 via-blue-700 to-blue-600
+      animate-gradient-text hover:animate-gradient-hover transition-all duration-1000">
+      Dashboard Perusahaan
+      {companyName && (
+        <span className="ml-2 bg-clip-text text-transparent
+          bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700
+          animate-gradient-text hover:animate-gradient-hover transition-all duration-1000">
+          - {companyName}
+        </span>
+      )}
+    </h1>
 
+    {/* Subjudul */}
+    <p className="text-gray-400 sm:text-lg mt-2">
+      Pantau semua karyawan dan progress test perusahaan Anda secara real-time
+    </p>
 
-{/* 📊 Statistik Dashboard */}
-<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
-  {/* Total User Terdaftar */}
-  <div className="bg-white rounded-xl shadow-md p-6 flex items-center gap-4">
-    <div className="p-3 rounded-full bg-indigo-100">
-      <Users className="w-6 h-6 text-indigo-600" />
-    </div>
-    <div>
-      <h3 className="text-gray-500 text-sm">Total User Terdaftar</h3>
-      <p className="text-3xl font-bold text-indigo-600">{totalUsers}</p>
+    {/* Garis bawah animatif */}
+    <div className="mt-4 w-32 h-1 mx-auto rounded-full shadow-lg
+      bg-gradient-to-r from-blue-800 via-blue-700 to-blue-600
+      animate-pulse hover:scale-105 transition-all duration-500"></div>
+
+    {/* Ikon kecil animatif */}
+    <div className="mt-6 flex justify-center gap-4">
+      <Users className="w-6 h-6 text-blue-700 animate-bounce" />
+      <CheckCircle className="w-6 h-6 text-blue-600 animate-bounce delay-75" />
+      <XCircle className="w-6 h-6 text-blue-500 animate-bounce delay-150" />
+      <Clock className="w-6 h-6 text-blue-400 animate-bounce delay-200" />
     </div>
   </div>
 
-  {/* User yang Sudah Tes */}
-  <div className="bg-white rounded-xl shadow-md p-6 flex items-center gap-4">
-    <div className="p-3 rounded-full bg-green-100">
-      <CheckCircle className="w-6 h-6 text-green-600" />
-    </div>
-    <div>
-      <h3 className="text-gray-500 text-sm">User yang Sudah Tes</h3>
-      <p className="text-3xl font-bold text-green-600">{testedUsers}</p>
-    </div>
-  </div>
 
-  {/* User Belum Tes */}
-  <div className="bg-white rounded-xl shadow-md p-6 flex items-center gap-4">
-    <div className="p-3 rounded-full bg-red-100">
-      <XCircle className="w-6 h-6 text-red-500" />
-    </div>
-    <div>
-      <h3 className="text-gray-500 text-sm">User Belum Tes</h3>
-      <p className="text-3xl font-bold text-red-500">{notTestedUsers}</p>
-    </div>
-  </div>
+<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+  {stats.map((stat, idx) => {
+    const percentage = totalUsers ? ((stat.value / totalUsers) * 100).toFixed(0) : 0;
+    const data = [
+      { name: stat.name, value: stat.value },
+      { name: "Remaining", value: totalUsers - stat.value },
+    ];
+    const COLORS = [stat.color, "#E5E7EB"]; // second color = gray bg
+
+    // Soft background colors
+const softBg: Record<string, string> = {
+  "#6366F1": "bg-indigo-50",
+  "#10B981": "bg-green-50",
+  "#EF4444": "bg-red-50",
+  "#F59E0B": "bg-yellow-50",
+};
+
+const iconColor: Record<string, string> = {
+  "#6366F1": "text-indigo-700",
+  "#10B981": "text-green-700",
+  "#EF4444": "text-red-700",
+  "#F59E0B": "text-yellow-700",
+};
+
+    return (
+      <div
+        key={idx}
+        className={`${softBg[stat.color]} ${iconColor[stat.color]} rounded-xl shadow-md p-4 flex flex-col items-center hover:scale-105 transform transition`}
+      >
+        <div className="mb-2">{stat.icon}</div>
+        <h3 className="text-gray-500 text-sm">{stat.name}</h3>
+        <p className="text-2xl font-bold mt-1">{stat.value}</p>
+        <div className="w-24 h-24 mt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                dataKey="value"
+                innerRadius={35}
+                outerRadius={45}
+                startAngle={90}
+                endAngle={-270}
+              >
+                {data.map((entry, i) => (
+                  <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value: number) => [`${value}`, "User"]} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <p className="text-sm text-gray-400 mt-1">{percentage}% dari total</p>
+      </div>
+    );
+  })}
 </div>
+
+
 
 
    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 items-stretch">
 
-      {/* Kolom Kiri: Chart */}
-<div className="bg-white p-6 rounded-xl shadow h-full flex flex-col">
-
+  {/* Kiri: Chart */}
+  <div className="bg-white p-6 rounded-2xl shadow-md h-full flex flex-col">
     <h2 className="text-xl font-bold mb-4 text-indigo-700 text-center">Test yang Sudah Dikerjakan</h2>
     {testStats.length > 0 ? (
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={testStats} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="testName" />
-          <YAxis allowDecimals={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis dataKey="testName" tick={{ fill: "#4b5563" }} />
+          <YAxis allowDecimals={false} tick={{ fill: "#4b5563" }} />
           <Tooltip />
-          <Bar dataKey="count" fill="#4f46e5" />
+          <Bar dataKey="count" fill="#4f46e5" radius={[6, 6, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     ) : (
-      <p className="text-center text-gray-500">Belum ada data tes</p>
+      <p className="text-center text-gray-500 mt-12">Belum ada data tes</p>
     )}
   </div>
-<div className="bg-white rounded-2xl shadow-lg p-6 h-full flex flex-col">
 
-  {/* Judul Card Section */}
-  <h2 className="text-xl font-bold text-indigo-700 mb-4 text-center">
-    Test yang Sudah Dibeli
-  </h2>
+  {/* Kanan: Paket/Test Card Grid */}
+  <div className="bg-indigo-50 rounded-2xl shadow-md p-6 h-full flex flex-col overflow-y-auto">
+    <h2 className="text-xl font-bold text-indigo-700 mb-4 text-center">Test yang Sudah Dibeli</h2>
 
-  {/* Grid Cards */}
-  <div className="h-[400px] overflow-y-auto">
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {[...packagePurchases, ...singlePayments].map((p) => {
+    {/* Grid Card */}
+    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-1 gap-4 w-full">
+      {[...packagePurchases, ...singlePayments].map((p, idx) => {
         const remaining =
           "remainingQuota" in p
             ? p.remainingQuota ?? p.quantity
             : p.quantity - (p.userPackages?.length ?? 0);
         const isEmpty = remaining <= 0;
 
+        const pieData = [
+          { name: "Used", value: p.quantity - remaining },
+          { name: "Remaining", value: remaining },
+        ];
+
         return (
           <div
-            key={p.id}
-            className={`rounded-2xl shadow-md p-4 ${
-              isEmpty ? "bg-red-50" : "bg-white"
-            }`}
+            key={idx}
+            className="bg-white rounded-2xl shadow-sm p-4 flex flex-row items-center justify-between w-full transition hover:shadow-lg hover:scale-105 transform"
           >
-            <h3 className="text-lg font-bold text-indigo-700">
-              {"package" in p ? p.package?.name : p.TestType?.name}
-            </h3>
+            {/* Circle Radial Progress */}
+            <div className="w-20 h-20 flex-shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    dataKey="value"
+                    startAngle={90}
+                    endAngle={-270}
+                    innerRadius={20}
+                    outerRadius={30}
+                  >
+                    <Cell fill={isEmpty ? "#F87171" : "#4f46e5"} />
+                    <Cell fill="#E5E7EB" />
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
 
-            {"package" in p && p.package?.description && (
-              <p className="text-xs text-gray-500">{p.package.description}</p>
-            )}
-
-            <div className="flex flex-wrap gap-1 mt-2 text-sm">
-              <span className="px-2 py-1 bg-gray-100 rounded">
-                Jumlah: {p.quantity}
-              </span>
-
-              <span
-                className={`px-2 py-1 rounded ${
-                  isEmpty
-                    ? "bg-red-100 text-red-700"
-                    : "bg-green-100 text-green-700"
-                }`}
-              >
-                Sisa: {remaining}
-              </span>
-
+            {/* Info Card */}
+            <div className="flex flex-col flex-1 ml-4">
+              <h3 className="text-indigo-700 font-semibold truncate">
+                {"package" in p ? p.package?.name : p.TestType?.name}
+              </h3>
+              {"package" in p && p.package?.description && (
+                <p className="text-xs text-gray-500 truncate">{p.package.description}</p>
+              )}
+              <p className={`mt-2 text-sm font-medium ${isEmpty ? "text-red-700" : "text-green-700"}`}>
+                {remaining} / {p.quantity} tersisa
+              </p>
               {"amount" in p && (
-                <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded">
-                  Harga: Rp {p.amount.toLocaleString("id-ID")}
-                </span>
+                <p className="mt-1 text-sm text-yellow-700 font-medium">
+                  Rp {p.amount.toLocaleString("id-ID")}
+                </p>
               )}
             </div>
           </div>
@@ -570,7 +652,6 @@ useEffect(() => {
   </div>
 </div>
 
-</div>
 
 <Dialog open={openDialog} onOpenChange={setOpenDialog}>
   <DialogContent className="max-w-lg">
@@ -997,6 +1078,8 @@ setGeneratedTestId(testId ?? "");
    <tbody>
   {paginatedUsers.length > 0 ? (
     paginatedUsers.map((u) => {
+           // console.log("🚀 u:", u); // ← letakkan di sini
+
       // Tentukan status baru
       let displayStatus = u.status; // langsung pakai status dari mapping allUsers
 
@@ -1047,19 +1130,23 @@ setGeneratedTestId(testId ?? "");
             {u.startedAt ? new Date(u.startedAt).toLocaleDateString("id-ID") : "-"}
           </td>
 
-          {/* Hasil */}
-          <td className="p-4 text-center">
-            {u.result ? (
-              <a
-                  href={`/tes/hasil/${u.result.Attempt.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-indigo-600 hover:underline text-sm"
-              >
-                Lihat Hasil
-              </a>
-            ) : "-"}
-          </td>
+      {/* Hasil */}
+<td className="p-4 text-center">
+  {u.result && u.result.validated ? (
+  <a
+    href={`/tes/hasil/${u.result.Attempt.id}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-indigo-600 hover:underline text-sm"
+  >
+    Lihat Hasil
+  </a>
+) : (
+  "-"
+)}
+
+</td>
+
 
           {/* Aksi */}
           <td className="p-4 text-center">

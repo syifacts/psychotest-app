@@ -101,10 +101,76 @@ const TRIPAY_CALLBACK_URL = process.env.TRIPAY_CALLBACK_URL;
 
 export async function POST(req: NextRequest) {
   try {
-    const { testTypeId, quantity = 1, userId: targetUserId, method = "BRIVA" } = await req.json();
+    // Ambil semua input sekaligus
+    const { testTypeId, quantity = 1, userId: targetUserId, method = "BRIVA", guestToken } = await req.json();
+
+    // ----------------------
+    // 1️⃣ Cek guest token CPMI
+    // ----------------------
+    let userId: number | undefined;
+    let role: "USER" | "PERUSAHAAN" | "GUEST" | undefined;
+
+    if (guestToken) {
+      const tokenData = await prisma.token.findUnique({
+        where: { token: guestToken },
+        include: { User: true },
+      });
+
+      if (!tokenData || !tokenData.userId || !tokenData.User) {
+        return NextResponse.json({ error: "Guest token tidak valid" }, { status: 401 });
+      }
+
+      userId = tokenData.userId;
+      role = "GUEST";
+
+       // ❌ Cek apakah attempt untuk user + testType sudah ada
+  const existingAttempt = await prisma.testAttempt.findFirst({
+    where: {
+      userId,
+      testTypeId,
+    },
+  });
+
+  if (existingAttempt) {
+    return NextResponse.json({
+      success: true,
+      startTest: true,
+      attempt: existingAttempt,
+      message: "Sudah ada attempt untuk user ini",
+    });
+  }
+
+
+      // ===== Buat attempt langsung untuk guest =====
+    const attempt = await prisma.testAttempt.create({
+  data: {
+    userId,
+    testTypeId,
+    tokenId: tokenData.id,
+    status: "RESERVED",           // ✅ benar
+    companyId: tokenData.User.companyId || null, // ← ini penting
+
+    
+  },
+});
+
+      // Tandai token sebagai sudah dipakai (opsional)
+      await prisma.token.update({
+        where: { id: tokenData.id },
+        data: { used: true, usedAt: new Date() },
+      });
+
+      return NextResponse.json({
+        success: true,
+        startTest: true,
+        attempt,
+        message: "Guest token valid, langsung mulai test",
+      });
+    }
+
+    // ===== Bagian user/perusahaan tetap sama =====
     if (!testTypeId) return NextResponse.json({ error: "testTypeId wajib" }, { status: 400 });
 
-    // Ambil token dari cookie
     const cookie = req.headers.get("cookie");
     const token = cookie?.split("; ").find((c) => c.startsWith("token="))?.split("=")[1];
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -112,34 +178,42 @@ export async function POST(req: NextRequest) {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string };
     if (decoded.role === "GUEST") return NextResponse.json({ error: "Role GUEST tidak bisa bayar" }, { status: 403 });
 
-    // Ambil test info
     const test = await prisma.testType.findUnique({ where: { id: Number(testTypeId) } });
     if (!test) return NextResponse.json({ error: "Tes tidak ditemukan" }, { status: 404 });
 
     const totalAmount = (test.price || 0) * quantity;
     const finalUserId = decoded.role === "PERUSAHAAN" && targetUserId ? targetUserId : decoded.id;
 
-    // ===== Cek payment SUCCESS sebelumnya =====
     const existingPayment = await prisma.payment.findFirst({
       where: {
         testTypeId: Number(testTypeId),
         userId: finalUserId,
         status: "SUCCESS",
-        attempts: { none: {} }, // pastikan payment belum dipakai di TestAttempt
+        attempts: { none: {} },
       },
       orderBy: { createdAt: "desc" },
     });
 
     if (existingPayment) {
-      // Buat attempt langsung
-      const attempt = await prisma.testAttempt.create({
-        data: {
-          userId: finalUserId,
-          testTypeId: test.id,
-          paymentId: existingPayment.id,
-          startedAt: new Date(),
-        },
-      });
+      
+      const finalUser = await prisma.user.findUnique({
+  where: { id: finalUserId },
+});
+
+const attempt = await prisma.testAttempt.create({
+  data: {
+    userId: finalUserId,
+    testTypeId: test.id,
+    paymentId: existingPayment.id,
+    companyId: finalUser?.companyId 
+      ? finalUser.companyId 
+      : decoded.role === "PERUSAHAAN" 
+        ? decoded.id 
+        : null,
+    status: "RESERVED",       // ✅ tandai reserved dulu
+  },
+});
+
 
       return NextResponse.json({
         success: true,
@@ -150,7 +224,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // ===== Buat payment baru =====
     const payment = await prisma.payment.create({
       data: {
         testTypeId: test.id,
@@ -163,21 +236,29 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Gratis → langsung buat attempt
     if (totalAmount === 0) {
-      const attempt = await prisma.testAttempt.create({
-        data: {
-          userId: finalUserId,
-          testTypeId: test.id,
-          paymentId: payment.id,
-          startedAt: new Date(),
-        },
-      });
+     const finalUser = await prisma.user.findUnique({
+  where: { id: finalUserId },
+});
+
+const attempt = await prisma.testAttempt.create({
+  data: {
+    userId: finalUserId,
+    testTypeId: test.id,
+    paymentId: payment.id,
+    companyId: finalUser?.companyId 
+      ? finalUser.companyId 
+      : decoded.role === "PERUSAHAAN" 
+        ? decoded.id 
+        : null,
+    status: "RESERVED",           // ✅ benar
+  },
+});
+
       await prisma.payment.update({ where: { id: payment.id }, data: { status: "SUCCESS" } });
       return NextResponse.json({ success: true, payment, attempt, startTest: true, reason: "FREE" });
     }
 
-    // ===== Buat payment via Tripay =====
     const user = await prisma.user.findUnique({ where: { id: finalUserId } });
     if (!TRIPAY_API_KEY || !TRIPAY_MERCHANT_CODE || !TRIPAY_PRIVATE_KEY) {
       throw new Error("Tripay credentials tidak lengkap di environment variables");
@@ -216,7 +297,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: data.message || "Payment gateway error", details: data }, { status: 400 });
     }
 
-    // Update payment dengan Tripay info
     const updated = await prisma.payment.update({
       where: { id: payment.id },
       data: { reference: data.data.reference, paymentUrl: data.data.checkout_url, payload: data, status: "PENDING" },

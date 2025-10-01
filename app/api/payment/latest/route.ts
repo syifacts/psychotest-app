@@ -1,4 +1,3 @@
-// app/api/payment/latest/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -23,18 +22,30 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { createdAt: "desc" },
       include: {
-        attempts: true, // cek apakah payment ini sudah dipakai untuk attempt
+        attempts: {
+          orderBy: { reservedAt: "desc" },
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            reservedAt: true,
+          },
+        },
       },
     });
+
+   // console.log("💰 Payment latest:", payment);
 
     return NextResponse.json({
       payment: payment
         ? {
             ...payment,
             attemptUsed: payment.attempts.length > 0,
+            attempt: payment.attempts[0] || null,
           }
         : null,
     });
+
   } catch (err: any) {
     console.error("❌ Error di /api/payment/latest:", err);
     return NextResponse.json(
