@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import { Search } from "lucide-react";
+
 
 const Navbar = () => {
   const router = useRouter();
@@ -89,17 +91,22 @@ const Navbar = () => {
         </div>
         {!hideSearch && role !== "PSIKOLOG" && (
           <div className="search">
+ <div className="search">
+  <Search className="absolute left-3 top-1/2 -translate-y-1/2 
+    text-gray-400 w-5 h-5 pointer-events-none" />
   <input
-  type="text"
-  placeholder="Cari tes..."
-  value={searchQuery}
-  onChange={(e) => {
-    setSearchQuery(e.target.value);
-    // Push ke halaman saat ini, jangan hardcode /dashboard
-    const query = e.target.value ? `?search=${encodeURIComponent(e.target.value)}` : "";
-    router.push(`${pathname}${query}`);
-  }}
-/>
+    type="text"
+    placeholder="Cari tes..."
+    value={searchQuery}
+    onChange={(e) => {
+      setSearchQuery(e.target.value);
+      const query = e.target.value ? `?search=${encodeURIComponent(e.target.value)}` : "";
+      router.push(`${pathname}${query}`);
+    }}
+  />
+</div>
+
+
 
 </div>
 
@@ -142,12 +149,13 @@ const Navbar = () => {
           height: 90px;
         }
 
-       .left {
+.left {
   display: flex;
   align-items: center;
   gap: 20px;
-  flex: 1;
+  flex: 1;              
 }
+
 
         .right {
           display: flex;
@@ -168,15 +176,18 @@ const Navbar = () => {
           font-family: "Poppins", sans-serif;
         }
 .search {
-  flex: 1;
+  flex: 1;              /* biar input ambil semua sisa ruang */
+  position: relative;   /* untuk icon absolute */
   display: flex;
+  align-items: center;
 }
-        .search input {
-  padding: 8px 12px;
+.search input {
+  width: 100%;          /* full sampai sebelum .right */
   border: 1px solid #ddd;
   border-radius: 8px;
-  width: 100%;   /* penuh */
-  max-width: 100%;
+  padding: 8px 12px;
+  padding-left: 45px;   /* biar teks ga nabrak icon */
+  font-size: 14px;
 }
 
         .nav-links {
