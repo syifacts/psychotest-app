@@ -176,18 +176,28 @@ const Navbar = () => {
           font-family: "Poppins", sans-serif;
         }
 .search {
-  flex: 1;              /* biar input ambil semua sisa ruang */
-  position: relative;   /* untuk icon absolute */
+  flex: 1;               /* ambil semua sisa ruang di kiri */
+  position: relative;    /* supaya icon absolute ngikut */
   display: flex;
   align-items: center;
 }
+
 .search input {
-  width: 100%;          /* full sampai sebelum .right */
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 8px 12px;
-  padding-left: 45px;   /* biar teks ga nabrak icon */
+  width: 100%;           /* isi penuh parent */
+  border: 1px solid #e5e7eb;
+  border-radius: 9999px; /* full rounded */
+  padding: 10px 16px;
+  padding-left: 45px;    /* space untuk icon */
   font-size: 14px;
+  background: #f9fafb;
+  transition: all 0.3s ease;
+}
+
+.search input:focus {
+  border-color: #0070f3;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0,112,243,0.2);
+  outline: none;
 }
 
         .nav-links {
