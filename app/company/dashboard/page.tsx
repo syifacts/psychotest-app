@@ -451,7 +451,7 @@ const paginatedUsers = filteredUsers.slice(
   currentPage * USERS_PER_PAGE
 );
 const stats = [
-  { name: "Total User", value: totalUsers, icon: <Users className="w-6 h-6" />, color: "#6366F1" },
+  { name: "Total Karyawan", value: totalUsers, icon: <Users className="w-6 h-6" />, color: "#6366F1" },
   { name: "Sudah Tes", value: testedUsers, icon: <CheckCircle className="w-6 h-6" />, color: "#10B981" },
   { name: "Belum Tes", value: notTestedUsers, icon: <XCircle className="w-6 h-6" />, color: "#EF4444" },
   { name: "Sedang Diverifikasi", value: verifyingUsers, icon: <Clock className="w-6 h-6" />, color: "#F59E0B" },
@@ -517,10 +517,14 @@ useEffect(() => {
 
     // Soft background colors
 const softBg: Record<string, string> = {
-  "#6366F1": "bg-indigo-50",
-  "#10B981": "bg-green-50",
-  "#EF4444": "bg-red-50",
-  "#F59E0B": "bg-yellow-50",
+  // "#6366F1": "bg-indigo-50",
+  // "#10B981": "bg-green-50",
+  // "#EF4444": "bg-red-50",
+  // "#F59E0B": "bg-yellow-50",
+   "#6366F1": "bg-indigo-500", // biru
+      "#10B981": "bg-green-500",  // hijau
+      "#EF4444": "bg-red-500",    // merah
+      "#F59E0B": "bg-yellow-500", // kuning
 };
 
 const iconColor: Record<string, string> = {
@@ -531,34 +535,35 @@ const iconColor: Record<string, string> = {
 };
 
     return (
-      <div
-        key={idx}
-        className={`${softBg[stat.color]} ${iconColor[stat.color]} rounded-xl shadow-md p-4 flex flex-col items-center hover:scale-105 transform transition`}
-      >
-        <div className="mb-2">{stat.icon}</div>
-        <h3 className="text-gray-500 text-sm">{stat.name}</h3>
-        <p className="text-2xl font-bold mt-1">{stat.value}</p>
-        <div className="w-24 h-24 mt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                dataKey="value"
-                innerRadius={35}
-                outerRadius={45}
-                startAngle={90}
-                endAngle={-270}
-              >
-                {data.map((entry, i) => (
-                  <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value: number) => [`${value}`, "User"]} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-        <p className="text-sm text-gray-400 mt-1">{percentage}% dari total</p>
-      </div>
+    <div
+  key={idx}
+  className={`${softBg[stat.color]} rounded-xl shadow-md p-4 flex flex-col items-center hover:scale-105 transform transition`}
+>
+  <div className="mb-2 text-white">{stat.icon}</div>
+  <h3 className="text-white text-sm">{stat.name}</h3>
+  <p className="text-2xl font-bold mt-1 text-white">{stat.value}</p>
+  <div className="w-24 h-24 mt-2">
+    <ResponsiveContainer width="100%" height="100%">
+      <PieChart>
+        <Pie
+          data={data}
+          dataKey="value"
+          innerRadius={35}
+          outerRadius={45}
+          startAngle={90}
+          endAngle={-270}
+        >
+          {data.map((entry, i) => (
+            <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
+          ))}
+        </Pie>
+        <Tooltip formatter={(value: number) => [`${value}`, "User"]} />
+      </PieChart>
+    </ResponsiveContainer>
+  </div>
+  <p className="text-sm text-gray-100 mt-1">{percentage}% dari total</p>
+</div>
+
     );
   })}
 </div>

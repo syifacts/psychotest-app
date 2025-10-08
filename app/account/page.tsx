@@ -26,6 +26,13 @@ export default function AccountPage() {
   const [savedTtd, setSavedTtd] = useState<string>(""); // Untuk TTD yang sudah tersimpan
   const [isSavingTtd, setIsSavingTtd] = useState(false);
   const router = useRouter();
+const [currentPage, setCurrentPage] = useState(1);
+const [rowsPerPage, setRowsPerPage] = useState(10);
+
+// Hitung pagination
+const indexOfLastRow = currentPage * rowsPerPage;
+const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+const paginatedTests = testHistory.slice(indexOfFirstRow, indexOfLastRow);
 
   // 🔹 Ambil user via API middleware
   useEffect(() => {
@@ -370,73 +377,147 @@ export default function AccountPage() {
           </div>
         </div>
 
-        {/* Riwayat Tes hanya untuk role "USER" biasa */}
-        {!["PSIKOLOG", "SUPERADMIN", "PERUSAHAAN"].includes(user.role || "") && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Riwayat Tes</h3>
-            <div className="overflow-x-auto">
-              {isLoadingHistory ? (
-                <p className="text-center text-gray-500 py-4">Memuat riwayat...</p>
-              ) : testHistory.length > 0 ? (
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Nama Tes</th>
-                      <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Tanggal Pengerjaan</th>
-                      <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 relative"><span className="sr-only">Aksi</span></th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {testHistory.map((historyItem) => (
-                      <tr key={historyItem.id}>
-                        <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{historyItem.testType.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                          {new Date(historyItem.completedAt).toLocaleDateString('id-ID', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                          })}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              historyItem.status === "Selesai"
-                                ? "bg-green-100 text-green-800"
-                                : historyItem.status === "Sedang diverifikasi psikolog"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {historyItem.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right font-medium">
-                          {historyItem.status === "Selesai" ? (
-                            <a
-                              href={`/tes/hasil/${historyItem.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              Lihat Hasil
-                            </a>
-                          ) : (
-                            "-"
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p className="text-center text-gray-500 py-4">
-                  Anda belum pernah mengerjakan tes apapun.
-                </p>
-              )}
-            </div>
+      {/* Riwayat Tes hanya untuk role "USER" biasa */}
+{!["PSIKOLOG", "SUPERADMIN", "PERUSAHAAN"].includes(user.role || "") && (
+  <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+    <h3 className="text-lg font-semibold text-gray-900 mb-4">Riwayat Tes</h3>
+
+    {/* Statistik ringkasan tes */}
+    {!isLoadingHistory && testHistory.length > 0 && (() => {
+      const totalTes = testHistory.length;
+      const totalSelesai = testHistory.filter(t => t.status === "Selesai").length;
+      const totalVerifikasi = testHistory.filter(t => t.status === "Sedang diverifikasi psikolog").length;
+      const totalDikerjakan = testHistory.filter(t => t.status === "Dikerjakan").length || 0; // opsional jika ada status ini
+
+      return (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+          <div className="bg-blue-50 p-4 rounded-lg text-center">
+            <p className="text-xs text-blue-600 font-medium">Total Tes Dibeli</p>
+            <p className="text-2xl font-bold text-blue-700">{totalTes}</p>
           </div>
-        )}
+          <div className="bg-yellow-50 p-4 rounded-lg text-center">
+            <p className="text-xs text-yellow-600 font-medium">Sedang Diverifikasi</p>
+            <p className="text-2xl font-bold text-yellow-700">{totalVerifikasi}</p>
+          </div>
+          <div className="bg-green-50 p-4 rounded-lg text-center">
+            <p className="text-xs text-green-600 font-medium">Tes Selesai</p>
+            <p className="text-2xl font-bold text-green-700">{totalSelesai}</p>
+          </div>
+          <div className="bg-gray-50 p-4 rounded-lg text-center">
+            <p className="text-xs text-gray-600 font-medium">Sedang Dikerjakan</p>
+            <p className="text-2xl font-bold text-gray-700">{totalDikerjakan}</p>
+          </div>
+        </div>
+      );
+    })()}
+
+    {/* Pagination dan jumlah baris */}
+    <div className="flex justify-between items-center mb-4">
+      <div>
+        <label className="text-sm text-gray-700 mr-2">Rows per page:</label>
+        <select
+          value={rowsPerPage}
+          onChange={(e) => {
+            setRowsPerPage(parseInt(e.target.value));
+            setCurrentPage(1);
+          }}
+          className="border border-gray-300 rounded-md text-sm px-2 py-1"
+        >
+          <option value={10}>10</option>
+          <option value={20}>20</option>
+          <option value={50}>50</option>
+        </select>
+      </div>
+      <div className="text-sm text-gray-600">
+        Page {currentPage} of {Math.ceil(testHistory.length / rowsPerPage) || 1}
+      </div>
+    </div>
+
+    <div className="overflow-x-auto">
+      {isLoadingHistory ? (
+        <p className="text-center text-gray-500 py-4">Memuat riwayat...</p>
+      ) : testHistory.length > 0 ? (
+        <table className="min-w-full divide-y divide-gray-200 text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Nama Tes</th>
+              <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Tanggal Pengerjaan</th>
+              <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Status</th>
+               <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Hasil Test</th>
+              {/*<th className="px-6 py-3 relative"><span className="sr-only">Aksi</span></th> */ }
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {paginatedTests.map((historyItem) => (
+              <tr key={historyItem.id}>
+                <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{historyItem.testType.name}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                  {new Date(historyItem.completedAt).toLocaleDateString('id-ID', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span
+                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      historyItem.status === "Selesai"
+                        ? "bg-green-100 text-green-800"
+                        : historyItem.status === "Sedang diverifikasi psikolog"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
+                  >
+                    {historyItem.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right font-medium">
+                  {historyItem.status === "Selesai" ? (
+                    <a
+                      href={`/tes/hasil/${historyItem.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-900"
+                    >
+                      Lihat Hasil
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="text-center text-gray-500 py-4">
+          Anda belum pernah mengerjakan tes apapun.
+        </p>
+      )}
+    </div>
+
+    {/* Navigasi halaman */}
+    {!isLoadingHistory && testHistory.length > 0 && (
+      <div className="flex justify-between items-center mt-4">
+        <button
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md disabled:opacity-50 hover:bg-gray-200 transition"
+        >
+          Prev
+        </button>
+        <button
+          onClick={() => setCurrentPage((p) => Math.min(Math.ceil(testHistory.length / rowsPerPage), p + 1))}
+          disabled={currentPage === Math.ceil(testHistory.length / rowsPerPage)}
+          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md disabled:opacity-50 hover:bg-gray-200 transition"
+        >
+          Next
+        </button>
+      </div>
+    )}
+  </div>
+)}
+
 
         {/* Tombol Logout */}
         <div className="mt-8 text-center">

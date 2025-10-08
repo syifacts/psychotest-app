@@ -3,12 +3,24 @@
 import React, { useState, useEffect } from "react";
 import styles from "../../app/tes/cpmi/cpmi.module.css";
 import { useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import Image from "next/image";
+
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface Props {
   hasAccess: boolean;
   setHasAccess: (val: boolean) => void;
   startAttempt: () => Promise<void>;
-  testInfo: { id: number; duration: number | null; price?: number | null } | null;
+  testInfo: {name:string; id: number; duration: number | null; price?: number | null } | null;
   role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN";
 }
 
@@ -17,7 +29,19 @@ interface User {
   name: string;
   email: string;
   role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN";
+   phone?: string; // tambahkan ini
 }
+
+const paymentMethods = [
+  { code: "BRIVA", label: "BRIVA", logo: "/logos/briva.png" },
+  { code: "QRIS", label: "QRIS", logo: "/logos/qris.png" },
+  { code: "SPAY", label: "ShopeePay", logo: "/logos/spay.png" },
+  { code: "DANA", label: "DANA", logo: "/logos/dana.png" },
+  { code: "GOPAY", label: "GoPay", logo: "/logos/gopay.png" },
+  { code: "MANDIRI", label: "Mandiri", logo: "/logos/mandiri.png" },
+  { code: "BCA", label: "BCA", logo: "/logos/bca.png" },
+  { code: "BNI", label: "BNI", logo: "/logos/bni.png" },
+];
 
 const CPMIPaymentButton: React.FC<Props> = ({
   hasAccess,
@@ -37,7 +61,28 @@ const CPMIPaymentButton: React.FC<Props> = ({
   const [paymentStatus, setPaymentStatus] = useState<"PENDING" | "FREE" | "SUCCESS" | null>(null);
   const [tokenUser, setTokenUser] = useState<User | null>(null);
 
+const [showForm, setShowForm] = useState(false);
+const [showIdentityModal, setShowIdentityModal] = useState(false);
+const [open, setOpen] = useState(false); // state untuk dialog
 
+
+
+const [formData, setFormData] = useState({
+  fullName: "",
+  email: "",
+  phone: "",
+});
+const [method, setMethod] = useState("BRIVA"); // default BRIVA
+
+useEffect(() => {
+  if (user) {
+    setFormData({
+      fullName: user.name || "",
+      email: user.email || "",
+      phone: user.phone || "", // kalau ada field phone di db
+    });
+  }
+}, [user]);
   // ---------------------------
   // Ambil info user / token
   // ---------------------------
@@ -81,7 +126,10 @@ const guestUser: User = {
             name: dataUser.user.fullName || "",
             email: dataUser.user.email,
             role: dataUser.user.role === "PERUSAHAAN" ? "PERUSAHAAN" : "USER",
+                phone: dataUser.user.phone || "",   // ⬅️ tambahin ini
+
           });
+
         }
       } catch (err) {
         console.error("Gagal fetch user/token info:", err);
@@ -99,6 +147,8 @@ const guestUser: User = {
   useEffect(() => {
   const checkPayment = async () => {
     if (!user || !testInfo?.id) return;
+        if (paymentStatus === "SUCCESS" || hasAccess) return; // ⬅️ tambahin ini
+
 
     try {
       const res = await fetch(
@@ -133,6 +183,28 @@ const guestUser: User = {
 
   checkPayment();
 }, [user, testInfo, setHasAccess]);
+const handleSaveIdentity = async () => {
+  try {
+    const res = await fetch("/api/user/update-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: user?.id,
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Gagal update user");
+    alert("✅ Data identitas berhasil diperbarui");
+  } catch (err) {
+    console.error(err);
+    alert("❌ Gagal menyimpan identitas");
+  }
+};
+
 
   // ---------------------------
   // Handle pembayaran
@@ -171,19 +243,35 @@ const guestUser: User = {
     if (!res.ok || !data.success) {
       return alert(data.error || "❌ Pembayaran gagal!");
     }
+if (data.startTest || data.payment?.status === "FREE") {
+  setHasAccess(true);
+  setPaymentStatus(data.payment.status);
+        setOpen(false);               // ✅ auto-close modal
 
-    if (data.startTest || data.payment?.status === "FREE") {
-      setHasAccess(true);
-      setPaymentStatus(data.payment.status);
-      if (data.attempt?.id) {
-        return startAttempt();
-      }
-    }
+
+  // langsung create attempt dari frontend
+  await startAttempt();
+  return;
+}
+
 
     if (data.payment?.paymentUrl) {
       window.open(data.payment.paymentUrl, "_blank");
+       setOpen(false); // ✅ langsung tutup dialog
+  return;
     }
-
+ if (data.payment?.status === "SUCCESS") {
+      setHasAccess(true);
+      setPaymentStatus("SUCCESS");
+      setOpen(false);   
+      setFormData({
+    fullName: user?.name || "",
+    email: user?.email || "",
+    phone: user?.phone || "",
+  });
+        return;  // ⬅️ tambahkan return supaya tidak ketimpa lagi
+            // ✅ auto-close modal
+    }
     setPaymentStatus(data.payment.status);
 
   } catch (err) {
@@ -198,6 +286,7 @@ const guestUser: User = {
   // ---------------------------
  if (checkingToken) return <p>Memeriksa status tes...</p>;
 
+ 
 if (role === "SUPERADMIN") {
   return (
     <p style={{ fontWeight: 500, color: "#555" }}>
@@ -215,14 +304,16 @@ if (tokenCompleted) {
 }
 
 // TOKEN valid → langsung Mulai Tes
-// TOKEN valid → langsung Mulai Tes
 if (tokenUser && !tokenCompleted) {
   return (
-    <div>
+    <div className="text-center mt-4">
       <p>
         ✅ Sudah didaftarkan oleh perusahaan: <b>{tokenUser.name}</b>
       </p>
-      <button className={styles.btn} onClick={startAttempt}>
+      <button
+        className={`${styles.btn} mt-4`}
+        onClick={startAttempt}
+      >
         Mulai Tes
       </button>
     </div>
@@ -255,43 +346,136 @@ if (hasAccess) {
   );
 }
 
+// 🔥 STEP BARU: Modal untuk identitas + metode pembayaran
+return (
+ <Dialog open={open} onOpenChange={setOpen}>
+  <DialogTrigger asChild>
+    <Button className={styles.btn} disabled={!user || loading}>
+      {user?.role === "PERUSAHAAN"
+        ? "Beli Tes (dengan Kuantitas)"
+        : "Bayar untuk Ikut Tes"}
+    </Button>
+  </DialogTrigger>
 
-  return (
-    <div>
-      {user?.role === "PERUSAHAAN" && (
-        <div style={{ marginBottom: "12px" }}>
-          <label
-            style={{ display: "block", marginBottom: "4px", fontWeight: 500 }}
-          >
-            Jumlah Kuantitas
-          </label>
+
+  <DialogContent className="sm:max-w-3xl">
+    <DialogHeader>
+      <DialogTitle>Data Identitas & Pembayaran</DialogTitle>
+    </DialogHeader>
+
+    {/* Info singkat */}
+    <p className="mb-4 text-sm text-gray-600">
+      Dengan ini kamu akan membeli test{" "}
+      <span className="font-semibold text-gray-800">
+        {testInfo?.name ? ` ${testInfo.name}` : "yang dipilih"}
+      </span>{" "}
+      {testInfo?.price ? `(Rp ${testInfo.price.toLocaleString("id-ID")})` : ""}
+    </p>
+
+    <div className="p-3 mb-4 rounded bg-yellow-50 border border-yellow-300 text-yellow-700 text-sm">
+      ⚠️ Perhatian: Identitas yang Anda ubah akan langsung disimpan dan menggantikan data sebelumnya.
+    </div>
+
+    {/* Grid 2 kolom */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Kolom kiri: identitas */}
+      <div className="space-y-3">
+        <h4 className="font-medium mb-2">Data Identitas</h4>
+        <div>
+          <label className="block text-sm font-medium">Nama Lengkap</label>
           <input
-            type="number"
-            min={1}
-            value={quantity}
-            onChange={(e) => setQuantity(Number(e.target.value))}
-            className={styles.input}
-            style={{
-              padding: "8px",
-              border: "1px solid #ccc",
-              borderRadius: "6px",
-              width: "120px",
-            }}
+            type="text"
+            className="w-full border rounded p-2"
+            value={formData.fullName}
+            onChange={(e) =>
+              setFormData({ ...formData, fullName: e.target.value })
+            }
           />
         </div>
-      )}
 
-      <button
-        className={styles.btn}
-        onClick={handlePayment}
-        disabled={!user || loading}
-      >
-        {user?.role === "PERUSAHAAN"
-          ? "Beli Tes (dengan Kuantitas)"
-          : "Bayar untuk Ikut Tes"}
-      </button>
+        <div>
+          <label className="block text-sm font-medium">Email</label>
+          <input
+            type="email"
+            className="w-full border rounded p-2"
+            value={formData.email}
+            onChange={(e) =>
+              setFormData({ ...formData, email: e.target.value })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium">No. Telepon</label>
+          <input
+            type="text"
+            className="w-full border rounded p-2"
+            value={formData.phone}
+            onChange={(e) =>
+              setFormData({ ...formData, phone: e.target.value })
+            }
+          />
+        </div>
+
+        <Button className={styles.btn} onClick={handleSaveIdentity}>
+          Simpan Identitas
+        </Button>
+      </div>
+
+      {/* Kolom kanan: metode pembayaran */}
+      <div className="space-y-4">
+        <h4 className="font-medium mb-2">Metode Pembayaran</h4>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {paymentMethods.map((pm) => (
+            <div
+              key={pm.code}
+              className={`cursor-pointer border rounded-lg p-3 flex flex-col items-center justify-center text-center transition hover:border-blue-500 ${
+                method === pm.code
+                  ? "border-blue-600 ring-2 ring-blue-200"
+                  : "border-gray-300"
+              }`}
+              onClick={() => setMethod(pm.code)}
+            >
+              <Image
+                src={pm.logo}
+                alt={pm.label}
+                width={40}
+                height={40}
+                className="mb-2"
+              />
+              <span className="text-sm font-medium">{pm.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {user?.role === "PERUSAHAAN" && (
+          <div>
+            <label className="block text-sm font-medium">Jumlah Kuantitas</label>
+            <input
+              type="number"
+              min={1}
+              value={quantity}
+              onChange={(e) => setQuantity(Number(e.target.value))}
+              className="w-32 border rounded p-2"
+            />
+          </div>
+        )}
+
+        <Button
+          className={styles.btn + " w-full"}
+          onClick={handlePayment}
+          disabled={!user || loading}
+        >
+          Lanjutkan Pembayaran
+        </Button>
+      </div>
     </div>
-  );
+  </DialogContent>
+</Dialog>
+
+);
+
 };
 
 export default CPMIPaymentButton;

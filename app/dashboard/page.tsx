@@ -188,14 +188,14 @@ const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
       >
         <LayoutGrid size={20}/>
       </button>
-      <button 
+      {/* <button 
         onClick={() => setView('masonry')}
         className={`p-2 rounded-lg transition-colors duration-300 ${
           view==='masonry' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 border'
         }`}
       >
         <Layout size={20}/>
-      </button>
+      </button> */}
     </div>
   </motion.div>
 </motion.div>
@@ -260,7 +260,7 @@ const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
   </div>
 )}
 
-        {view === 'masonry' && (
+        {/* {view === 'masonry' && (
           <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
             {filteredTests.map((test, index) => (
               <AnimatedOnScroll key={index} delay={0.05 * index} duration={0.6}>
@@ -279,7 +279,7 @@ const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
               </AnimatedOnScroll>
             ))}
           </div>
-        )}
+        )} */}
       </div>
     </main>
   );

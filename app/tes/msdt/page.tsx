@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./msdt.module.css";
 import MSDTIntro from "@/components/MSDT/MSDTIntro";
+import BiodataForm from "@/components/MSDT/BiodataForm";
+import MSDTInstruction from "@/components/MSDT/MSDTInstruction";
 
 interface Question {
   id: number;
@@ -24,7 +26,7 @@ const TesMSDTPage = () => {
 
   const [user, setUser] = useState<{ id: number; role: "USER" | "PERUSAHAAN" } | null>(null);
   const [role, setRole] = useState<"USER" | "PERUSAHAAN">("USER");
-  const [testInfo, setTestInfo] = useState<{ id: number; duration: number; name?: string } | null>(null);
+  const [testInfo, setTestInfo] = useState<{ id: number; duration: number; name: string } | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [accessReason, setAccessReason] = useState("");
 
@@ -35,6 +37,8 @@ const TesMSDTPage = () => {
   const [attemptId, setAttemptId] = useState<number | null>(null);
 
   const [showIntro, setShowIntro] = useState(true);
+   const [showBiodata, setShowBiodata] = useState(false);   // ✅ tambahan
+  const [showInstruction, setShowInstruction] = useState(false); // ✅ tambahan
   const [showQuestions, setShowQuestions] = useState(false);
 
   // -------------------------
@@ -74,7 +78,15 @@ const TesMSDTPage = () => {
       const data = await res.json();
       const qList: Question[] = Array.isArray(data) ? data : data.questions;
       setQuestions(qList || []);
+      //setTimeLeft(testInfo?.duration ? testInfo.duration * 60 : 30 * 60);
+        // ✅ hitung ulang sisa waktu dari endTime
+    const savedEnd = localStorage.getItem("endTime");
+    if (savedEnd) {
+      const diff = Math.max(0, Math.floor((new Date(savedEnd).getTime() - Date.now()) / 1000));
+      setTimeLeft(diff);
+    } else {
       setTimeLeft(testInfo?.duration ? testInfo.duration * 60 : 30 * 60);
+    }
     } catch (err) {
       console.error(err);
     }
@@ -89,6 +101,8 @@ const TesMSDTPage = () => {
     localStorage.removeItem("attemptId");
     localStorage.removeItem("endTime");
     localStorage.removeItem("currentIndex");
+    localStorage.setItem("stage", "biodata"); 
+
 
     setAttemptId(null);
     setAnswers({});
@@ -115,11 +129,38 @@ const TesMSDTPage = () => {
 
       await loadQuestions();
       setShowIntro(false);
-      setShowQuestions(true);
+      setShowBiodata(true);
+
+      //setShowQuestions(true);
     } catch (err) {
       console.error(err);
     }
   };
+useEffect(() => {
+  const savedStage = localStorage.getItem("stage");
+  const savedAttemptId = localStorage.getItem("attemptId");
+  const savedIndex = localStorage.getItem("currentIndex");
+  const savedAnswers = localStorage.getItem("answers");
+
+  if (savedAttemptId && savedStage) {
+    setAttemptId(Number(savedAttemptId));
+   if (savedAnswers) {
+      setAnswers(JSON.parse(savedAnswers)); // ✅ restore jawaban
+    }
+    if (savedStage === "biodata") {
+      setShowIntro(false);
+      setShowBiodata(true);
+    } else if (savedStage === "instruction") {
+      setShowIntro(false);
+      setShowInstruction(true);
+    } else if (savedStage === "questions") {
+      setShowIntro(false);
+      setShowQuestions(true);
+      if (savedIndex) setCurrentIndex(Number(savedIndex));
+      loadQuestions();
+    }
+  }
+}, []);
 
   // -------------------------
   // Timer
@@ -147,7 +188,9 @@ const TesMSDTPage = () => {
   // Pilih jawaban
   // -------------------------
   const handleSelectAnswer = async (qid: number, choice: string) => {
-    setAnswers((prev) => ({ ...prev, [qid]: choice }));
+    const newAnswers = { ...answers, [qid]: choice };
+  setAnswers(newAnswers);
+  localStorage.setItem("answers", JSON.stringify(newAnswers)); // ✅ simpan jawaban
 
     if (!user || !attemptId) return;
     try {
@@ -166,6 +209,21 @@ const TesMSDTPage = () => {
       console.error(err);
     }
   };
+const handleNext = () => {
+  setCurrentIndex(i => {
+    const newIndex = i + 1;
+    localStorage.setItem("currentIndex", newIndex.toString());
+    return newIndex;
+  });
+};
+
+const handleBack = () => {
+  setCurrentIndex(i => {
+    const newIndex = i - 1;
+    localStorage.setItem("currentIndex", newIndex.toString());
+    return newIndex;
+  });
+};
 
   // -------------------------
   // Submit test
@@ -220,6 +278,32 @@ const TesMSDTPage = () => {
       />
     );
   }
+   // ✅ setelah start → tampilkan biodata
+  if (showBiodata) {
+    return (
+      <BiodataForm onSaved={() => {
+        setShowBiodata(false);
+        setShowInstruction(true); // lanjut ke instruksi
+        localStorage.setItem("stage", "instruction");
+
+      }} />
+    );
+  }
+
+   // ✅ setelah biodata → instruksi
+if (showInstruction) {
+  return (
+    <MSDTInstruction
+      onStartTest={async () => {
+        await loadQuestions();
+        setShowInstruction(false);
+        setShowQuestions(true);
+        localStorage.setItem("stage", "questions");
+
+      }}
+    />
+  );
+}
 
   if (showQuestions && currentQuestion) {
     return (
@@ -227,6 +311,8 @@ const TesMSDTPage = () => {
         <div className={styles.header}>
           <h1 className={styles.title}>{testInfo?.name || "Tes MSDT"}</h1>
           <div className={styles.timer}>⏳ {formatTime(timeLeft)}</div>
+    
+
         </div>
 
         <div className={styles.mainContent}>
@@ -250,13 +336,31 @@ const TesMSDTPage = () => {
             </ul>
 
             <div className={styles.navButtons}>
-              <button className={styles.backBtn} onClick={() => setCurrentIndex(i => i - 1)} disabled={currentIndex === 0}>← Back</button>
-              {currentIndex < questions.length - 1 ? (
-                <button className={styles.btn} onClick={() => setCurrentIndex(i => i + 1)}>Next →</button>
-              ) : (
-                <button className={styles.btn} onClick={handleSubmit}>Submit Tes</button>
-              )}
-            </div>
+  <button
+    className={styles.backBtn}
+    onClick={handleBack}
+    disabled={currentIndex === 0}
+  >
+    ← Back
+  </button>
+  {currentIndex < questions.length - 1 ? (
+    <button className={styles.btn} onClick={handleNext}>Next →</button>
+  ) : (
+    <button className={styles.btn} onClick={handleSubmit}>Submit Tes</button>
+  )}
+</div>
+<div className="mt-4 text-center">
+  <button
+    onClick={() => {
+      setShowInstruction(true);
+      setShowQuestions(false);
+      localStorage.setItem("stage", "instruction");
+    }}
+    className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+  >
+    📖 Lihat Instruksi
+  </button>
+</div>
           </div>
 
           <div className={styles.answerCard}>

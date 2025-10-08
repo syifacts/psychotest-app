@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import CPMIIntro from "../../../components/CPMI/CPMIIntro";
 import CPMIInstruction from "@/components/CPMI/CPMIInstruction";
 import BiodataForm from "@/components/CPMI/BiodataForm";
+import { ArrowLeft } from "lucide-react";
 
 interface Question {
   id: number;
@@ -575,13 +576,11 @@ case "questions":
           </div>
            {/* Tombol kembali ke instruksi */}
           <button
-  className={styles.backBtn}
-  style={{ marginBottom: "12px" }}
   onClick={() => setStep("instruction")}
+  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 hover:bg-gray-100 transition-all duration-200 text-sm font-medium text-gray-700 shadow-sm mb-3"
 >
-  ← Kembali ke Instruksi
+  <ArrowLeft size={16} /> Kembali ke Instruksi
 </button>
-
         </div>
         
 

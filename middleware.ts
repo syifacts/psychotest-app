@@ -77,6 +77,11 @@ export async function middleware(req: NextRequest) {
   if (guestTestPaths.some(p => path.startsWith(p))) {
     return NextResponse.next();
   }
+  // 🚫 Blokir akses guest ke halaman /account
+if (path.startsWith("/account")) {
+  url.pathname = "/login";
+  return NextResponse.redirect(url);
+}
 
   // 4️⃣ Halaman publik lain
   if (publicPaths.includes(path) || publicPaths.some(p => path.startsWith(p))) {

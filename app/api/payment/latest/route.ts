@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-   // console.log("💰 Payment latest:", payment);
+   console.log("💰 Payment latest:", payment);
 
     return NextResponse.json({
       payment: payment

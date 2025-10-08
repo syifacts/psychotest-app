@@ -7,11 +7,14 @@ import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer';
 // Import semua template PDF
 import ReportISTDocument from '../../../../components/report/reportDocument';
 import ReportCPMIDocument from '../../../../components/report/reportDocumentCPMI';
+import ReportMSDTDocument from '@/components/report/reportDocumentMSDT';
 
 // Mapping testType → PDF component
 const PDFComponents: Record<string, any> = {
   IST: ReportISTDocument,
   CPMI: ReportCPMIDocument,
+    MSDT: ReportMSDTDocument, // ✅ tambahkan ini
+
 };
 
 export default function HasilPage() {
@@ -20,6 +23,7 @@ export default function HasilPage() {
   const [subtestResults, setSubtestResults] = useState<any[]>([]);
   const [result, setResult] = useState<any | null>(null);
   const [cpmiResult, setCpmiResult] = useState<any | null>(null); 
+    const [msdtResult, setmsdtResult] = useState<any | null>(null); 
 const [kesimpulan, setKesimpulan] = useState({
   kesimpulan: '',
   kesimpulanSikap: '',
@@ -83,6 +87,7 @@ useEffect(() => {
       setSubtestResults(data.subtestResults || []);
       setResult(data.result || null);
       setCpmiResult(data.cpmiResult || null);
+      setmsdtResult(data.msdtResult || null);
 
       // Ambil source data: CPMI kalau ada, kalau tidak pakai result
       const source = data.cpmiResult || data.result || {};
@@ -106,6 +111,7 @@ useEffect(() => {
   };
 
   fetchReport();
+
 }, [id]);
 
 
@@ -126,8 +132,9 @@ useEffect(() => {
   }
 
   // Tentukan jenis tes
-  const rawTestType = attempt.TestType?.name || attempt.TestType?.code || attempt.TestType?.id || 'IST';
-  const testType = String(rawTestType).toUpperCase();
+const rawTestType = attempt.TestType?.name || attempt.TestType?.code || attempt.TestType?.id || 'IST';
+const testType = String(rawTestType).toUpperCase();
+
   const PDFTemplate = PDFComponents[testType] || ReportISTDocument;
 
   const fileName = `${attempt.TestType?.name || 'Tes'}_${attempt.User?.fullName || 'User'}.pdf`.replace(/\s+/g, '_');
@@ -148,12 +155,24 @@ kesimpulanumum: kesimpulan.kesimpulanumum,
         ttd,          // ✅ sekarang sudah ada
         barcode: cpmiResult.barcode,
       };
-    } else {
+    } 
+    else if (testType === 'MSDT' && msdtResult) {
+    return {
+     attempt,
+           result: msdtResult,       // MSDT pakai result utama
+          kesimpulan: msdtResult?.kesimpulan || kesimpulan,
+          ttd,
+  barcode: msdtResult?.barcode,
+    barcodettd: msdtResult?.barcodettd,
+    expiresAt: msdtResult?.expiresAt
+    };
+  }
+  else {
       return {
         attempt,
         subtestResults,
         result,
-        kesimpulan,
+       // kesimpulan,
         ttd,
          barcode: result?.barcode,
       };
@@ -189,6 +208,7 @@ kesimpulanumum: kesimpulan.kesimpulanumum,
       </div>
 
       {/* Preview PDF */}
+      
       <div className="flex-grow">
         <PDFViewer style={{ width: '100%', height: '100%' }}>
           <PDFTemplate {...pdfProps} />

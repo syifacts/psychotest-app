@@ -33,6 +33,8 @@ export async function GET(req: Request) {
             ttdUrl: true,
             createdAt: true,
             updatedAt: true,
+            phone: true,
+            
           },
         });
         if (userFromDB) return NextResponse.json({ user: userFromDB });
@@ -55,6 +57,7 @@ export async function GET(req: Request) {
             ttdUrl: true,
             createdAt: true,
             updatedAt: true,
+            phone: true,
           },
         });
 
