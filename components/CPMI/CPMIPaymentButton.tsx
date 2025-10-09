@@ -5,6 +5,7 @@ import styles from "../../app/tes/cpmi/cpmi.module.css";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { motion } from "framer-motion";
 
 
 import {
@@ -307,11 +308,16 @@ if (tokenCompleted) {
 if (tokenUser && !tokenCompleted) {
   return (
     <div className="text-center mt-4">
-      <p>
-        ✅ Sudah didaftarkan oleh perusahaan: <b>{tokenUser.name}</b>
-      </p>
+      <motion.p
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-sm bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 px-4 py-3 rounded-xl mb-6 border border-blue-200 flex items-center gap-2 justify-center"
+      >
+        <span className="text-xl">🏢</span>
+        <span>Sudah didaftarkan oleh perusahaan ({tokenUser.name})</span>
+      </motion.p>
       <button
-        className={`${styles.btn} mt-4`}
+        className={`${styles.btn} mt-1`}
         onClick={startAttempt}
       >
         Mulai Tes
@@ -336,7 +342,17 @@ if (user?.role === "GUEST" && hasAccess) {
 }
 
 // USER / PERUSAHAAN yang sudah bayar → Mulai Tes
-if (hasAccess) {
+// if (hasAccess) {
+//   return (
+//     <div>
+//       <button className={styles.btn} onClick={startAttempt}>
+//         Mulai Tes
+//       </button>
+//     </div>
+//   );
+// }
+
+if (hasAccess && user?.role !== "PERUSAHAAN") {
   return (
     <div>
       <button className={styles.btn} onClick={startAttempt}>
@@ -345,6 +361,7 @@ if (hasAccess) {
     </div>
   );
 }
+
 
 // 🔥 STEP BARU: Modal untuk identitas + metode pembayaran
 return (

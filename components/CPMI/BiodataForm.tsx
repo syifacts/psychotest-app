@@ -136,7 +136,8 @@ if (loading) return <p>Memuat data...</p>;
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal menyimpan biodata");
 
-      alert(`✅ Biodata berhasil disimpan! Usia: ${data.usia} tahun`);
+      //alert(`✅ Biodata berhasil disimpan! Usia: ${data.usia} tahun`);
+      alert(`✅ Biodata berhasil disimpan!`);
       if (onSaved) onSaved();
     } catch (err: any) {
       alert("❌ " + err.message);
@@ -147,82 +148,118 @@ if (loading) return <p>Memuat data...</p>;
 
   return (
     <form
-      onSubmit={handleSubmit}
-      className="max-w-lg mx-auto p-6 border rounded-lg shadow-md"
-    >
-      <h2 className="text-xl font-bold mb-4">Isi Biodata</h2>
-
-      <label className="block mb-2 font-semibold">User ID / Custom ID</label>
-      <input
-        type="text"
-        value={tokenData?.customId ?? ""}
-        disabled
-        className="w-full p-2 mb-4 border rounded bg-gray-100"
-      />
-
-      <label className="block mb-2 font-semibold">Nama Lengkap</label>
-      <input
-        type="text"
-        value={fullName}
-        onChange={(e) => setFullName(e.target.value)}
-        className="w-full p-2 mb-4 border rounded"
-      />
-
-      <label className="block mb-2 font-semibold">Tanggal Lahir</label>
-      <input
-        type="date"
-        value={birthDate}
-        onChange={(e) => setBirthDate(e.target.value)}
-        className="w-full p-2 mb-4 border rounded"
-      />
-
-      <label className="block mb-2 font-semibold">Jenis Kelamin</label>
-      <select
-        value={gender}
-        onChange={(e) => setGender(e.target.value as typeof genders[number])}
-        className="w-full p-2 mb-4 border rounded"
-      >
-        <option value="">Pilih</option>
-        {genders.map((g) => (
-          <option key={g} value={g}>
-            {g}
-          </option>
-        ))}
-      </select>
-<label className="block mb-2 font-semibold">Pendidikan</label>
-<select
-  value={education}
-  onChange={(e) => setEducation(e.target.value)}
-  className="w-full p-2 mb-4 border rounded"
+  onSubmit={handleSubmit}
+  className="mt-15 max-w-lg mx-auto bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-blue-100"
 >
-  <option value="">-- Pilih Pendidikan --</option>
-  <option value="SMA/SMK">SMA/SMK</option>
-  <option value="Diploma">Diploma</option>
-  <option value="Sarjana">Sarjana (S1)</option>
-  <option value="Magister">Magister (S2)</option>
-  <option value="Doktor">Doktor (S3)</option>
-</select>
+  {/* Judul Form */}
+  <h2 className="text-2xl font-bold mb-6 text-center text-blue-700">
+    📝 Isi Biodata Diri
+  </h2>
 
+  {/* User ID */}
+  <div className="mb-5">
+    <label className="block mb-2 font-semibold text-gray-700">
+      User ID / Custom ID
+    </label>
+    <input
+      type="text"
+      value={tokenData?.customId ?? ""}
+      disabled
+      className="w-full p-3 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+    />
+  </div>
 
-      <label className="block mb-2 font-semibold">Melamar Untuk</label>
-      <input
-        type="text"
-        value={tujuan}
-        onChange={(e) => setTujuan(e.target.value)}
-        placeholder="Masukkan posisi yang dilamar"
-        className="w-full p-2 mb-4 border rounded"
-      />
+  {/* Nama */}
+  <div className="mb-5">
+    <label className="block mb-2 font-semibold text-gray-700">
+      Nama Lengkap
+    </label>
+    <input
+      type="text"
+      value={fullName}
+      onChange={(e) => setFullName(e.target.value)}
+      placeholder="Masukkan nama lengkap"
+      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all"
+    />
+  </div>
 
-      <button
-        type="submit"
-        className={`w-full p-2 rounded bg-blue-600 text-white font-semibold ${
-          loading ? "opacity-50" : ""
-        }`}
-        disabled={loading}
-      >
-        {loading ? "Menyimpan..." : "Simpan Biodata"}
-      </button>
-    </form>
+  {/* Tanggal Lahir */}
+  <div className="mb-5">
+    <label className="block mb-2 font-semibold text-gray-700">
+      Tanggal Lahir
+    </label>
+    <input
+      type="date"
+      value={birthDate}
+      onChange={(e) => setBirthDate(e.target.value)}
+      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all"
+    />
+  </div>
+
+  {/* Jenis Kelamin */}
+  <div className="mb-5">
+    <label className="block mb-2 font-semibold text-gray-700">
+      Jenis Kelamin
+    </label>
+    <select
+      value={gender}
+      onChange={(e) => setGender(e.target.value as typeof genders[number])}
+      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white"
+    >
+      <option value="">Pilih</option>
+      {genders.map((g) => (
+        <option key={g} value={g}>
+          {g}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  {/* Pendidikan */}
+  <div className="mb-5">
+    <label className="block mb-2 font-semibold text-gray-700">Pendidikan</label>
+    <select
+      value={education}
+      onChange={(e) => setEducation(e.target.value)}
+      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white"
+    >
+      <option value="">-- Pilih Pendidikan --</option>
+      <option value="SMA/SMK">SMA/SMK</option>
+      <option value="Diploma">Diploma</option>
+      <option value="Sarjana">Sarjana (S1)</option>
+      <option value="Magister">Magister (S2)</option>
+      <option value="Doktor">Doktor (S3)</option>
+    </select>
+  </div>
+
+  {/* Tujuan */}
+  <div className="mb-6">
+    <label className="block mb-2 font-semibold text-gray-700">
+      Melamar Untuk
+    </label>
+    <input
+      type="text"
+      value={tujuan}
+      onChange={(e) => setTujuan(e.target.value)}
+      placeholder="Masukkan posisi yang dilamar"
+      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all"
+    />
+  </div>
+
+  {/* Tombol Simpan */}
+  <button
+    type="submit"
+    disabled={loading}
+    className={`w-full py-3 rounded-lg font-semibold text-white transition-all shadow-md ${
+      loading
+        ? "bg-blue-400 cursor-not-allowed"
+        : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:scale-[1.02] hover:shadow-lg"
+    }`}
+  >
+    {loading ? "Menyimpan..." : "💾 Simpan Biodata"}
+  </button>
+</form>
+
   );
 };
 

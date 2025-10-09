@@ -104,6 +104,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             ? {
                 fullName: istResultRaw.ValidatedBy.fullName,
                 lembagalayanan: istResultRaw.ValidatedBy.lembagalayanan,
+                
               }
             : null,
         }
@@ -247,6 +248,8 @@ saranpengembangan: saranPengembangan,
       ? {
           fullName: cpmiResultRaw.ValidatedBy.fullName,
           lembagalayanan: cpmiResultRaw.ValidatedBy.lembagalayanan,
+          strNumber: cpmiResultRaw.ValidatedBy.strNumber,
+          sippNumber: cpmiResultRaw.ValidatedBy.sippNumber,
         }
       : null,
 

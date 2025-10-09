@@ -456,8 +456,8 @@ case "questions":
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Soal CPMI</h1>
-        <div className={styles.timer}>⏳ {formatTime(timeLeft)}</div>
+<h1 className={`${styles.title} mt-15`}>Soal Tes WPT untuk CPMI</h1>
+<div className={`${styles.timer} mt-15`}>⏳ {formatTime(timeLeft)}</div>
       </div>
 
       <div className={styles.mainContent}>
@@ -513,17 +513,18 @@ case "questions":
                 handleSelectAnswer(currentQuestion.id, currentQuestion.code, String(idx + 1))
               }
             />
-            <span>
-              {isImage ? (
-                <img
-                  src={opt}
-                  alt={`Pilihan ${idx + 1}`}
-                  style={{ maxWidth: "150px", display: "block", marginTop: "5px" }}
-                />
-              ) : (
-                `${idx + 1}. ${opt}`
-              )}
-            </span>
+           <span className="flex items-center gap-3">
+  {isImage ? (
+    <img
+      src={opt}
+      alt={`Pilihan ${idx + 1}`}
+      className="w-28 h-auto rounded-md object-contain border"
+    />
+  ) : (
+    <span className="text-gray-700 font-medium">{`${idx + 1}. ${opt}`}</span>
+  )}
+</span>
+
           </label>
         </li>
       );
@@ -546,42 +547,61 @@ case "questions":
       </div>
     )}
   <textarea
-    className={styles.essayInput}
-    value={answers[currentQuestion.code] || ""}
-    onChange={(e) =>
-      handleSelectAnswer(currentQuestion.id, currentQuestion.code, e.target.value)
-    }
-    placeholder="Tuliskan jawaban Anda di sini..."
-    rows={5}
-  />
+  className="mt-5 w-full p-4 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all duration-200 shadow-sm bg-gray-50 resize-none text-gray-800 placeholder-gray-400"
+  value={answers[currentQuestion.code] || ""}
+  onChange={(e) =>
+    handleSelectAnswer(currentQuestion.id, currentQuestion.code, e.target.value)
+  }
+  placeholder="✏️ Tuliskan jawaban Anda di sini..."
+  rows={6}
+/>
+
  </div>
           )}
 
           {/* Navigasi Back / Next / Submit */}
-          <div className={styles.navButtons}>
-            <button
-              className={styles.backBtn}
-              onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
-              disabled={currentIndex === 0}
-            >
-              ← Back
-            </button>
-            {currentIndex < questions.length - 1 ? (
-              <button className={styles.btn} onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}>
-                Next →
-              </button>
-            ) : (
-              <button className={styles.btn} onClick={handleSubmit}>Submit Tes</button>
-            )}
-          </div>
-           {/* Tombol kembali ke instruksi */}
-          <button
-  onClick={() => setStep("instruction")}
-  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 hover:bg-gray-100 transition-all duration-200 text-sm font-medium text-gray-700 shadow-sm mb-3"
->
-  <ArrowLeft size={16} /> Kembali ke Instruksi
-</button>
-        </div>
+<div className="flex justify-between items-center mt-10 space-x-4">
+  <button
+    onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+    disabled={currentIndex === 0}
+    className={`px-6 py-3 rounded-lg font-semibold transition-all shadow-sm border
+      ${
+        currentIndex === 0
+          ? "bg-gray-200 text-gray-400 cursor-not-allowed border-gray-200"
+          : "bg-white text-blue-600 border-blue-500 hover:bg-blue-50 hover:scale-[1.03]"
+      }`}
+  >
+    ← Kembali
+  </button>
+
+  {currentIndex < questions.length - 1 ? (
+    <button
+      onClick={() =>
+        setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))
+      }
+      className="px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-indigo-600 hover:to-blue-600 hover:scale-[1.03] transition-all shadow-md"
+    >
+      Selanjutnya →
+    </button>
+  ) : (
+    <button
+      onClick={handleSubmit}
+      className="px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-emerald-600 hover:to-green-600 hover:scale-[1.03] transition-all shadow-md"
+    >
+      ✅ Submit Tes
+    </button>
+  )}
+</div>
+
+        <div className="mt-8 flex justify-center pb-8 mt-30">
+    <button
+      onClick={() => setStep("instruction")}
+      className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-300 hover:bg-gray-100 transition-all duration-200 text-sm font-medium text-gray-700 shadow-sm bg-white"
+    >
+      <ArrowLeft size={16} /> Kembali ke Instruksi
+    </button>
+  </div>
+</div>
         
 
         {/* Ringkasan Jawaban */}

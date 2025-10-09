@@ -13,6 +13,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       select: {
         id: true,
         customId: true,
+        education:true,
         fullName: true,
         birthDate: true,
         gender: true,

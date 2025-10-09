@@ -1,4 +1,4 @@
-export const CPMIquestions = [
+export const TIU6questions = [
   {
     content: "/TIU6latihansoal1.png",
     image: "/TIU6latihansoal1_1.png",

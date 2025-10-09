@@ -122,6 +122,8 @@ if (status && status !== "all") {
             fullName: true,
             ttdUrl: true,
             ttdHash: true,
+             strNumber: true,   // tambahkan
+        sippNumber: true,
           },
         },
       },
@@ -149,6 +151,8 @@ if (status && status !== "all") {
             fullName: true,
             ttdUrl: true,
             ttdHash: true,
+             strNumber: true,   // tambahkan
+        sippNumber: true,
           },
         },
       },
@@ -232,7 +236,8 @@ export async function POST(req: NextRequest) {
       result = await prisma.result.findUnique({
         where: { id: reportId },
         include: {
-          User: { select: { id: true, fullName: true, ttdUrl: true, ttdHash: true } },
+          User: { select: { id: true, fullName: true, ttdUrl: true, ttdHash: true,  strNumber: true,   // tambahkan
+        sippNumber: true, } },
           ValidatedBy: true,
         },
       });

@@ -107,6 +107,8 @@ const handleSubmit = async () => {
     if (modalRole === "PSIKOLOG") {
       payload.lembagalayanan = formData.lembagalayanan || "";
       payload.phone = formData.phone || "";
+       payload.strNumber = formData.strNumber || "";
+  payload.sippNumber = formData.sippNumber || "";
     } else if (modalRole === "PERUSAHAAN") {
       payload.address = formData.address || "";
     }
@@ -429,6 +431,22 @@ const handleDelete = async (id: number) => {
             value={formData.phone || ""}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
           />
+
+              {/* Tambahan STR/SIK dan SIPP/SIPPK */}
+    <input
+      type="text"
+      placeholder="Nomor STR/SIK"
+      className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+      value={formData.strNumber || ""}
+      onChange={(e) => setFormData({ ...formData, strNumber: e.target.value })}
+    />
+    <input
+      type="text"
+      placeholder="Nomor SIPP/SIPPK"
+      className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+      value={formData.sippNumber || ""}
+      onChange={(e) => setFormData({ ...formData, sippNumber: e.target.value })}
+    />
         </>
       ) : (
         <>

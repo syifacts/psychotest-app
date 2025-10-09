@@ -4,7 +4,7 @@ import Link from "next/link"
 import type React from "react"
 import { useState, useEffect } from "react"
 import { motion, Variants, cubicBezier } from "framer-motion"
-import CPMIPaymentButton from "./CPMIPaymentButton"
+import CPMIPaymentButton from "../CPMI/CPMIPaymentButton"
 import Navbar from "../layout/navbar"
 
 interface Props {
@@ -31,13 +31,10 @@ interface Props {
   role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN"
 }
 
-const CPMIIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAttempt, role, accessReason }) => {
+const TIU6Intro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAttempt, role, accessReason }) => {
   const [currentRole, setCurrentRole] = useState<"USER" | "PERUSAHAAN" | "SUPERADMIN" | "GUEST">("GUEST")
 
-  const isCompanyAccess = 
-  (role === "USER" || role === "GUEST") && 
-  accessReason?.startsWith("Sudah didaftarkan oleh perusahaan");
-
+  const isCompanyAccess = accessReason?.startsWith("Sudah didaftarkan oleh perusahaan")
 
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include" })
@@ -324,7 +321,7 @@ const CPMIIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
                   transition={{ type: "spring", stiffness: 300 }}
                 >
                   <img
-                    src={testInfo?.img || "/cpmi.jpg"}
+                    src={testInfo?.img || "/fallback.jpg"}
                     alt="Ilustrasi Tes CPMI"
                     className="w-full h-64 object-cover"
                   />
@@ -491,4 +488,4 @@ const CPMIIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
   )
 }
 
-export default CPMIIntro
+export default TIU6Intro

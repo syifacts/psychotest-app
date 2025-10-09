@@ -405,6 +405,41 @@ const testStats = testTypes.map((t) => {
     count,
   };
 });
+const mergePayment = (existingPayments: Payment[], newPayment: Payment) => {
+  // cek apakah payment untuk TestType ini sudah ada
+  const existing = existingPayments.find(
+    (p) => p.TestType.id === newPayment.TestType.id
+  );
+
+  if (existing) {
+    // jika ada, jumlahkan quantity dan tetap gunakan userPackages lama
+    const used = existing.userPackages?.length ?? 0;
+    const total = existing.quantity + newPayment.quantity;
+
+    return existingPayments.map((p) =>
+      p.TestType.id === newPayment.TestType.id
+        ? {
+            ...p,
+            quantity: total,
+            remainingQuota: total - used,
+          }
+        : p
+    );
+  } else {
+    // jika belum ada, tambahkan baru
+    return [
+      ...existingPayments,
+      {
+        ...newPayment,
+        remainingQuota: newPayment.quantity - (newPayment.userPackages?.length ?? 0),
+      },
+    ];
+  }
+};
+// Merge semua singlePayments agar jenis tes sama digabung
+const mergedSinglePayments = singlePayments.reduce((acc, payment) => {
+  return mergePayment(acc, payment);
+}, [] as Payment[]);
 
   // Statistik user
 // Statistik user berdasarkan allUsers
@@ -485,7 +520,20 @@ useEffect(() => {
         </span>
       )}
     </h1>
-
+{/* Pesan selamat datang */}
+<p
+  className="text-gray-500 sm:text-lg mt-4 flex items-center justify-center gap-2 
+  animate-fade-in transition-all duration-700"
+>
+  <span className="text-indigo-600 text-2xl animate-pulse">🏢</span>
+  <span>
+    Selamat datang kembali {" "}
+    <span className="font-semibold text-indigo-700">
+      {companyName || "Anda"}
+    </span>
+   
+  </span>
+</p>
     {/* Subjudul */}
     <p className="text-gray-400 sm:text-lg mt-2">
       Pantau semua karyawan dan progress test perusahaan Anda secara real-time
@@ -591,24 +639,25 @@ const iconColor: Record<string, string> = {
     )}
   </div>
 
+
   {/* Kanan: Paket/Test Card Grid */}
   <div className="bg-indigo-50 rounded-2xl shadow-md p-6 h-full flex flex-col overflow-y-auto">
     <h2 className="text-xl font-bold text-indigo-700 mb-4 text-center">Test yang Sudah Dibeli</h2>
 
     {/* Grid Card */}
     <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-1 gap-4 w-full">
-      {[...packagePurchases, ...singlePayments].map((p, idx) => {
-        const remaining =
-          "remainingQuota" in p
-            ? p.remainingQuota ?? p.quantity
-            : p.quantity - (p.userPackages?.length ?? 0);
-        const isEmpty = remaining <= 0;
+   {[...packagePurchases, ...mergedSinglePayments].map((p, idx) => {
+  const remaining =
+    "remainingQuota" in p
+      ? p.remainingQuota ?? p.quantity
+      : p.quantity - (p.userPackages?.length ?? 0);
 
-        const pieData = [
-          { name: "Used", value: p.quantity - remaining },
-          { name: "Remaining", value: remaining },
-        ];
+  const isEmpty = remaining <= 0;
 
+  const pieData = [
+    { name: "Used", value: p.quantity - remaining },
+    { name: "Remaining", value: remaining },
+  ];
         return (
           <div
             key={idx}
@@ -680,6 +729,7 @@ const iconColor: Record<string, string> = {
 
       {/* Pilih Paket / Test */}
       <div>
+        
         <label className="block text-sm font-medium mb-1">
           {assignTarget === "PACKAGE" ? "Pilih Paket" : "Pilih Test"}
         </label>
@@ -697,18 +747,19 @@ const iconColor: Record<string, string> = {
             ))}
           </select>
         ) : (
-          <select
-            value={selectedTest ?? ""}
-            onChange={(e) => setSelectedTest(parseInt(e.target.value))}
-            className="w-full border rounded-lg p-2"
-          >
-            <option value="">-- Pilih Test --</option>
-            {singlePayments.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.TestType?.name} (Sisa {p.remainingQuota ?? (p.quantity - (p.userPackages?.length ?? 0))})
-              </option>
-            ))}
-          </select>
+         <select
+  value={selectedTest ?? ""}
+  onChange={(e) => setSelectedTest(parseInt(e.target.value))}
+  className="w-full border rounded-lg p-2"
+>
+  <option value="">-- Pilih Test --</option>
+  {mergedSinglePayments.map((p) => (
+    <option key={p.id} value={p.id}>
+      {p.TestType?.name} (Sisa {p.remainingQuota})
+    </option>
+  ))}
+</select>
+
         )}
       </div>
 

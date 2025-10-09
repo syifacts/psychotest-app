@@ -380,6 +380,15 @@ if (paymentStatus === "SUCCESS" || paymentStatus === "FINISHED") {
   );
 }
 
+if (hasAccess && user?.role !== "PERUSAHAAN") {
+  return (
+    <div>
+      <button className={styles.btn} onClick={startAttempt}>
+        Mulai Tes
+      </button>
+    </div>
+  );
+}
 
 
 

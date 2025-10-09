@@ -251,14 +251,15 @@ const paginatedTests = testHistory.slice(indexOfFirstRow, indexOfLastRow);
         {/* TTD Section - hanya untuk PSIKOLOG */}
         {user.role === "PSIKOLOG" && (
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Tanda Tangan Digital</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Tanda Tangan Digital</h3> 
             
             {/* TTD yang sudah tersimpan */}
             {savedTtd && (
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              {/*  <label className="block text-sm font-medium text-gray-700 mb-2">
                   TTD Tersimpan:
-                </label>
+                </label> */}
+                {/* 
                 <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 flex items-center justify-center">
                   {savedTtd && savedTtd.startsWith("data:image") && (
   <img
@@ -269,6 +270,8 @@ const paginatedTests = testHistory.slice(indexOfFirstRow, indexOfLastRow);
 )}
 
                 </div>
+                */}
+
                 {/* <div className="mt-2 flex justify-end">
                   <button
                     onClick={handleDeleteTtd}

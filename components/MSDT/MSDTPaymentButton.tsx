@@ -342,6 +342,16 @@ if (hasAccess) {
   );
 }
 
+if (hasAccess && user?.role !== "PERUSAHAAN") {
+  return (
+    <div>
+      <button className={styles.btn} onClick={startAttempt}>
+        Mulai Tes
+      </button>
+    </div>
+  );
+}
+
 // 🔥 STEP BARU: Modal untuk identitas + metode pembayaran
 return (
  <Dialog open={open} onOpenChange={setOpen}>

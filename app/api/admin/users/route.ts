@@ -12,6 +12,8 @@ export async function POST(req: NextRequest) {
       birthDate,
       gender,
       education,
+       strNumber,
+  sippNumber,
       lembagalayanan,
       organization,
       address,
@@ -48,6 +50,8 @@ export async function POST(req: NextRequest) {
       newUser.birthDate = birthDate ? new Date(birthDate) : null;
       newUser.gender = gender || null;
       newUser.education = education || null;
+       newUser.strNumber = strNumber || null;
+  newUser.sippNumber = sippNumber || null;
     } else if (role === "PERUSAHAAN") {
       newUser.address = address || null;
     }

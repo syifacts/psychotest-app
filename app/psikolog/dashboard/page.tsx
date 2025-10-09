@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { motion } from "framer-motion";
+import { Brain, Heart, Activity, UserCircle } from "lucide-react";
 import Navbar from "@/components/layout/navbar";
 import {
   BarChart,
@@ -69,7 +71,16 @@ export default function DashboardKeseluruhan() {
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const router = useRouter();
-  
+   const [psychologistName, setPsychologistName] = useState<string>("");
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user?.fullName) setPsychologistName(data.user.fullName);
+      });
+  }, []);
+
 // Tambahkan state untuk pagination
 const [currentPage, setCurrentPage] = useState<number>(1);
 const [rowsPerPage, setRowsPerPage] = useState<number>(10);
@@ -293,12 +304,75 @@ setOverallStatsBySource(
   const pendingCount = reports.filter((r) => !r.validated).length;
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="relative min-h-screen bg-gray-50 overflow-hidden">
+      {/* 🔮 GLOBAL PAGE BLOBS (background seluruh halaman) */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-32 -left-20 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob" />
+        <div className="absolute top-40 right-0 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000" />
+        <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000" />
+      </div>
       <Navbar />
 
       <div className="p-6 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800">Dashboard</h1>
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 p-8 shadow-md mb-10">
+      {/* 🔮 Blob Background */}
+      <motion.div
+        className="absolute -top-10 -left-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"
+        animate={{ x: [0, 30, -30, 0], y: [0, 20, -20, 0] }}
+        transition={{ duration: 9, repeat: Infinity }}
+      />
+      <motion.div
+        className="absolute top-0 right-0 w-64 h-64 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"
+        animate={{ x: [0, -20, 20, 0], y: [0, -10, 10, 0] }}
+        transition={{ duration: 11, repeat: Infinity }}
+      />
 
+      {/* 🧭 Header Content */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="relative z-10 text-center"
+      >
+        <h1
+          className="text-4xl sm:text-5xl font-extrabold mb-4 mt-6 bg-clip-text text-transparent
+          bg-gradient-to-r from-blue-800 via-indigo-700 to-purple-600
+          animate-gradient-text hover:animate-gradient-hover transition-all duration-1000"
+        >
+          Dashboard Psikolog
+          {psychologistName && (
+            <span
+              className="ml-2 bg-clip-text text-transparent
+              bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-700
+              animate-gradient-text hover:animate-gradient-hover transition-all duration-1000"
+            >
+              - {psychologistName}
+            </span>
+          )}
+        </h1>
+
+        <p className="text-gray-600 mt-2">
+          Selamat datang kembali,{" "}
+          <span className="font-semibold text-indigo-700">
+            {psychologistName || "Psikolog"}
+          </span>
+          ! 🧠
+        </p>
+
+        {/* Ikon Section */}
+        <div className="flex justify-center gap-6 mt-6 text-indigo-600">
+          {[Brain, Heart, Activity, UserCircle].map((Icon, i) => (
+            <motion.div
+              key={i}
+              whileHover={{ scale: 1.25, rotate: i % 2 === 0 ? 10 : -10 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Icon size={30} />
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+    </div>
 
 {/* 🔹 Summary Cards (2x2 Grid) */}
 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">

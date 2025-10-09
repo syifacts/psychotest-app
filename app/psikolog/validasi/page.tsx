@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import Navbar from "@/components/layout/navbar";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { motion } from "framer-motion";
+import { ClipboardCheck, Clock, FileSearch } from "lucide-react";
+
+
 
 interface Report {
   id: number;
@@ -134,36 +138,85 @@ const filteredReports = reports.filter((r) => {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <Navbar />
-      <div className="p-6 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800">Validasi oleh Psikolog</h1>
+        <main className="relative min-h-screen bg-gray-50 overflow-hidden">
+      {/* 🔮 GLOBAL PAGE BLOBS */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-32 -left-20 w-96 h-96 bg-purple-300 rounded-full mix-blend-overlay filter blur-3xl opacity-40 animate-blob" />
+        <div className="absolute top-40 right-0 w-96 h-96 bg-blue-300 rounded-full mix-blend-overlay filter blur-3xl opacity-40 animate-blob animation-delay-2000" />
+        <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-pink-300 rounded-full mix-blend-overlay filter blur-3xl opacity-40 animate-blob animation-delay-4000" />
+      </div>
 
-        {/* Tabs */}
-        <div className="flex gap-3 mb-6">
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition ${tab === "pending" ? "bg-blue-600 text-white shadow" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
+      <Navbar />
+      {/* ✨ Page Container */}
+      <div className="p-6 max-w-7xl mx-auto">
+        {/* 🧭 Header Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          className="text-center mb-10"
+        >
+          <h1
+            className="text-4xl sm:text-5xl font-extrabold mb-4 mt-6 bg-clip-text text-transparent 
+            bg-gradient-to-r from-blue-800 via-indigo-700 to-purple-600"
+          >
+            Validasi oleh Psikolog
+          </h1>
+          <p className="text-gray-600 text-lg">
+            Kelola hasil tes dan lakukan validasi dengan mudah 🧠
+          </p>
+        </motion.div>
+       {/* 🧩 Tabs */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="flex justify-center gap-4 mb-10"
+        >
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all duration-300 shadow-sm ${
+              tab === "pending"
+                ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
             onClick={() => setTab("pending")}
           >
-            Pending
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition ${tab === "history" ? "bg-green-600 text-white shadow" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
+            <Clock size={18} /> Pending
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all duration-300 shadow-sm ${
+              tab === "history"
+                ? "bg-green-600 text-white shadow-md shadow-green-200"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
             onClick={() => setTab("history")}
           >
-            History
-          </button>
-        </div>
+            <ClipboardCheck size={18} /> History
+          </motion.button>
+        </motion.div>
+
+       
 
         {/* 🔹 Global Filters */}
-        <div className="bg-white p-4 rounded-xl shadow mb-6 flex flex-wrap gap-4">
-          <input
-            type="text"
-            placeholder="Cari nama user..."
-            value={searchUser}
-            onChange={(e) => setSearchUser(e.target.value)}
-            className="p-2 border rounded-md flex-1"
-          />
+      <div className="bg-white p-4 rounded-xl shadow mb-6 flex flex-wrap gap-4 items-center">
+  <div className="relative flex-1 min-w-[250px]">
+    <FileSearch
+      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+      size={20}
+    />
+    <input
+      type="text"
+      placeholder="Cari nama user..."
+      value={searchUser}
+      onChange={(e) => setSearchUser(e.target.value)}
+      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+    />
+  </div>
            {/* Filter tanggal */}
 <input
   type="date"
