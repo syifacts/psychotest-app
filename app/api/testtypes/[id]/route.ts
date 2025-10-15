@@ -25,6 +25,9 @@ export async function GET(req: Request, { params }: Params) {
       pointbenefit: true,
       price: true,
       duration: true,
+      priceDiscount: true,
+      percentDiscount: true,
+    noteDiscount: true,
     },
   });
 
@@ -53,6 +56,9 @@ export async function PUT(req: Request, { params }: Params) {
       pointbenefit: body.pointbenefit,
       price: body.price,
       duration: body.duration,
+      priceDiscount: body.priceDiscount,
+    noteDiscount: body.noteDiscount,
+      percentDiscount: body.percentDiscount, // ✅ samakan dengan nama di schema Prisma
     },
   });
 

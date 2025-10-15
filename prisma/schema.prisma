@@ -73,6 +73,8 @@ model User {
   companyPayments              Payment[] @relation("CompanyPayments") 
   tokens      Token[]
     companyAttempts    TestAttempt[]       @relation("CompanyTestAttempt")
+      companyPricings  CompanyPricing[]
+
 
 }
 
@@ -105,6 +107,9 @@ model TestType {
   createdAt     DateTime       @default(now())
   duration      Int
   price         Int?
+  priceDiscount  Int?     // harga diskon otomatis
+  percentDiscount Int?     // ⬅️ ubah ke Int
+  noteDiscount   String?  // keterangan promo, misal: "Flash Sale Oktober"
   judul         String?
   deskripsijudul  String? @db.Text
   juduldesk1     String?
@@ -129,6 +134,8 @@ model TestType {
   preferenceQuestions PreferenceQuestion[]
   personalityDescriptions PersonalityDescription[] // Relasi ke deskripsi personality
   personalityResults      PersonalityResult[]    // Relasi ke hasil personality
+  companyPricings  CompanyPricing[]
+
 }
 
 // ------------------
@@ -390,7 +397,11 @@ model Payment {
   paymentUrl  String?       // URL pembayaran dari Tripay (opsional)
   payload     Json?         // response lengkap dari Tripay (opsional)
   paidAt      DateTime?    
-  expiredAt   DateTime?    
+  expiredAt   DateTime? 
+  promoId Int? 
+  companyPricingId Int? // harga khusus yang dipakai kalau ada
+
+   
 
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -400,6 +411,10 @@ model Payment {
   TestType    TestType      @relation(fields: [testTypeId], references: [id])
   attempts    TestAttempt[]
   company     User?         @relation("CompanyPayments", fields: [companyId], references: [id])
+  Promo   Promo? @relation(fields: [promoId], references: [id])
+  CompanyPricing    CompanyPricing? @relation(fields: [companyPricingId], references: [id])
+
+
 }
 
 // ------------------
@@ -543,4 +558,42 @@ model PersonalityDescription {
   PersonalityResults PersonalityResult[]
 
   @@unique([testTypeId, type])
+}
+model CompanyPricing {
+  id           Int       @id @default(autoincrement())
+  companyId    Int
+  testTypeId   Int
+  customPrice  Int?      // harga khusus
+  discountNominal Int?   // potongan nominal (optional)
+  discountNote String?   // catatan, misal: "Deal dokter Piet 200k"
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+payments Payment[]
+
+  company      User      @relation(fields: [companyId], references: [id])
+  testType     TestType  @relation(fields: [testTypeId], references: [id])
+
+  @@unique([companyId, testTypeId])
+}
+model Promo {
+  id           Int        @id @default(autoincrement())
+  name         String
+  code         String?    @unique // kalau mau promo pakai kode
+  type         String     // 'NOMINAL', 'PERCENT', 'BUNDLE'
+  value        Int        // misal 50000 untuk nominal, 10 untuk persen, 1 untuk bundle gratis
+  minPurchase  Int?       // minimal pembelian (untuk bundle/promo tertentu)
+  maxDiscount  Int?       // batas maksimal diskon
+  validFrom    DateTime?
+  validUntil   DateTime?
+  isActive     Boolean    @default(true)
+
+  // Optional: promo hanya untuk perusahaan/test tertentu
+  //applicableCompanies CompanyPricingPromo[]
+  //applicableTests     TestPromo[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+    payments     Payment[]
+
 }

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Navbar from "@/components/layout/navbar";
 import { Pencil, Search } from "lucide-react"; // icon dari lucide-react
+import FinanceReportPage from "@/components/admin/FinanceReport";
+import { motion } from "framer-motion"
 
 interface TestType {
   id: number;
@@ -17,6 +19,10 @@ interface TestType {
   judulbenefit?: string;
   pointbenefit?: string;
   price?: number;
+  priceDiscount?: number;
+noteDiscount?: string;
+percentDiscount?: number;
+
   duration?: string;
 }
 
@@ -25,6 +31,8 @@ export default function MasterTestPage() {
   const [selected, setSelected] = useState<TestType | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"master" | "finance">("master");
+
 
   useEffect(() => {
     fetch("/api/testtypes")
@@ -71,7 +79,88 @@ export default function MasterTestPage() {
     <>
       <Navbar />
       <div className="p-6">
-        <h1 className="text-3xl font-bold mb-6 text-blue-700">Master Data Test</h1>
+      <div className="relative mb-10">
+  {/* Blob Background */}
+  <div className="absolute -top-5 -left-10 w-60 h-60 bg-gradient-to-r from-blue-300 to-purple-400 rounded-full filter blur-3xl opacity-30 -z-10 animate-blob"></div>
+  <div className="absolute -bottom-10 -right-10 w-72 h-72 bg-gradient-to-r from-green-300 to-teal-400 rounded-full filter blur-3xl opacity-30 -z-10 animate-blob animation-delay-2000"></div>
+
+<div className="relative flex flex-col items-center text-center mb-10 mt-15">
+  
+
+  {/* Judul Tab */}
+  <motion.h2
+    className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 drop-shadow-lg mb-3"
+    initial={{ opacity: 0, y: -30 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.7 }}
+  >
+    {activeTab === "master" ? "Master Test" : "Laporan Keuangan"}
+  </motion.h2>
+
+  {/* Deskripsi */}
+  <motion.p
+    className="text-gray-600 text-lg md:text-xl max-w-2xl"
+    initial={{ opacity: 0, y: -10 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.7, delay: 0.3 }}
+  >
+    {activeTab === "master"
+      ? "Kelola seluruh data dan pengaturan tes psikologi di sistem."
+      : "Lihat dan ekspor laporan keuangan dari seluruh transaksi yang terjadi."}
+  </motion.p>
+</div>
+
+{/* Tailwind custom animation */}
+<style jsx>{`
+  @keyframes blob {
+    0% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(30px, -20px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
+  .animate-blob {
+    animation: blob 8s infinite;
+  }
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+`}</style>
+
+  {/* Buttons */}
+  <div className="flex gap-4 mt-20 ml-10">
+    <motion.button
+      className={`px-5 py-2 rounded-lg font-medium text-white shadow-md transition-all duration-300 ${
+        activeTab === "master"
+          ? "bg-gradient-to-r from-blue-500 to-purple-500"
+          : "bg-gray-200 text-gray-700"
+      }`}
+      onClick={() => setActiveTab("master")}
+      whileHover={{ scale: 1.08 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      Master Test
+    </motion.button>
+
+    <motion.button
+      className={`px-5 py-2 rounded-lg font-medium text-white shadow-md transition-all duration-300 ${
+        activeTab === "finance"
+          ? "bg-gradient-to-r from-green-400 to-teal-500"
+          : "bg-gray-200 text-gray-700"
+      }`}
+      onClick={() => setActiveTab("finance")}
+      whileHover={{ scale: 1.08 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      Laporan Keuangan
+    </motion.button>
+  </div>
+</div>
+
+
+ {/* Master Test Content */}
+    {activeTab === "master" && (
+      <div className="p-6">
+       {/* <h1 className="text-3xl font-bold mb-6 text-blue-700">Master Data Test</h1>  */}
 
         {/* Search Bar */}
         <div className="mb-4 relative w-full md:w-1/2">
@@ -93,6 +182,7 @@ export default function MasterTestPage() {
                 <th className="border px-4 py-2 text-left">ID</th>
                 <th className="border px-4 py-2 text-left">Nama Test</th>
                 <th className="border px-4 py-2 text-left">Deskripsi</th>
+                <th className="border px-4 py-2 text-left">Harga</th>
                 <th className="border px-4 py-2 text-center">Aksi</th>
               </tr>
             </thead>
@@ -105,6 +195,25 @@ export default function MasterTestPage() {
                   <td className="border px-4 py-2">{test.id}</td>
                   <td className="border px-4 py-2 font-medium">{test.name}</td>
                   <td className="border px-4 py-2 text-gray-600">{test.desc}</td>
+                  <td className="border px-4 py-2">
+  {typeof test.price === "number" ? (
+    test.priceDiscount && test.priceDiscount < test.price ? (
+      <div>
+        <p className="line-through text-gray-400 text-sm">
+          Rp {test.price.toLocaleString("id-ID")}
+        </p>
+        <p className="text-green-600 font-semibold">
+          Rp {test.priceDiscount.toLocaleString("id-ID")}
+        </p>
+      </div>
+    ) : (
+      <p>Rp {test.price.toLocaleString("id-ID")}</p>
+    )
+  ) : (
+    <p>-</p> // tampilkan tanda "-" kalau harga belum ada
+  )}
+</td>
+
                   <td className="border px-4 py-2 text-center">
                     <button
                       className="flex items-center gap-1 justify-center bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded-lg shadow transition"
@@ -259,35 +368,91 @@ export default function MasterTestPage() {
         </div>
 
         {/* Price & Duration Section */}
-        <div className="p-4 border rounded-xl shadow-sm bg-purple-50">
-          <h3 className="font-semibold text-lg mb-3 text-purple-700">Price & Duration</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col">
-              <label className="font-medium mb-1">Duration (menit)</label>
-              <input
-                type="number"
-                className="border rounded px-3 py-2 focus:ring-2 focus:ring-purple-400 focus:outline-none"
-                value={selected.duration || ""}
-                onChange={(e) =>
-                  setSelected({ ...selected, duration: e.target.value })
-                }
-                placeholder="Durasi test"
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className="font-medium mb-1">Price</label>
-              <input
-                type="number"
-                className="border rounded px-3 py-2 focus:ring-2 focus:ring-purple-400 focus:outline-none"
-                value={selected.price || ""}
-                onChange={(e) =>
-                  setSelected({ ...selected, price: Number(e.target.value) })
-                }
-                placeholder="Harga test"
-              />
-            </div>
-          </div>
-        </div>
+       {/* Price & Duration Section */}
+<div className="p-4 border rounded-xl shadow-sm bg-purple-50">
+  <h3 className="font-semibold text-lg mb-3 text-purple-700">Price & Duration</h3>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="flex flex-col">
+      <label className="font-medium mb-1">Duration (menit)</label>
+      <input
+        type="number"
+        className="border rounded px-3 py-2 focus:ring-2 focus:ring-purple-400 focus:outline-none"
+        value={selected.duration || ""}
+        onChange={(e) =>
+          setSelected({ ...selected, duration: e.target.value })
+        }
+        placeholder="Durasi test"
+      />
+    </div>
+
+    <div className="flex flex-col">
+      <label className="font-medium mb-1">Harga Asli</label>
+      <input
+        type="number"
+        className="border rounded px-3 py-2 focus:ring-2 focus:ring-purple-400 focus:outline-none"
+        value={selected.price || ""}
+        onChange={(e) =>
+          setSelected({ ...selected, price: Number(e.target.value) })
+        }
+        placeholder="Harga test"
+      />
+    </div>
+
+    <div className="flex flex-col">
+      <label className="font-medium mb-1 text-purple-700">Harga Setelah Diskon (Opsional)</label>
+      <input
+        type="number"
+        className="border rounded px-3 py-2 focus:ring-2 focus:ring-purple-400 focus:outline-none"
+        value={selected.priceDiscount || ""}
+        onChange={(e) =>
+          setSelected({ ...selected, priceDiscount: Number(e.target.value) })
+        }
+        placeholder="Masukkan harga promo, contoh: 90000"
+      />
+      <p className="text-sm text-gray-500 mt-1">
+        Jika kosong, maka harga asli akan digunakan.
+      </p>
+    </div>
+   <div className="flex flex-col">
+      <label className="font-medium mb-1 text-purple-700">Discount (%) Opsional</label>
+  <input
+    type="number"
+    min="0"
+    max="100"
+    className="border rounded px-3 py-2 focus:ring-2 focus:ring-purple-400 focus:outline-none"
+    value={selected.percentDiscount ?? ""}
+    onChange={(e) => {
+      const percentDiscount = parseInt(e.target.value) || 0; // ✅ samakan nama
+      const newDiscountPrice =
+        selected.price && percentDiscount
+          ? selected.price - (selected.price * percentDiscount) / 100
+          : selected.price;
+      setSelected({
+        ...selected,
+        percentDiscount, // ✅ nama sama
+        priceDiscount: newDiscountPrice,
+      });
+    }}
+    placeholder="Persentase diskon (contoh: 20)"
+  />
+</div>
+
+
+    <div className="flex flex-col">
+      <label className="font-medium mb-1 text-purple-700">Catatan Diskon</label>
+      <input
+        type="text"
+        className="border rounded px-3 py-2 focus:ring-2 focus:ring-purple-400 focus:outline-none"
+        value={selected.noteDiscount || ""}
+        onChange={(e) =>
+          setSelected({ ...selected, noteDiscount: e.target.value })
+        }
+        placeholder="Contoh: Promo akhir tahun"
+      />
+    </div>
+  </div>
+</div>
+
       </div>
 
       {/* Buttons */}
@@ -309,8 +474,13 @@ export default function MasterTestPage() {
     </div>
   </div>
 )}
-
-      </div>
-    </>
+</div>
+    )}
+    {/* Finance Tab Content */}
+      {activeTab === "finance" && <FinanceReportPage />}
+    </div>
+  </>
+   
+    
   );
 }

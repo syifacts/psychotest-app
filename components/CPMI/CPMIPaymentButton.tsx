@@ -21,7 +21,9 @@ interface Props {
   hasAccess: boolean;
   setHasAccess: (val: boolean) => void;
   startAttempt: () => Promise<void>;
-  testInfo: {name:string; id: number; duration: number | null; price?: number | null } | null;
+  testInfo: {name:string; id: number; duration: number | null; price?: number | null ;   customPrice?: number | null;  // <- tambahkan ini
+  discountNominal?: number | null; // optional kalau nanti pakai diskon
+  discountNote?: string | null;   } | null;
   role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN";
 }
 
@@ -65,7 +67,88 @@ const CPMIPaymentButton: React.FC<Props> = ({
 const [showForm, setShowForm] = useState(false);
 const [showIdentityModal, setShowIdentityModal] = useState(false);
 const [open, setOpen] = useState(false); // state untuk dialog
+// const displayPrice = (() => {
+//   if (!testInfo) return 0;
 
+//   if (testInfo.customPrice != null) return testInfo.customPrice;
+
+//   if (testInfo.discountNominal != null) {
+//     const basePrice = testInfo.price ?? 0;
+//     return Math.round(basePrice * (1 - testInfo.discountNominal / 100));
+//   }
+
+//   return testInfo.price ?? 0;
+// })();
+const getFinalPrice = (testInfo: any) => {
+  if (!testInfo) return 0;
+
+  const { price, customPrice, discountNominal, priceDiscount, percentDiscount } = testInfo;
+
+  // 1️⃣ Prioritas: customPrice
+  if (customPrice != null && customPrice > 0) return customPrice;
+
+  // 2️⃣ Jika ada discountNominal (penanda harga sudah final)
+  // ❌ jangan dikurangi lagi, pakai price apa adanya
+  if (discountNominal != null && price != null) return price;
+
+  // 3️⃣ Jika ada priceDiscount dari backend
+  if (priceDiscount != null && priceDiscount > 0 && priceDiscount < (price ?? 0)) return priceDiscount;
+
+  // 4️⃣ Jika ada percentDiscount dari database
+  if (percentDiscount != null && percentDiscount > 0 && price != null) return Math.round(price - (price * percentDiscount) / 100);
+
+  // 5️⃣ Default: harga normal
+  return price ?? 0;
+};
+
+// const displayPrice = (() => {
+//   if (!testInfo) return 0;
+
+//   const {
+//     price,
+//     customPrice,
+//     discountNominal,
+//     priceDiscount,
+//     percentDiscount,
+//   } = testInfo as any;
+
+//   // ✅ 1. Prioritas: custom price
+//   if (customPrice != null) return customPrice;
+
+//   // ✅ 2. Jika ada discountNominal (penanda harga sudah final) → tampilkan price apa adanya
+//   if (discountNominal != null && price != null) {
+//     return price; // ✅ jangan dikurangin lagi
+//   }
+
+//   // ✅ 3. Jika ada harga diskon langsung dari backend
+//   if (priceDiscount != null && priceDiscount < (price ?? 0)) {
+//     return priceDiscount;
+//   }
+
+//   // ✅ 4. Jika ada diskon persen dari database
+//   if (percentDiscount != null && price != null) {
+//     const discounted = price - (price * percentDiscount) / 100;
+//     return Math.round(discounted);
+//   }
+
+//   // ✅ 5. Default harga normal
+//   return price ?? 0;
+// })();
+
+// const unitPrice = testInfo?.customPrice != null
+//   ? testInfo.customPrice
+//   : testInfo?.discountNominal != null
+//     ? Math.round((testInfo.price ?? 0) * (1 - testInfo.discountNominal / 100))
+//     : testInfo?.price ?? 0;
+
+// const totalPrice = unitPrice * quantity;
+
+// const unitPrice = testInfo?.price ?? 0;  // ✅ harga final langsung dari backend
+// const totalPrice = unitPrice * quantity;
+
+const displayPrice = getFinalPrice(testInfo);
+const unitPrice = displayPrice;
+const totalPrice = displayPrice * quantity;
 
 
 const [formData, setFormData] = useState({
@@ -380,14 +463,17 @@ return (
       <DialogTitle>Data Identitas & Pembayaran</DialogTitle>
     </DialogHeader>
 
-    {/* Info singkat */}
-    <p className="mb-4 text-sm text-gray-600">
-      Dengan ini kamu akan membeli test{" "}
-      <span className="font-semibold text-gray-800">
-        {testInfo?.name ? ` ${testInfo.name}` : "yang dipilih"}
-      </span>{" "}
-      {testInfo?.price ? `(Rp ${testInfo.price.toLocaleString("id-ID")})` : ""}
-    </p>
+   {/* Info singkat */}
+<p className="mb-4 text-sm text-gray-600">
+  Dengan ini kamu akan membeli test{" "}
+  <span className="font-semibold text-gray-800">
+    {testInfo?.name ?? "yang dipilih"}
+  </span>{" "}
+  (Rp {displayPrice.toLocaleString("id-ID")})
+</p>
+
+
+
 
     <div className="p-3 mb-4 rounded bg-yellow-50 border border-yellow-300 text-yellow-700 text-sm">
       ⚠️ Perhatian: Identitas yang Anda ubah akan langsung disimpan dan menggantikan data sebelumnya.
@@ -467,17 +553,42 @@ return (
         </div>
 
         {user?.role === "PERUSAHAAN" && (
-          <div>
-            <label className="block text-sm font-medium">Jumlah Kuantitas</label>
-            <input
-              type="number"
-              min={1}
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-              className="w-32 border rounded p-2"
-            />
-          </div>
-        )}
+  <div className="mb-4">
+    <label className="block text-sm font-medium mb-1 text-gray-700">
+      Jumlah Kuantitas
+    </label>
+    <input
+      type="number"
+      min={1}
+      value={quantity}
+      onChange={(e) => setQuantity(Number(e.target.value))}
+      className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+    />
+  </div>
+)}
+
+        {/* Ringkasan Harga */}
+<div className="p-4 mb-4 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 text-blue-900 text-sm shadow-sm">
+  <h4 className="font-medium mb-2">Ringkasan Pembayaran</h4>
+  <div className="flex justify-between mb-1">
+    <span>Harga Satuan:</span>
+    <span>Rp {displayPrice.toLocaleString("id-ID")}</span>
+  </div>
+
+  {user?.role === "PERUSAHAAN" && (
+    <div className="flex justify-between mb-1">
+      <span>Kuantitas:</span>
+      <span>{quantity}</span>
+    </div>
+  )}
+
+  <div className="flex justify-between mt-2 pt-2 border-t border-blue-200 font-semibold text-blue-800">
+    <span>Total:</span>
+    <span>Rp {(displayPrice * quantity).toLocaleString("id-ID")}</span>
+  </div>
+</div>
+
+
 
         <Button
           className={styles.btn + " w-full"}

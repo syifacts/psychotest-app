@@ -39,6 +39,22 @@ const [filterCompany, setFilterCompany] = useState("all");
 const [filterDate, setFilterDate] = useState("all");
 const [startDate, setStartDate] = useState("");
 const [endDate, setEndDate] = useState("");
+const [testTypes, setTestTypes] = useState<any[]>([]);
+
+
+React.useEffect(() => {
+  const fetchTestTypes = async () => {
+    try {
+      const res = await fetch("/api/testtypes"); // pastikan API ini tersedia
+      const data = await res.json();
+      setTestTypes(data);
+    } catch (error) {
+      console.error("Gagal mengambil test types:", error);
+    }
+  };
+
+  fetchTestTypes();
+}, []);
 
 
   // Modal state
@@ -58,6 +74,8 @@ const filteredUsers = users.filter((u) => {
   const matchName = u.fullName.toLowerCase().includes(search.toLowerCase());
   const matchCompany = filterCompany === "all" || (u.companyName || "-") === filterCompany;
 
+
+  
   // 🔹 Filter tanggal (range)
   let matchDate = true;
   if (startDate || endDate) {
@@ -98,12 +116,31 @@ const handleOpenModal = async (role: "PSIKOLOG" | "PERUSAHAAN") => {
   }
 };
 
+React.useEffect(() => {
+  if (modalRole === "PERUSAHAAN" && testTypes.length > 0) {
+    const cpmi = testTypes.find((t) => t.name.toUpperCase() === "CPMI");
+    if (cpmi) {
+      setFormData((prev: any) => ({
+        ...prev,
+        testTypeId: cpmi.id.toString(),
+      }));
+    }
+  }
+}, [testTypes, modalRole]);
 
 
 // Di handleSubmit, generate password sebelum POST
 const handleSubmit = async () => {
   try {
     const payload: any = { role: modalRole, ...formData, password: generatedPassword };
+ if (modalRole === "PERUSAHAAN") {
+  payload.address = formData.address || "";
+  payload.customPrice = formData.customPrice ? parseInt(formData.customPrice) : null;
+  payload.discountNominal = formData.discountNominal ? parseInt(formData.discountNominal) : null;
+  payload.testTypeId = formData.testTypeId ? parseInt(formData.testTypeId) : null;
+  payload.discountNote = formData.discountNote || "";
+}
+
     if (modalRole === "PSIKOLOG") {
       payload.lembagalayanan = formData.lembagalayanan || "";
       payload.phone = formData.phone || "";
@@ -471,7 +508,43 @@ const handleDelete = async (id: number) => {
             value={formData.email || ""}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           />
+<input
+  type="number"
+  placeholder="Harga Khusus (opsional)"
+  className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
+  value={formData.customPrice || ""}
+  onChange={(e) => setFormData({ ...formData, customPrice: e.target.value })}
+/>
+<input
+  type="number"
+  placeholder="Potongan (%) (opsional)"
+  className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
+  value={formData.discountNominal || ""}
+  onChange={(e) =>
+    setFormData({ ...formData, discountNominal: e.target.value })
+  }
+/>
 
+ <label>Jenis Tes</label>
+      <select
+  value={formData.testTypeId || ""}
+  onChange={(e) => setFormData({ ...formData, testTypeId: e.target.value })}
+>
+  <option value="">Pilih Jenis Tes</option>
+  {testTypes.map((test: any) => (
+    <option key={test.id} value={test.id}>
+      {test.name}
+    </option>
+  ))}
+</select>
+
+{/* <input
+  type="text"
+  placeholder="Catatan Diskon (opsional)"
+  className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
+  value={formData.discountNote || ""}
+  onChange={(e) => setFormData({ ...formData, discountNote: e.target.value })}
+/> */}
           {generatedPassword && (
             <input
               type="text"

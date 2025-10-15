@@ -181,7 +181,52 @@ export async function POST(req: NextRequest) {
     const test = await prisma.testType.findUnique({ where: { id: Number(testTypeId) } });
     if (!test) return NextResponse.json({ error: "Tes tidak ditemukan" }, { status: 404 });
 
-    const totalAmount = (test.price || 0) * quantity;
+   // const totalAmount = (test.price || 0) * quantity;
+ // Ambil harga default dari TestType
+// ✅ Ambil harga dasar dari TestType
+const basePrice = test.price ?? 0;
+
+// Variabel final
+let finalPrice = basePrice;
+
+// Jika perusahaan
+if (decoded.role === "PERUSAHAAN") {
+  const companyPricing = await prisma.companyPricing.findFirst({
+    where: { companyId: decoded.id, testTypeId: test.id },
+  });
+
+  if (companyPricing?.customPrice != null) {
+    finalPrice = companyPricing.customPrice;
+  }
+
+  if (companyPricing?.discountNominal != null) {
+    // hanya hitung diskon jika nominal > 0, tapi jika 0 tetap pakai harga asli
+    finalPrice = Math.round(finalPrice - (finalPrice * companyPricing.discountNominal) / 100);
+    if (finalPrice < 0) finalPrice = basePrice; // safety, jangan sampai < 0
+  }
+} else {
+  // user biasa
+  if (test.priceDiscount != null) {
+    finalPrice = test.priceDiscount > 0 ? test.priceDiscount : basePrice;
+  } else if (test.percentDiscount != null) {
+    finalPrice = test.percentDiscount > 0 
+      ? Math.round(basePrice - (basePrice * test.percentDiscount) / 100) 
+      : basePrice;
+  }
+}
+
+// Safety terakhir: jangan sampai finalPrice < 0 atau 0
+if (!finalPrice || finalPrice <= 0) finalPrice = basePrice;
+
+
+
+// ✅ Total harga akhir
+const totalAmount = finalPrice * quantity;
+
+
+//const totalAmount = finalPrice * quantity;
+
+
     const finalUserId = decoded.role === "PERUSAHAAN" && targetUserId ? targetUserId : decoded.id;
 
     const existingPayment = await prisma.payment.findFirst({
@@ -224,6 +269,14 @@ const attempt = await prisma.testAttempt.create({
       });
     }
 
+    let companyPricingRecord = null;
+
+if (decoded.role === "PERUSAHAAN") {
+  companyPricingRecord = await prisma.companyPricing.findFirst({
+    where: { companyId: decoded.id, testTypeId: test.id },
+    select: { id: true },
+  });
+}
     const payment = await prisma.payment.create({
       data: {
         testTypeId: test.id,
@@ -231,6 +284,7 @@ const attempt = await prisma.testAttempt.create({
         status: totalAmount === 0 ? "FREE" : "PENDING",
         userId: finalUserId,
         companyId: decoded.role === "PERUSAHAAN" ? decoded.id : null,
+        companyPricingId: companyPricingRecord?.id ?? null, // ✅ tambahkan ini
         quantity,
         method,
       },
@@ -277,7 +331,16 @@ const attempt = await prisma.testAttempt.create({
       customer_name: user?.fullName || `User ${finalUserId}`,
       customer_email: user?.email || "no-reply@example.com",
       customer_phone: user?.phone || "081234567890",
-      order_items: [{ sku: `TEST-${test.id}`, name: test.name, price: test.price || 0, quantity }],
+     // order_items: [{ sku: `TEST-${test.id}`, name: test.name, price: test.price || 0, quantity }],
+order_items: [
+  {
+    sku: `TEST-${test.id}`,
+    name: test.name,
+    price: finalPrice, // ✅ harga setelah diskon
+    quantity,
+  },
+],
+
       return_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/payment/return`,
       expired_time: Math.floor(Date.now() / 1000) + 3600,
       signature,

@@ -8,7 +8,6 @@ import { useSearchParams } from "next/navigation";
 import { LayoutGrid, Rows, Layout } from "lucide-react"; // ikon lucide-react
    import { motion } from "framer-motion";
 
-
 interface TestType {
   id: number;
   name: string;
@@ -16,6 +15,8 @@ interface TestType {
   price: string | number;
   img: string;
   badge?: string;
+  percentDiscount: number;
+  priceDiscount: number;
 }
 
 const formatPrice = (price: string | number) => {
@@ -30,26 +31,33 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'list' | 'grid' | 'masonry'>('grid');
   const [sortOption, setSortOption] = useState("Harga Terendah");
+const [user, setUser] = useState<any>(null);
 
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get("search")?.toLowerCase() || "";
 
   const filteredTests = tests
     .filter(t => t.name.toLowerCase().includes(searchQuery))
-    .sort((a, b) => {
-      if (a.id === 30) return -1;
-      if (b.id === 30) return 1;
+   .sort((a, b) => {
+  if (a.id === 30) return -1;
+  if (b.id === 30) return 1;
 
-      const priceA = typeof a.price === "string" ? parseFloat(a.price.replace(/[^\d]/g, "")) : a.price;
-      const priceB = typeof b.price === "string" ? parseFloat(b.price.replace(/[^\d]/g, "")) : b.price;
+  const getFinalPrice = (t: TestType) => {
+    const base = typeof t.price === "string" ? parseFloat(t.price.replace(/[^\d]/g, "")) : t.price;
+    return t.priceDiscount && t.priceDiscount < base ? t.priceDiscount : base;
+  };
 
-      if (sortOption === "Harga Terendah") return priceA - priceB;
-      if (sortOption === "Harga Tertinggi") return priceB - priceA;
-      if (sortOption === "Nama A-Z") return a.name.localeCompare(b.name);
-      if (sortOption === "Nama Z-A") return b.name.localeCompare(a.name);
+  const priceA = getFinalPrice(a);
+  const priceB = getFinalPrice(b);
 
-      return 0;
-    });
+  if (sortOption === "Harga Terendah") return priceA - priceB;
+  if (sortOption === "Harga Tertinggi") return priceB - priceA;
+  if (sortOption === "Nama A-Z") return a.name.localeCompare(b.name);
+  if (sortOption === "Nama Z-A") return b.name.localeCompare(a.name);
+
+  return 0;
+});
+
     const quotes = [
   "Kenali dirimu, maka kamu akan tahu arah terbaik untuk berkembang.",
   "Setiap tes adalah langkah kecil menuju versi terbaik dirimu.",
@@ -58,23 +66,107 @@ export default function DashboardPage() {
 
 const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
+ useEffect(() => {
+  async function init() {
+    try {
+      const res = await fetch("/api/me");
+      const data = await res.json();
+      const u = data.user;
+      setUser(u);
 
-  useEffect(() => {
-    async function fetchTests() {
-      try {
-        const res = await fetch('/api/testtypes');
-        const data: TestType[] = await res.json();
-        setTests(data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
+      let endpoint = "/api/testtypes";
+      if (u && u.role === "PERUSAHAAN") {
+        endpoint = `/api/company/testtypes?companyId=${u.id}`;
       }
-    }
-    fetchTests();
-  }, []);
 
-  if (loading) return <p className="text-center mt-8">Loading...</p>;
+      console.log("📡 Fetching endpoint:", endpoint);
+      const resTests = await fetch(endpoint);
+      const testsData: TestType[] = await resTests.json();
+      setTests(testsData);
+    } catch (error) {
+      console.error("Gagal fetch tests:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+  init();
+}, []);
+
+const renderPrice = (test: TestType) => {
+  const price = typeof test.price === "string"
+    ? parseFloat(test.price.replace(/[^\d]/g, ""))
+    : test.price;
+
+  const hasDiscount =
+    test.priceDiscount && Number(test.priceDiscount) < Number(price);
+
+  if (hasDiscount) {
+    return (
+      <div className="flex flex-col">
+        <div className="flex items-center gap-2">
+          <p className="text-lg font-extrabold text-blue-600">
+            Rp {Number(test.priceDiscount).toLocaleString("id-ID")}
+          </p>
+          <p className="text-sm line-through text-gray-500">
+            Rp {Number(price).toLocaleString("id-ID")}
+          </p>
+        </div>
+        {test.percentDiscount ? (
+          <p className="text-xs text-green-600 font-semibold">
+            🎉 Diskon {test.percentDiscount}%
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <p className="text-lg font-extrabold text-blue-600">
+      Rp {Number(price).toLocaleString("id-ID")}
+    </p>
+  );
+};
+
+if (loading) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
+      <motion.div
+        className="flex flex-col items-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+      >
+        {/* Spinner */}
+        <motion.div
+          className="w-16 h-16 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"
+          initial={{ rotate: 0 }}
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
+        />
+
+        {/* Text shimmer */}
+        <motion.p
+          className="mt-6 text-lg font-semibold text-blue-600 animate-pulse"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          Sedang memuat daftar tes psikologi...
+        </motion.p>
+
+        {/* Optional: quote loading */}
+        <motion.p
+          className="mt-3 text-sm text-gray-600 italic text-center max-w-md"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+        >
+          “Kesabaran adalah bagian dari perjalanan mengenal diri.”
+        </motion.p>
+      </motion.div>
+    </div>
+  );
+}
 
   return (
     <main className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
@@ -215,7 +307,7 @@ const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
                     <h3 className="text-lg font-bold text-gray-900">{test.name}</h3>
                     <p className="text-sm text-gray-600 mt-1 line-clamp-2">{test.desc}</p>
                     <div className="flex items-center justify-between mt-3">
-                      <p className="text-blue-600 font-extrabold">{formatPrice(test.price)}</p>
+{renderPrice(test)}
                       <span className="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold">Lihat Detail</span>
                     </div>
                   </div>
@@ -250,7 +342,7 @@ const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
           <div className="p-5 flex flex-col flex-1 justify-between">
             <p className="text-sm text-gray-600 mb-2 line-clamp-3">{test.desc}</p>
             <div className="mt-auto flex items-center justify-between">
-              <p className="text-xl text-blue-600 font-extrabold">{formatPrice(test.price)}</p>
+{renderPrice(test)}
               <span className="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold">Lihat Detail</span>
             </div>
           </div>

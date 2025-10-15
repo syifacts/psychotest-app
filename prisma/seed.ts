@@ -43,7 +43,7 @@ const testTypes = [
   id: 1,
   name: "IST",
   desc: "Intelligence Structure Test",
-  duration: 60,
+  duration: 30,
   price: 150000,
   img: "/ist.jpeg",
   img2: "/ist.jpeg",

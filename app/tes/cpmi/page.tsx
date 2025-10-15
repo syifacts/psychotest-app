@@ -7,6 +7,8 @@ import CPMIIntro from "../../../components/CPMI/CPMIIntro";
 import CPMIInstruction from "@/components/CPMI/CPMIInstruction";
 import BiodataForm from "@/components/CPMI/BiodataForm";
 import { ArrowLeft } from "lucide-react";
+import { motion } from "framer-motion";
+
 
 interface Question {
   id: number;
@@ -44,6 +46,8 @@ const [role, setRole] = useState<"USER" | "PERUSAHAAN" | "GUEST">("USER");
 const [answers, setAnswers] = useState<Record<string, string>>({});
 
   const [loading, setLoading] = useState(false);
+  const [loadingIntro, setLoadingIntro] = useState(true);
+
 
   const [attemptId, setAttemptId] = useState<number | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -74,6 +78,7 @@ useEffect(() => {
  useEffect(() => {
   const fetchUserAndTest = async () => {
     try {
+      setLoadingIntro(true); // mulai loading intro
       const urlParams = new URLSearchParams(window.location.search);
       const token = urlParams.get("token");
 
@@ -112,6 +117,8 @@ useEffect(() => {
 
     } catch (err) {
       console.error("Gagal fetch user/test info CPMI:", err);
+    }finally {
+      setTimeout(() => setLoadingIntro(false), 600); // kasih jeda biar transisi halus
     }
   };
 
@@ -415,21 +422,65 @@ setStep("questions");
   // -------------------------
   // Render
   // -------------------------
-  switch (step) {
-    case "intro":
-      return (
-        <CPMIIntro
-          testInfo={testInfo}
-          hasAccess={hasAccess}
-          accessReason={accessReason}
-          setHasAccess={setHasAccess}
-          startAttempt={async (): Promise<void> => {
-  setStep("biodata");
-}}
-
-          role={role}
+  if (step === "intro" && loadingIntro) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
+      <motion.div
+        className="flex flex-col items-center"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        {/* Spinner */}
+        <motion.div
+          className="w-14 h-14 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"
+          initial={{ rotate: 0 }}
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
         />
-      );
+
+        <motion.p
+          className="mt-5 text-blue-700 font-semibold text-lg animate-pulse"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          Menyiapkan halaman tes CPMI...
+        </motion.p>
+
+        <motion.p
+          className="mt-2 text-gray-500 text-sm italic"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+        >
+          “Mohon tunggu sebentar, sistem sedang memuat test.”
+        </motion.p>
+      </motion.div>
+    </div>
+  );
+}
+
+  switch (step) {
+   case "intro":
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+    >
+      <CPMIIntro
+        testInfo={testInfo}
+        hasAccess={hasAccess}
+        accessReason={accessReason}
+        setHasAccess={setHasAccess}
+        startAttempt={async (): Promise<void> => {
+          setStep("biodata");
+        }}
+        role={role}
+      />
+    </motion.div>
+  );
 
     case "biodata":
       return (

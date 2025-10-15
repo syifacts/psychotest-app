@@ -46,7 +46,7 @@ const Navbar = () => {
   const handleLogin = () => router.push("/login");
   const handleSignup = () => router.push("/register");
 
-  const hideSearch = ["/","/login", "/register", "/account", "/admin/master-test", "/psikolog/validasi", "/company/dashboard", "/admin/dashboard"].includes(pathname);
+  const hideSearch = ["/","/login", "/register", "/account", "/admin/master-data", "/psikolog/validasi", "/company/dashboard", "/admin/dashboard"].some(path => pathname === path || pathname.startsWith("/tes/"));
 
   // Config menu per role
   const menuConfig: Record<string, { href: string; label: string }[]> = {
@@ -67,8 +67,8 @@ const Navbar = () => {
     SUPERADMIN: [
       //{ href: "/", label: "Beranda" },
       { href: "/admin/dashboard", label: "Dashboard" },
-      { href: "/admin/tes", label: "Layanan Tes" },
-      { href: "/admin/master-test", label: "Master Tes" },
+      { href: "/dashboard", label: "Layanan Tes" },
+      { href: "/admin/master-data", label: "Master Data" },
       { href: "/account", label: "Akun" },
     ],
     PERUSAHAAN: [
@@ -147,6 +147,8 @@ const Navbar = () => {
           flex-wrap: wrap;
           gap: 10px;
           height: 90px;
+            z-index: 1000; /* pastikan di atas semua elemen lain */
+
         }
 
 .left {
