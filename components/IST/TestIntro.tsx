@@ -8,11 +8,26 @@ import ISTPaymentButton from "./ISTPaymentButton";
 
 interface Props {
   testInfo: {
-    id: number;
-    name: string;
-    duration: number | null;
-    price?: number | null;
-    img?: string;
+      name : string
+    id: number
+    duration: number | null
+    price?: number | null
+    judul?: string
+    deskripsijudul?: string
+    juduldesk1?: string
+    desk1?: string
+    juduldesk2?: string
+    desk2?: string
+    judulbenefit?: string
+    pointbenefit?: string
+    img?: string
+    cp?: string
+    customPrice?: number | null;  // <- tambahkan ini
+  discountNominal?: number | null; // optional kalau nanti pakai diskon
+  discountNote?: string | null;   // optional
+  priceDiscount?: number
+percentDiscount?: number
+noteDiscount?: string
   } | null;
   hasAccess: boolean;
   alreadyTaken: boolean;

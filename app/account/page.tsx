@@ -1,4 +1,6 @@
 'use client';
+import { useToast } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/toaster"
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -14,6 +16,12 @@ interface User {
   updatedAt?: string;
   profileImage?: string; 
   ttdUrl?: string;
+  lembagalayanan?:string;
+  strNumber?: number;
+  sippNumber?: number;
+  phone?: number;
+  address?: number;
+  education?: string;
 }
 
 export default function AccountPage() {
@@ -33,6 +41,8 @@ const [rowsPerPage, setRowsPerPage] = useState(10);
 const indexOfLastRow = currentPage * rowsPerPage;
 const indexOfFirstRow = indexOfLastRow - rowsPerPage;
 const paginatedTests = testHistory.slice(indexOfFirstRow, indexOfLastRow);
+const { toast } = useToast();
+
 
   // 🔹 Ambil user via API middleware
   useEffect(() => {
@@ -122,46 +132,70 @@ const paginatedTests = testHistory.slice(indexOfFirstRow, indexOfLastRow);
   };
 
   // Simpan TTD ke database
-  const handleSaveTtd = async () => {
-    if (!ttdPreview || ttdPreview.trim() === "") {
-      alert("Silakan pilih file TTD terlebih dahulu!");
-      return;
+const handleSaveTtd = async () => {
+  if (!ttdPreview || ttdPreview.trim() === "") {
+    toast({
+      title: "Gagal Menyimpan",
+      description: "Silakan pilih file TTD terlebih dahulu!",
+      variant: "warning",
+      position: "center",
+      duration: 3000,
+    });
+    return;
+  }
+
+  if (!user?.id) {
+    toast({
+      title: "Gagal Menyimpan",
+      description: "User ID tidak ditemukan!",
+      variant: "error",
+      position: "center",
+      duration: 3000,
+    });
+    return;
+  }
+
+  setIsSavingTtd(true);
+  try {
+    const res = await fetch("/api/update-ttd", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        userId: user.id,
+        ttd: ttdPreview,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || "Gagal menyimpan TTD");
     }
 
-    if (!user?.id) {
-      alert("User ID tidak ditemukan!");
-      return;
-    }
+    setUser((prev) => (prev ? { ...prev, ttdUrl: ttdPreview } : prev));
+    setSavedTtd(ttdPreview);
+    setTtdPreview("");
 
-    setIsSavingTtd(true);
-    try {
-      const res = await fetch("/api/update-ttd", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ 
-          userId: user.id, 
-          ttd: ttdPreview // Gunakan 'ttd' sesuai dengan API
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || "Gagal menyimpan TTD");
-      }
-
-      // Update state user dan savedTtd dengan ttdUrl yang baru
-      setUser(prev => prev ? { ...prev, ttdUrl: ttdPreview } : prev);
-      setSavedTtd(ttdPreview);
-      setTtdPreview(""); // Clear preview setelah berhasil save
-      alert("TTD berhasil disimpan!");
-    } catch (err: any) {
-      console.error('Error saving TTD:', err);
-      alert("Gagal menyimpan TTD: " + err.message);
-    } finally {
-      setIsSavingTtd(false);
-    }
-  };
+    toast({
+      title: "Berhasil",
+      description: "TTD berhasil disimpan!",
+      variant: "success",
+      position: "center",
+      duration: 3000,
+    });
+  } catch (err: any) {
+    console.error("Error saving TTD:", err);
+    toast({
+      title: "Gagal Menyimpan",
+      description: err.message || "Terjadi kesalahan saat menyimpan TTD.",
+      variant: "error",
+      position: "center",
+      duration: 3000,
+    });
+  } finally {
+    setIsSavingTtd(false);
+  }
+};
 
   // Reset TTD
   const handleResetTtd = () => {
@@ -221,13 +255,28 @@ const paginatedTests = testHistory.slice(indexOfFirstRow, indexOfLastRow);
 
         {/* Profil Utama */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8 flex items-center space-x-6">
-          <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 flex items-center justify-center bg-gray-200">
-            <img
-              src={user.profileImage || "https://fonts.gstatic.com/s/i/materialicons/person/v12/24px.svg"}
-              alt="Profile"
-              className={`w-full h-full object-cover ${!user.profileImage ? 'p-2' : ''}`}
-            />
-          </div>
+<div className="relative w-24 h-24 rounded-full overflow-hidden border-2 flex items-center justify-center bg-blue-600 text-white text-3xl font-semibold">
+  {user.profileImage ? (
+    <img
+      src={user.profileImage}
+      alt="Profile"
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <span>
+      {user.fullName
+  ? (() => {
+      const parts = user.fullName.trim().split(' ');
+      const first = parts[0]?.[0] || '';
+      const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+      return (first + last).toUpperCase();
+    })()
+  : '?'}
+
+    </span>
+  )}
+</div>
+
 
           <div className="flex-grow">
             <h2 className="text-xl font-semibold text-gray-900">{user.fullName || 'Nama Pengguna'}</h2>
@@ -297,11 +346,14 @@ const paginatedTests = testHistory.slice(indexOfFirstRow, indexOfLastRow);
                     Preview File Baru:
                   </label>
                   <div className="border border-gray-200 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden">
+<div className="flex justify-center">
   <img
- src={ttdPreview}
+    src={ttdPreview}
     alt="TTD Tersimpan"
-    className="w-full h-auto object-contain"
+    className="w-40 h-auto object-contain rounded-md shadow"
   />
+</div>
+
 </div>
 
                 </div>
@@ -357,28 +409,105 @@ const paginatedTests = testHistory.slice(indexOfFirstRow, indexOfLastRow);
           </div>
         )}
 
-        {/* Informasi Pribadi */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-            <div>
-              <label className="block text-gray-500">Full Name</label>
-              <p className="font-medium text-gray-800">{user.fullName || 'N/A'}</p>
-            </div>
-            <div>
-              <label className="block text-gray-500">Date of Birth</label>
-              <p className="font-medium text-gray-800">
-                {user.birthDate ? new Date(user.birthDate).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}
-              </p>
-            </div>
-            <div>
-              <label className="block text-gray-500">Email Address</label>
-              <p className="font-medium text-gray-800">{user.email || 'N/A'}</p>
-            </div>
-          </div>
-        </div>
+{/* 🌟 Informasi Pribadi */}
+<div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+  <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+    <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+  </div>
+
+  {/* USER */}
+  {user.role === "USER" && (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+      <div>
+        <label className="block text-gray-500">Full Name</label>
+        <p className="font-medium text-gray-800">{user.fullName || "N/A"}</p>
+      </div>
+      <div>
+        <label className="block text-gray-500">Date of Birth</label>
+        <p className="font-medium text-gray-800">
+          {user.birthDate
+            ? new Date(user.birthDate).toLocaleDateString("id-ID", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              })
+            : "N/A"}
+        </p>
+      </div>
+      <div>
+        <label className="block text-gray-500">Email</label>
+        <p className="font-medium text-gray-800">{user.email || "N/A"}</p>
+      </div>
+      <div>
+        <label className="block text-gray-500">Education</label>
+        <p className="font-medium text-gray-800">{user.education || "N/A"}</p>
+      </div>
+    </div>
+  )}
+
+  {/* PSIKOLOG */}
+  {user.role === "PSIKOLOG" && (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+      <div>
+        <label className="block text-gray-500">Full Name</label>
+        <p className="font-medium text-gray-800">{user.fullName || "N/A"}</p>
+      </div>
+      <div>
+        <label className="block text-gray-500">Email</label>
+        <p className="font-medium text-gray-800">{user.email || "N/A"}</p>
+      </div>
+      <div>
+        <label className="block text-gray-500">Fasyankes / Lembaga Layanan Psikologi</label>
+        <p className="font-medium text-gray-800">{user.lembagalayanan || "N/A"}</p>
+      </div>
+      <div>
+        <label className="block text-gray-500">Nomor STR / SIK</label>
+        <p className="font-medium text-gray-800">{user.strNumber || "N/A"}</p>
+      </div>
+      <div>
+        <label className="block text-gray-500">Nomor SIPP / SIPPK</label>
+        <p className="font-medium text-gray-800">{user.sippNumber || "N/A"}</p>
+      </div>
+    </div>
+  )}
+
+  {/* PERUSAHAAN */}
+  {user.role === "PERUSAHAAN" && (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+      <div>
+        <label className="block text-gray-500">Full Name</label>
+        <p className="font-medium text-gray-800">{user.fullName || "N/A"}</p>
+      </div>
+      <div>
+        <label className="block text-gray-500">Email</label>
+        <p className="font-medium text-gray-800">{user.email || "N/A"}</p>
+      </div>
+      <div>
+        <label className="block text-gray-500">Address</label>
+        <p className="font-medium text-gray-800">{user.address || "N/A"}</p>
+      </div>
+      <div>
+        <label className="block text-gray-500">Phone</label>
+        <p className="font-medium text-gray-800">{user.phone || "N/A"}</p>
+      </div>
+    </div>
+  )}
+
+  {/* ADMIN / SUPERADMIN */}
+  {(user.role === "SUPERADMIN" || user.role === "ADMIN") && (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+      <div>
+        <label className="block text-gray-500">Full Name</label>
+        <p className="font-medium text-gray-800">{user.fullName || "N/A"}</p>
+      </div>
+      <div>
+        <label className="block text-gray-500">Email</label>
+        <p className="font-medium text-gray-800">{user.email || "N/A"}</p>
+      </div>
+    </div>
+  )}
+</div>
+
 
       {/* Riwayat Tes hanya untuk role "USER" biasa */}
 {!["PSIKOLOG", "SUPERADMIN", "PERUSAHAAN"].includes(user.role || "") && (
@@ -540,6 +669,8 @@ const paginatedTests = testHistory.slice(indexOfFirstRow, indexOfLastRow);
           />
         )}
       </div>
+          <Toaster />
+
     </main>
   );
 }

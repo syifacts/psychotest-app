@@ -372,12 +372,12 @@ const pdfKey = JSON.stringify({
       {attempt.User?.fullName} - {attempt.TestType?.name}
     </h1>
     <div className="flex gap-2">
-      <button
+      {/* <button
         onClick={handleSave}
         className="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600"
       >
         💾 Simpan
-      </button>
+      </button> */}
       <PDFDownloadLink
       key={pdfKey}
         document={<PDFTemplate {...pdfProps} />}
@@ -470,8 +470,18 @@ const pdfKey = JSON.stringify({
             />
           </>
         )}
+         {/* ✅ Tombol Simpan di bawah */}
+        <div className="pt-4 border-t mt-4">
+          <button
+            onClick={handleSave}
+            className="w-full py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition"
+          >
+            💾 Simpan
+          </button>
+          </div>
       </div>
     </div>
+
 
     {/* PDF Preview */}
     <div className="flex-grow bg-white rounded-lg shadow p-2">

@@ -189,7 +189,7 @@ const handleDelete = async (id: number) => {
     // Tampilkan notifikasi
     setNotifMessage("User berhasil dihapus!");
     setShowNotif(true);
-    setTimeout(() => setShowNotif(false), 3000);
+    setTimeout(() => setShowNotif(false), 1500);
   } catch (err: any) {
     alert(err.message);
   }

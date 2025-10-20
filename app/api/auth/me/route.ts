@@ -34,6 +34,8 @@ export async function GET(req: Request) {
             createdAt: true,
             updatedAt: true,
             phone: true,
+                education: true, // ✅ tambahkan ini
+
             
           },
         });
@@ -58,6 +60,11 @@ export async function GET(req: Request) {
             createdAt: true,
             updatedAt: true,
             phone: true,
+            education: true, // ✅ tambahkan ini
+            sippNumber: true,
+            strNumber:true,
+            lembagalayanan:true,
+
           },
         });
 

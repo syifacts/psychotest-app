@@ -1,6 +1,8 @@
 // app/api/attempts/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import jwt from "jsonwebtoken";
+
 
 // helper untuk ambil kategori dominan
 // function getDominantKategori(aspekArr: any[]) {
@@ -21,6 +23,7 @@ import { prisma } from "@/lib/prisma";
 //   }
 //   return dominant;
 // }
+
 
 function getDominantKategori(aspekArr: any[]) {
   if (!Array.isArray(aspekArr)) return "-";
@@ -47,13 +50,37 @@ function getDominantKategori(aspekArr: any[]) {
 
   return "-";
 }
+const JWT_SECRET = process.env.JWT_SECRET || "secretkey";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest) {
+  
   try {
-    const attemptId = Number(params.id);
+        const url = new URL(req.url);
+    const attemptId = Number(url.pathname.split("/").pop()); // /api/attempts/99 → 99
     if (!attemptId) {
       return NextResponse.json({ error: "Invalid attempt ID" }, { status: 400 });
     }
+    
+    // Ambil token dari cookie (atau header jika pakai Bearer)
+    const authToken = req.cookies.get("token")?.value;
+if (!authToken) 
+  return NextResponse.json(
+    { error: "Anda harus login terlebih dahulu untuk melihat hasil test." },
+    { status: 401 }
+  );
+   let decoded: any;
+ try {
+  decoded = jwt.verify(authToken, JWT_SECRET);
+} catch {
+  return NextResponse.json(
+    { error: "Token tidak valid. Silakan login ulang." },
+    { status: 401 }
+  );
+}
+
+
+    const userId = decoded.id;
+    const userRole = decoded.role;
 
     const attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
@@ -75,7 +102,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     if (!attempt) {
       return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
     }
+ // --- Proteksi akses ---
+    const isOwner = attempt.userId === userId;
+    const isCompany = attempt.companyId === userId;
+    const isPsikolog = userRole === "PSIKOLOG";
 
+    if (!isOwner && !isCompany && !isPsikolog) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    
     // --- SubtestResults
     const subtestResults = attempt.subtestResults.map((s:any) => ({
       ...s,

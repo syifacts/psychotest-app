@@ -9,7 +9,7 @@ import Navbar from "../layout/navbar"
 
 interface Props {
   testInfo: {
-    name: string;
+   name : string
     id: number
     duration: number | null
     price?: number | null
@@ -23,7 +23,13 @@ interface Props {
     pointbenefit?: string
     img?: string
     cp?: string
-  } | null
+    customPrice?: number | null;  // <- tambahkan ini
+  discountNominal?: number | null; // optional kalau nanti pakai diskon
+  discountNote?: string | null;   // optional
+  priceDiscount?: number
+percentDiscount?: number
+noteDiscount?: string
+  } | null;
   hasAccess: boolean
   setHasAccess: (val: boolean) => void
   startAttempt: () => Promise<void>

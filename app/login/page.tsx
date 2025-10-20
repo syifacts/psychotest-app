@@ -111,11 +111,11 @@ export default function LoginPage() {
                     <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                       Password
                     </label>
-                    <div className="text-sm">
+                    {/* <div className="text-sm">
                       <a href="#" className="font-medium text-blue-500 hover:underline hover:text-blue-600">
                         Lupa password?
                       </a>
-                    </div>
+                    </div> */}
                   </div>
                   <div className="mt-1">
                     <input

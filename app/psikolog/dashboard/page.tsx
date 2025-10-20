@@ -311,6 +311,24 @@ setOverallStatsBySource(
         <div className="absolute top-40 right-0 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000" />
         <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000" />
       </div>
+      {/* 🌈 BLOBS LATAR PUTIH UTAMA */}
+<div className="pointer-events-none absolute inset-0 -z-0">
+  {/* Kanan atas */}
+  {/* <div className="absolute top-10 right-[-60px] w-[400px] h-[400px] bg-gradient-to-br from-indigo-300 via-purple-300 to-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob" /> */}
+
+  {/* Kiri atas */}
+  {/* <div className="absolute -top-10 -left-40 w-[380px] h-[380px] bg-gradient-to-br from-blue-300 via-indigo-300 to-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-45 animate-blob animation-delay-2000" /> */}
+
+  {/* Kanan bawah */}
+  <div className="absolute bottom-[-100px] right-[-100px] w-[420px] h-[420px] bg-gradient-to-br from-purple-300 via-pink-300 to-red-200 rounded-full mix-blend-multiply filter blur-3xl opacity-45 animate-blob animation-delay-3000" />
+
+  {/* Kiri bawah */}
+  <div className="absolute bottom-[-120px] left-[-100px] w-[420px] h-[420px] bg-gradient-to-br from-blue-200 via-cyan-200 to-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-4000" />
+
+  {/* Tengah bawah */}
+  <div className="absolute bottom-[-150px] left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-gradient-to-br from-pink-200 via-purple-200 to-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-1000" />
+</div>
+
       <Navbar />
 
       <div className="p-6 max-w-7xl mx-auto">

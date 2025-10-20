@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer';
+import { useRouter } from "next/navigation";
+
 
 // Import semua template PDF
 import ReportISTDocument from '../../../../components/report/reportDocument';
@@ -18,12 +20,24 @@ const PDFComponents: Record<string, any> = {
 };
 
 export default function HasilPage() {
-  const { id } = useParams();
+  const router = useRouter();
+    const { id } = useParams(); // ✅ pakai useParams saja
+  const [data, setData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState<any | null>(null);
   const [subtestResults, setSubtestResults] = useState<any[]>([]);
   const [result, setResult] = useState<any | null>(null);
   const [cpmiResult, setCpmiResult] = useState<any | null>(null); 
     const [msdtResult, setmsdtResult] = useState<any | null>(null); 
+    const [unauthorized, setUnauthorized] = useState(false);
+    // Tambahkan ini setelah useState
+useEffect(() => {
+  if (unauthorized) {
+    const timer = setTimeout(() => router.push("/login"), 2000);
+    return () => clearTimeout(timer); // cleanup jika component unmount
+  }
+}, [unauthorized, router]);
+
 const [kesimpulan, setKesimpulan] = useState({
   kesimpulan: '',
   kesimpulanSikap: '',
@@ -72,12 +86,29 @@ const [kesimpulan, setKesimpulan] = useState({
 //   fetchReport();
 // }, [id]);
 
+
+
 useEffect(() => {
   if (!id) return;
 
   const fetchReport = async () => {
     try {
       const res = await fetch(`/api/attempts/${id}`);
+     if (res.status === 401) {
+  setUnauthorized(true); // trigger tampilan login
+  return;
+}
+
+        if (res.status === 403) {
+          setError("Anda tidak memiliki akses untuk melihat hasil test ini.");
+          return;
+        }
+        if (res.status === 404) {
+          setError("Hasil test tidak ditemukan.");
+          return;
+        }
+
+      
       if (!res.ok) throw new Error("Gagal ambil data report");
       const data = await res.json();
 
@@ -115,7 +146,24 @@ useEffect(() => {
 }, [id]);
 
 
-  if (isLoading) {
+// Render desain unauthorized
+if (unauthorized) {
+  return (
+    <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="bg-white shadow-md rounded-lg p-6 flex flex-col items-center max-w-sm text-center animate-fadeIn">
+        <svg className="w-12 h-12 text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h2 className="text-xl font-semibold text-red-600 mb-2">Perlu Login</h2>
+        <p className="text-gray-700">Anda harus login dulu untuk melihat hasil test.</p>
+        <p className="mt-4 text-sm text-gray-500">Anda akan diarahkan ke halaman login...</p>
+      </div>
+    </div>
+  );
+}
+
+
+if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <p>Memuat laporan...</p>
@@ -181,8 +229,38 @@ kesimpulanumum: kesimpulan.kesimpulanumum,
 
   const pdfProps = getPDFProps();
 
+  if (error) {
   return (
+    <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="bg-white shadow-md rounded-lg p-6 flex flex-col items-center max-w-sm text-center animate-fadeIn">
+        <svg
+          className="w-12 h-12 text-red-500 mb-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <h2 className="text-xl font-semibold text-red-600 mb-2">Perlu Login</h2>
+        <p className="text-gray-700">{error}</p>
+        <p className="mt-4 text-sm text-gray-500">
+          Anda akan diarahkan ke halaman login...
+        </p>
+      </div>
+    </div>
+  );
+}
+
+  return (
+    
     <div className="h-screen flex flex-col">
+      
       {/* Tombol Download */}
       <div className="p-4 bg-gray-100 flex justify-between items-center">
         <div>

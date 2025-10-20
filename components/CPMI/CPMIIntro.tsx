@@ -26,9 +26,9 @@ interface Props {
     customPrice?: number | null;  // <- tambahkan ini
   discountNominal?: number | null; // optional kalau nanti pakai diskon
   discountNote?: string | null;   // optional
-  priceDiscount: number,      // ✅ tambahkan ini
-      percentDiscount: number,    // ✅ tambahkan ini
-      noteDiscount: string,       // ✅ tambahkan ini
+  priceDiscount?: number
+percentDiscount?: number
+noteDiscount?: string
   
   } | null
   hasAccess: boolean

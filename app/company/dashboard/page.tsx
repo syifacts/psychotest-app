@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { UserPlus } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast"
+import { Toaster } from "@/components/ui/toaster"
+
+
 
 import Navbar from "@/components/layout/navbar";
 import {
@@ -70,6 +74,8 @@ interface Payment {
 }
 
 export default function CompanyDashboard() {
+    const { toast, dismiss, toasts } = useToast(); // ✅ hook dipanggil di level atas component
+
   const [packagePurchases, setPackagePurchases] = useState<PackagePurchase[]>([]);
   const [singlePayments, setSinglePayments] = useState<Payment[]>([]);
   const [companyId, setCompanyId] = useState<number | null>(null);
@@ -95,7 +101,6 @@ const [openDateFilter, setOpenDateFilter] = useState(false);
 const [usersPerPage, setUsersPerPage] = useState(10);
 const [allRegisteredUsers, setAllRegisteredUsers] = useState<User[]>([]);
 const [verifyingUsers, setVerifyingUsers] = useState(0);
-
 
 
 
@@ -251,7 +256,10 @@ const idRes = await fetch(
     const data = await res.json();
     if (!res.ok) return alert(data.error);
 
-    alert(`✅ User berhasil didaftarkan!\nToken: ${data.token ?? "-"}`);
+toast({
+  title: "✅ User berhasil didaftarkan!",
+  description: `Token: ${data.token ?? "-"}`,
+})
     fetchDashboard();
   } catch (err) {
     console.error(err);
@@ -260,26 +268,76 @@ const idRes = await fetch(
 };
 
 
-  const handleRemoveUser = async (
+const handleRemoveUser = (
     userId: number,
     type: "Paket" | "Test Satuan",
     targetId: number
   ) => {
-    if (!confirm("Yakin ingin menghapus user ini?")) return;
-    try {
-      const res = await fetch("/api/company/remove-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, type, targetId }),
-      });
-      const data = await res.json();
-      if (!res.ok) return alert(data.error);
-      alert("User berhasil dihapus");
-      fetchDashboard();
-    } catch (err) {
-      console.error(err);
-      alert("Terjadi kesalahan saat menghapus user");
-    }
+    // toast konfirmasi
+    toast({
+  title: "⚠️ Konfirmasi penghapusan",
+  description: "Apakah kamu yakin ingin menghapus user ini?",
+  duration: 10000,
+  variant: "warning",
+    position: "center", // ⚡ ini buat muncul di tengah layar
+
+      action: (
+        <div className="flex gap-2 mt-2">
+          <button
+            className="bg-gray-200 text-gray-800 px-3 py-1 rounded"
+            onClick={() => {
+              const lastToast = toasts[toasts.length - 1];
+              if (lastToast) dismiss(lastToast.id);
+              toast({ title: "❌ Penghapusan dibatalkan", duration: 3000 });
+            }}
+          >
+            Batal
+          </button>
+          <button
+            className="bg-red-600 text-white px-3 py-1 rounded"
+            onClick={async () => {
+              const lastToast = toasts[toasts.length - 1];
+              if (lastToast) dismiss(lastToast.id);
+
+              try {
+                const res = await fetch("/api/company/remove-user", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ userId, type, targetId }),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                  toast({
+                    title: "⚠️ Gagal menghapus user",
+                    description: data.error || "Terjadi kesalahan",
+                    duration: 5000,
+                  });
+                  return;
+                }
+
+                toast({
+                  title: "✅ User berhasil dihapus",
+                  description: `User dengan ID ${userId} telah dihapus`,
+                  duration: 5000,
+                });
+
+                fetchDashboard();
+              } catch (err) {
+                console.error(err);
+                toast({
+                  title: "⚠️ Terjadi kesalahan",
+                  description: "Tidak bisa menghapus user saat ini",
+                  duration: 5000,
+                });
+              }
+            }}
+          >
+            Hapus
+          </button>
+        </div>
+      ),
+    });
   };
   useEffect(() => {
   const fetchTestTypes = async () => {
@@ -816,14 +874,39 @@ const iconColor: Record<string, string> = {
       });
 
       const data = await res.json();
-      if (!res.ok) return alert(data.error);
 
-      alert(`✅ User berhasil didaftarkan!\nToken: ${data.token ?? "-"}`);
+      if (!res.ok) {
+        setOpenDialog(false); // ⚡ tutup modal dulu
+        toast({
+          title: "⚠️ Gagal mendaftarkan user",
+          description: data.error || "Terjadi kesalahan",
+          duration: 5000,
+          variant: "error",
+          position: "center", // muncul di atas modal
+        });
+        return;
+      }
+
+      setOpenDialog(false); // tutup modal
+      toast({
+        title: "✅ User berhasil didaftarkan!",
+        description: `Token: ${data.token ?? "-"}`,
+        duration: 5000,
+        variant: "success",
+        position: "top", // muncul di atas layar
+      });
+
       fetchDashboard();
-      setOpenDialog(false); // tutup dialog setelah sukses
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Terjadi kesalahan saat mendaftarkan user");
+      setOpenDialog(false); // tutup modal
+      toast({
+        title: "⚠️ Terjadi kesalahan",
+        description: err.message || "Tidak bisa mendaftarkan user",
+        duration: 5000,
+        variant: "error",
+        position: "center",
+      });
     }
   }}
   disabled={
@@ -834,6 +917,7 @@ const iconColor: Record<string, string> = {
 >
   Tambahkan
 </Button>
+
 
     </DialogFooter>
   </DialogContent>
@@ -1272,6 +1356,8 @@ setGeneratedTestId(testId ?? "");
  
 
    </div>
+   <Toaster />
+
    </div>
      
 
