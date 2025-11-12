@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const userId = Number(params.id);
@@ -14,9 +13,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       where: { id: userId },
       select: {
         id: true,
-          email: true,       // ✅ tambahkan ini
+        email: true,
         customId: true,
-        education:true,
+        education: true,
         fullName: true,
         birthDate: true,
         gender: true,
@@ -28,15 +27,17 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 });
     }
 
-return NextResponse.json({
-  message: "Data user berhasil diambil",
-  data: user,
-});
+    // ✅ Kembalikan format lama agar kompatibel dengan frontend
+    return NextResponse.json({
+      user, 
+    });
+
   } catch (err: any) {
     console.error(err);
     return NextResponse.json({ error: err.message || "Gagal ambil data user" }, { status: 500 });
   }
 }
+
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const userId = Number(params.id);
@@ -58,7 +59,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: "Unsupported content type" }, { status: 400 });
     }
 
-    // Cek user ada atau tidak
+    // Cek apakah user ada
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, password: true, role: true, email: true },
@@ -70,9 +71,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     const updateData: any = {};
 
-    // -----------------------------
     // === ROLE-BASED EDIT FIELDS ===
-    // -----------------------------
     switch (user.role) {
       case "PSIKOLOG":
         if (data.fullName) updateData.fullName = data.fullName;
@@ -100,12 +99,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         if (data.email) updateData.email = data.email;
         if (data.birthDate) updateData.birthDate = new Date(data.birthDate);
         if (data.education) updateData.education = data.education;
+        if (data.tujuan) updateData.tujuan = data.tujuan;
         break;
     }
 
-    // -----------------------------
-    // === UPDATE PASSWORD (opsional)
-    // -----------------------------
+    // === PASSWORD update opsional ===
     if (data.newPassword) {
       if (!data.currentPassword) {
         return NextResponse.json({ error: "Password lama harus diisi" }, { status: 400 });
@@ -120,9 +118,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       updateData.password = hashed;
     }
 
-    // -----------------------------
-    // === SIMPAN KE DATABASE ===
-    // -----------------------------
+    // === UPDATE DB ===
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: updateData,
@@ -138,13 +134,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         lembagalayanan: true,
         strNumber: true,
         sippNumber: true,
+        tujuan: true,
         updatedAt: true,
       },
     });
 
+    // ✅ Gunakan format sama agar frontend juga cocok
     return NextResponse.json({
-      message: "Data berhasil diperbarui",
-      data: updatedUser,
+      user: updatedUser,
     });
 
   } catch (err: any) {

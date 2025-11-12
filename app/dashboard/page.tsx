@@ -17,6 +17,8 @@ interface TestType {
   badge?: string;
   percentDiscount: number;
   priceDiscount: number;
+  originalName?:string;
+  comingSoon?: boolean;
 }
 
 const formatPrice = (price: string | number) => {
@@ -32,15 +34,24 @@ export default function DashboardPage() {
   const [view, setView] = useState<'list' | 'grid' | 'masonry'>('grid');
   const [sortOption, setSortOption] = useState("Harga Terendah");
 const [user, setUser] = useState<any>(null);
+const [showAvailableOnly, setShowAvailableOnly] = useState(false);
+
 
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get("search")?.toLowerCase() || "";
 
+  // const filteredTests = tests
+  //   .filter(t => t.name.toLowerCase().includes(searchQuery))
+  //  .sort((a, b) => {
+  // if (a.id === 30) return -1;
+  // if (b.id === 30) return 1;
+
   const filteredTests = tests
-    .filter(t => t.name.toLowerCase().includes(searchQuery))
-   .sort((a, b) => {
-  if (a.id === 30) return -1;
-  if (b.id === 30) return 1;
+  .filter(t => 
+    t.name.toLowerCase().includes(searchQuery) &&
+    (!showAvailableOnly || !t.comingSoon)
+  )
+  .sort((a, b) => {
 
   const getFinalPrice = (t: TestType) => {
     const base = typeof t.price === "string" ? parseFloat(t.price.replace(/[^\d]/g, "")) : t.price;
@@ -80,9 +91,25 @@ const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
       }
 
       console.log("📡 Fetching endpoint:", endpoint);
-      const resTests = await fetch(endpoint);
-      const testsData: TestType[] = await resTests.json();
-      setTests(testsData);
+const resTests = await fetch(endpoint);
+let testsData: TestType[] = await resTests.json();
+
+// ubah nama CPMI jadi WPT di FE saja (tanpa ubah link)
+testsData = testsData.map(test => {
+  // Ganti CPMI jadi WPT
+  if (test.name === "CPMI") return { ...test, originalName: "CPMI", name: "WPT" };
+
+  // Tandai tes yang belum aktif sebagai comingSoon
+  const activeTests = ["WPT", "IST", "MBTI", "Holland", "Big Five", "TIU6"];
+  if (!activeTests.includes(test.name)) return { ...test, comingSoon: true };
+
+  return test;
+});
+
+setTests(testsData); // ✅ penting! simpan hasil ke state
+
+
+
     } catch (error) {
       console.error("Gagal fetch tests:", error);
     } finally {
@@ -251,16 +278,42 @@ if (loading) {
     transition={{ delay: 0.6 }}
   >
     {/* Sort */}
-    <select
+    {/* <select
       value={sortOption}
       onChange={(e) => setSortOption(e.target.value)}
+      
       className="px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 shadow-sm"
     >
       <option>Harga Terendah</option>
       <option>Harga Tertinggi</option>
       <option>Nama A-Z</option>
       <option>Nama Z-A</option>
-    </select>
+    </select> */}
+    {/* Sort + Filter */}
+<select
+  value={sortOption}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    if (value === "availableOnly") {
+      // toggle filter “hanya yang sudah hadir”
+      setShowAvailableOnly((prev) => !prev);
+      return; // jangan ubah urutan sort
+    }
+
+    setSortOption(value);
+  }}
+  className="px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 shadow-sm"
+>
+  <option>Harga Terendah</option>
+  <option>Harga Tertinggi</option>
+  <option>Nama A-Z</option>
+  <option>Nama Z-A</option>
+  <option value="availableOnly">
+    {showAvailableOnly ? "Tampilkan Semua Tes" : "Hanya yang Sudah Hadir"}
+  </option>
+</select>
+
 
     {/* Toggle view */}
     <div className="flex items-center gap-2">
@@ -289,42 +342,86 @@ if (loading) {
         <Layout size={20}/>
       </button> */}
     </div>
+    
   </motion.div>
 </motion.div>
 
         {/* Content */}
-        {view === 'list' && (
-          <div className="space-y-5">
-            {filteredTests.map((test, index) => (
-              <AnimatedOnScroll key={index} delay={0.05 * index} duration={0.6}>
-                <Link href={`/tes/${test.name.toLowerCase().replace(/\s+/g, '-')}`}
-                  className="flex bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden hover:scale-[1.01]"
-                >
-                  <div className="relative w-48 h-32 flex-shrink-0">
-                    <Image src={test.img || "/fallback.jpg"} alt={test.name} fill className="object-cover"/>
-                  </div>
-                  <div className="p-5 flex-1 flex flex-col justify-between">
-                    <h3 className="text-lg font-bold text-gray-900">{test.name}</h3>
-                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">{test.desc}</p>
-                    <div className="flex items-center justify-between mt-3">
-{renderPrice(test)}
-                      <span className="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold">Lihat Detail</span>
-                    </div>
-                  </div>
-                </Link>
-              </AnimatedOnScroll>
-            ))}
+{view === 'list' && (
+  <div className="space-y-5">
+    {filteredTests.map((test, index) => (
+      <AnimatedOnScroll key={index} delay={0.05 * index} duration={0.6}>
+        <Link
+          href={
+            test.comingSoon
+              ? "#"
+              : `/tes/${test.originalName?.toLowerCase().replace(/\s+/g, '-') ||
+                  test.name.toLowerCase().replace(/\s+/g, '-')}`
+          }
+          className={`flex bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden hover:scale-[1.01] ${
+            test.comingSoon ? "opacity-60 cursor-not-allowed" : ""
+          }`}
+        >
+          <div className="relative w-48 h-32 flex-shrink-0">
+            <Image
+              src={test.img || "/fallback.jpg"}
+              alt={test.name}
+              fill
+              className="object-cover"
+            />
+            {test.comingSoon && (
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <span className="text-white text-xs font-semibold bg-black/60 px-2 py-1 rounded-full">
+                  Segera Hadir
+                </span>
+              </div>
+            )}
           </div>
-        )}
 
-      {view === 'grid' && (
+          <div className="p-5 flex-1 flex flex-col justify-between">
+            <h3 className="text-lg font-bold text-gray-900">{test.name}</h3>
+            <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+              {test.desc}
+            </p>
+
+            <div className="flex items-center justify-between mt-3">
+              {test.comingSoon ? (
+                <span className="px-3 py-1 rounded-full bg-gray-400 text-white text-xs font-semibold cursor-not-allowed">
+                  Segera Hadir
+                </span>
+              ) : (
+                <>
+                  {renderPrice(test)}
+                  <span className="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold">
+                    Lihat Detail
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        </Link>
+      </AnimatedOnScroll>
+    ))}
+  </div>
+)}
+
+
+{view === 'grid' && (
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
     {filteredTests.map((test, index) => (
       <AnimatedOnScroll key={index} delay={0.05 * index} duration={0.6}>
         <Link
-          href={`/tes/${test.name.toLowerCase().replace(/\s+/g, '-')}`}
-          className="group relative bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition flex flex-col hover:scale-[1.02]"
+          href={
+            test.comingSoon
+              ? "#"
+              : `/tes/${test.originalName?.toLowerCase().replace(/\s+/g, '-') ||
+                  test.name.toLowerCase().replace(/\s+/g, '-')}`
+          }
+          className={`group relative bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition flex flex-col hover:scale-[1.02] ${
+            test.comingSoon ? "opacity-60 cursor-not-allowed" : ""
+          }`}
         >
+          {/* Gambar dan overlay */}
           <div className="relative w-full h-48">
             <Image
               src={test.img || "/fallback.jpg"}
@@ -332,18 +429,42 @@ if (loading) {
               fill
               className="object-cover"
             />
-            {/* Title on image */}
-           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-<h3 className="absolute bottom-3 left-3 text-xl font-bold text-white drop-shadow-md">
-  {test.name}
-</h3>
 
+            {/* Overlay untuk semua gambar */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+
+            {/* Nama tes */}
+            <h3 className="absolute bottom-3 left-3 text-xl font-bold text-white drop-shadow-md">
+              {test.name}
+            </h3>
+
+            {/* Tambahan overlay "Segera Hadir" */}
+            {test.comingSoon && (
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <span className="text-white text-sm font-semibold bg-black/60 px-3 py-1 rounded-full">
+                  Segera Hadir
+                </span>
+              </div>
+            )}
           </div>
+
+          {/* Konten deskripsi dan harga */}
           <div className="p-5 flex flex-col flex-1 justify-between">
             <p className="text-sm text-gray-600 mb-2 line-clamp-3">{test.desc}</p>
+
             <div className="mt-auto flex items-center justify-between">
-{renderPrice(test)}
-              <span className="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold">Lihat Detail</span>
+              {test.comingSoon ? (
+                <span className="px-3 py-1 rounded-full bg-gray-400 text-white text-xs font-semibold cursor-not-allowed">
+                  Segera Hadir
+                </span>
+              ) : (
+                <>
+                  {renderPrice(test)}
+                  <span className="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold">
+                    Lihat Detail
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </Link>
