@@ -18,11 +18,15 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = await context.params; // ⬅️ perhatikan: pakai await
+    const id = parseInt(params.id);
+
     const user = await prisma.user.delete({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     return NextResponse.json({ success: true, user });
