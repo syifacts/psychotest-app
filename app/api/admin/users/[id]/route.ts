@@ -84,64 +84,50 @@ import { NextRequest, NextResponse } from "next/server";
 // }
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params; // <-- WAJIB AWAIT
+
   try {
-    const id = parseInt(params.id);
+    const userId = parseInt(id);
 
     const result = await prisma.$transaction(async (tx) => {
-      // ==========================
-      // 1. Hapus data turunan by userId
-      // ==========================
-
-      await tx.answer.deleteMany({ where: { userId: id } });
-      await tx.result.deleteMany({ where: { userId: id } });
-      await tx.testAttempt.deleteMany({ where: { userId: id } });
-      await tx.payment.deleteMany({ where: { userId: id } });
-      await tx.userProgress.deleteMany({ where: { userId: id } });
-      await tx.personalityResult.deleteMany({ where: { userId: id } });
-      await tx.token.deleteMany({ where: { userId: id } });
-      await tx.packagePurchase.deleteMany({ where: { userId: id } });
-      await tx.userPackage.deleteMany({ where: { userId: id } });
-
-      // ==========================
-      // 2. Relasi companyId yang harus di-null-kan, bukan dihapus
-      // ==========================
+      await tx.answer.deleteMany({ where: { userId } });
+      await tx.result.deleteMany({ where: { userId } });
+      await tx.testAttempt.deleteMany({ where: { userId } });
+      await tx.payment.deleteMany({ where: { userId } });
+      await tx.userProgress.deleteMany({ where: { userId } });
+      await tx.personalityResult.deleteMany({ where: { userId } });
+      await tx.token.deleteMany({ where: { userId } });
+      await tx.packagePurchase.deleteMany({ where: { userId } });
+      await tx.userPackage.deleteMany({ where: { userId } });
 
       await tx.payment.updateMany({
-        where: { companyId: id },
+        where: { companyId: userId },
         data: { companyId: null },
       });
 
       await tx.testAttempt.updateMany({
-        where: { companyId: id },
+        where: { companyId: userId },
         data: { companyId: null },
       });
 
       await tx.token.updateMany({
-        where: { companyId: id },
+        where: { companyId: userId },
         data: { companyId: null },
       });
 
       await tx.packagePurchase.updateMany({
-        where: { companyId: id },
+        where: { companyId: userId },
         data: { companyId: null },
       });
 
-      // ==========================
-      // 3. Hapus tabel khusus perusahaan
-      // ==========================
-
       await tx.companyPricing.deleteMany({
-        where: { companyId: id },
+        where: { companyId: userId },
       });
 
-      // ==========================
-      // 4. Terakhir: hapus user
-      // ==========================
-
       const user = await tx.user.delete({
-        where: { id },
+        where: { id: userId },
       });
 
       return user;
@@ -149,7 +135,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, user: result });
   } catch (err: any) {
-    console.error(err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
