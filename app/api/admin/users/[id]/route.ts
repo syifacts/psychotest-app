@@ -82,11 +82,8 @@ import { NextRequest, NextResponse } from "next/server";
 //     return NextResponse.json({ error: err.message }, { status: 500 });
 //   }
 // }
-export async function DELETE(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const { id } = await context.params; // <-- WAJIB AWAIT
+export async function DELETE(req: NextRequest, context: any) {
+  const { id } = await context.params; // Next.js 15 requires awaiting params
 
   try {
     const userId = parseInt(id);
