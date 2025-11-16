@@ -32,6 +32,8 @@ interface PaymentRow {
   paidAt?: string;
   paymentUrl?: string;
   status: string;
+  testName: string;
+  psychologist: string;
 }
 
 export default function FinanceReportPage() {
@@ -42,6 +44,26 @@ export default function FinanceReportPage() {
   const [endDate, setEndDate] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState("");
+
+
+  const updateStatus = async (id: number, status: string) => {
+  const res = await fetch(`/api/payment/${id}/status`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!res.ok) {
+    alert("Gagal update status");
+    return;
+  }
+
+  // update state tanpa reload
+  setPayments((prev) =>
+    prev.map((p) => (p.id === id ? { ...p, status } : p))
+  );
+};
 
   useEffect(() => {
     fetch("/api/payment")
@@ -105,6 +127,9 @@ const mapped = data
       : "-",
     paymentUrl: p.paymentUrl ?? "-",
     status: p.status || "pending",
+    testName: p.TestType?.name ?? "-",
+psychologist: p.attempts?.[0]?.results?.[0]?.ValidatedBy?.fullName ?? "-",
+
   };
 });
 
@@ -116,37 +141,42 @@ const mapped = data
   }, []);
 
   // Filter & search
-  useEffect(() => {
-    let temp = [...payments];
+useEffect(() => {
+  let temp = [...payments];
 
-    if (search) {
-      const s = search.toLowerCase();
-      temp = temp.filter((p) =>
-        (p.fullName ?? "-").toLowerCase().includes(s)
-      );
-    }
+  if (search) {
+    const s = search.toLowerCase();
+    temp = temp.filter((p) =>
+      (p.fullName ?? "-").toLowerCase().includes(s)
+    );
+  }
 
-    if (startDate) {
-      temp = temp.filter((p) => {
-        if (!p.paidAt) return false;
-        const [d, m, y] = p.paidAt.split("/");
-        const paidDate = new Date(`${y}-${m}-${d}`);
-        return paidDate >= new Date(startDate);
-      });
-    }
+  if (startDate) {
+    temp = temp.filter((p) => {
+      if (!p.paidAt) return false;
+      const [d, m, y] = p.paidAt.split("/");
+      const paidDate = new Date(`${y}-${m}-${d}`);
+      return paidDate >= new Date(startDate);
+    });
+  }
 
-    if (endDate) {
-      temp = temp.filter((p) => {
-        if (!p.paidAt) return false;
-        const [d, m, y] = p.paidAt.split("/");
-        const paidDate = new Date(`${y}-${m}-${d}`);
-        return paidDate <= new Date(endDate);
-      });
-    }
+  if (endDate) {
+    temp = temp.filter((p) => {
+      if (!p.paidAt) return false;
+      const [d, m, y] = p.paidAt.split("/");
+      const paidDate = new Date(`${y}-${m}-${d}`);
+      return paidDate <= new Date(endDate);
+    });
+  }
 
-    setFilteredPayments(temp);
-    setCurrentPage(1);
-  }, [search, startDate, endDate, payments]);
+  if (statusFilter) {
+    temp = temp.filter((p) => p.status === statusFilter);
+  }
+
+  setFilteredPayments(temp);
+  setCurrentPage(1);
+}, [search, startDate, endDate, payments, statusFilter]);
+
 
   // Fungsi bantu tanggal
   const getDateFromString = (dateStr?: string) => {
@@ -214,6 +244,7 @@ const exportExcel = () => {
   const formattedData = filteredPayments.map((item) => ({
     ID: item.id,
     User: item.fullName,
+    "Nama Test": item.testName,
     "Harga Asli": item.originalPrice,
     "Custom Price": item.customPrice ?? 0,
     "Diskon Nominal": item.discountNominal ?? 0,
@@ -233,7 +264,7 @@ const exportExcel = () => {
 
   // Jumlah baris data (tidak termasuk header)
   const lastRow = formattedData.length + 1;
-const totalFormula = `=SUM(I2:I${lastRow})`; // ✅ hitung dari kolom I
+const totalFormula = `=SUM(J2:I${lastRow})`; // ✅ hitung dari kolom I
 
 XLSX.utils.sheet_add_aoa(
   ws,
@@ -257,7 +288,7 @@ ws["!merges"].push({
 // Gabungkan kolom I–M untuk hasil total
 ws["!merges"].push({
   s: { r: lastRow, c: 8 }, // I
-  e: { r: lastRow, c: 12 }, // M
+  e: { r: lastRow, c: 13 }, // M
 });
 
   // Atur lebar kolom
@@ -460,6 +491,18 @@ if (totalValueCell) {
           />
         </div>
 
+{/* Status Filter (Dropdown) */}
+  <select
+    className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400"
+    value={statusFilter}
+    onChange={(e) => setStatusFilter(e.target.value)}
+  >
+    <option value="">Semua Status</option>
+    <option value="SUCCESS">SUCCESS</option>
+    <option value="FAILED">FAILED</option>
+    <option value="PENDING">PENDING</option>
+    <option value="REFUND">REFUND</option>
+  </select>
         <select
           className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400"
           value={rowsPerPage}
@@ -478,6 +521,7 @@ if (totalValueCell) {
             <tr>
               <th className="border px-4 py-2">ID</th>
               <th className="border px-4 py-2">User</th>
+              <th className="border px-4 py-2">Nama Test</th>
               <th className="border px-4 py-2">Harga Asli</th>
               <th className="border px-4 py-2">Custom Price</th>
               <th className="border px-4 py-2">Diskon Nominal</th>
@@ -489,7 +533,9 @@ if (totalValueCell) {
               <th className="border px-4 py-2">Method</th>
               <th className="border px-4 py-2">Paid At</th>
               <th className="border px-4 py-2">Payment URL</th>
-              <th className="border px-4 py-2">Status</th>
+<th className="border px-4 py-2">Status</th>
+{/* <th className="border px-4 py-2">Psikolog</th> */}
+ <th className="p-2 border">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -497,6 +543,7 @@ if (totalValueCell) {
               <tr key={p.id} className="hover:bg-blue-50 transition">
                 <td className="border px-4 py-2">{p.id}</td>
                 <td className="border px-4 py-2">{p.fullName}</td>
+                <td className="border px-4 py-2">{p.testName}</td>
                 <td className="border px-4 py-2">Rp {p.originalPrice.toLocaleString()}</td>
                 <td className="border px-4 py-2">
                   {p.customPrice ? `Rp ${p.customPrice.toLocaleString()}` : "-"}
@@ -535,18 +582,48 @@ if (totalValueCell) {
                   )}
                 </td>
                 <td className="border px-4 py-2">
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-semibold ${
-                      p.status === "SUCCESS"
-                        ? "bg-green-100 text-green-700"
-                        : p.status === "FAILED"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}
-                  >
-                    {p.status}
-                  </span>
-                </td>
+  <span
+    className={`px-2 py-1 rounded text-xs font-semibold ${
+      p.status === "SUCCESS"
+        ? "bg-green-100 text-green-700"
+        : p.status === "FAILED"
+        ? "bg-red-100 text-red-700"
+        : p.status === "REFUND"
+        ? "bg-purple-100 text-purple-700"
+        : "bg-yellow-100 text-yellow-700"
+    }`}
+  >
+    {p.status}
+  </span>
+
+
+  {/* tombol ubah */}
+  {/* <button
+    className="ml-2 text-blue-600 hover:underline text-xs"
+    onClick={() => updateStatus(p.id, "REFUND")}
+  >
+    Refund
+  </button> */}
+</td>
+  {/* <td className="border px-4 py-2">{p.psychologist}</td> */}
+<td className="p-2 border text-center">
+          {p.status === "SUCCESS" ? (
+            <button
+              className="px-3 py-1 text-xs rounded bg-yellow-200 
+                         text-yellow-800 hover:bg-yellow-300 border border-yellow-400"
+              onClick={() => {
+                if (confirm(`Yakin ingin REFUND pembayaran #${p.id}?`)) {
+                  updateStatus(p.id, "REFUND");
+                }
+              }}
+            >
+              Refund
+            </button>
+          ) : (
+            <span className="text-gray-400 text-xs">-</span>
+          )}
+        </td>
+
               </tr>
             ))}
             {displayedPayments.length === 0 && (

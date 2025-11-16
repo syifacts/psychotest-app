@@ -224,6 +224,8 @@ if (loading) return <p>Memuat data...</p>;
       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all bg-white"
     >
       <option value="">-- Pilih Pendidikan --</option>
+          <option value="SD">SD</option>
+    <option value="SMP">SMP</option>
       <option value="SMA/SMK">SMA/SMK</option>
       <option value="Diploma">Diploma</option>
       <option value="Sarjana">Sarjana (S1)</option>
@@ -235,13 +237,13 @@ if (loading) return <p>Memuat data...</p>;
   {/* Tujuan */}
   <div className="mb-6">
     <label className="block mb-2 font-semibold text-gray-700">
-      Melamar Untuk
+      Tujuan
     </label>
     <input
       type="text"
       value={tujuan}
       onChange={(e) => setTujuan(e.target.value)}
-      placeholder="Masukkan posisi yang dilamar"
+      placeholder="Contoh: Bekerja di Korea"
       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all"
     />
   </div>

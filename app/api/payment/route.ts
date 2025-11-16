@@ -44,17 +44,32 @@ where: {
     company: { select: { fullName: true } },
     TestType: {
       select: {
+         name: true,
         price: true,
         priceDiscount: true,
         percentDiscount: true,
       },
     },
+    
     CompanyPricing: {
       select: {
         id: true,
         customPrice: true,
         discountNominal: true,
         discountNote: true,
+      },
+    },
+    attempts: {
+      select: {
+        results: {
+          select: {
+            ValidatedBy: {
+              select: {
+                fullName: true, // nama psikolog
+              },
+            },
+          },
+        },
       },
     },
   },

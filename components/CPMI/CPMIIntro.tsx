@@ -6,6 +6,8 @@ import { useState, useEffect } from "react"
 import { motion, Variants, cubicBezier } from "framer-motion"
 import CPMIPaymentButton from "./CPMIPaymentButton"
 import Navbar from "../layout/navbar"
+import ReactMarkdown from "react-markdown";
+
 
 interface Props {
   testInfo: {
@@ -224,15 +226,23 @@ const activePercentDiscount =
                 {testInfo.judul}
               </motion.h1>
             )}
-            {testInfo?.deskripsijudul && (
-              <motion.div
-                className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: testInfo.deskripsijudul }}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
-              />
-            )}
+{testInfo?.deskripsijudul && (
+  <motion.div
+    className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ duration: 0.8, delay: 0.4 }}
+  >
+    <ReactMarkdown
+      components={{
+        p: (props) => <p className="mb-2" {...props} />,
+        strong: (props) => <b {...props} />,
+      }}
+    >
+      {testInfo.deskripsijudul}
+    </ReactMarkdown>
+  </motion.div>
+)}
           </motion.div>
 
           <motion.div
@@ -265,7 +275,7 @@ const activePercentDiscount =
                       </div>
                       <h2 className="text-2xl font-bold text-gray-800">{testInfo.juduldesk1}</h2>
                     </div>
-                   {testInfo.desk1 && (
+{testInfo.desk1 && (
   <motion.ul
     className="space-y-3 text-gray-700"
     initial="hidden"
@@ -276,9 +286,29 @@ const activePercentDiscount =
         transition: { staggerChildren: 0.15 },
       },
     }}
-    dangerouslySetInnerHTML={{ __html: testInfo.desk1 }}
-  />
+  >
+    {testInfo.desk1
+      .split("\n")
+      .filter(line => line.trim() !== "")
+      .map((line, i) => (
+        <motion.li
+          key={i}
+          variants={itemVariants}
+          className="leading-relaxed"
+        >
+          <ReactMarkdown
+            components={{
+              p: "span",   // supaya markdown tidak bikin <p> di dalam <li>
+              strong: "b", // markdown ** → <b>
+            }}
+          >
+            {line}
+          </ReactMarkdown>
+        </motion.li>
+      ))}
+  </motion.ul>
 )}
+
 
                   </div>
                 </motion.section>
@@ -306,7 +336,7 @@ const activePercentDiscount =
                       </div>
                       <h2 className="text-2xl font-bold text-gray-800">{testInfo.juduldesk2}</h2>
                     </div>
-                {testInfo.desk2 && (
+{testInfo.desk2 && (
   <motion.ul
     className="space-y-3 text-gray-700 list-none pl-0"
     initial="hidden"
@@ -317,9 +347,22 @@ const activePercentDiscount =
         transition: { staggerChildren: 0.15 },
       },
     }}
-    dangerouslySetInnerHTML={{ __html: testInfo.desk2 }}
-  />
+  >
+    {testInfo.desk2
+      .split("\n")
+      .filter(line => line.trim() !== "")
+      .map((line, i) => (
+        <motion.li
+          key={i}
+          variants={itemVariants}
+          className="leading-relaxed"
+        >
+          {line}
+        </motion.li>
+      ))}
+  </motion.ul>
 )}
+
 
                   </div>
                 </motion.section>
@@ -344,7 +387,7 @@ const activePercentDiscount =
                     <h3 className="font-bold text-lg text-gray-800">{testInfo.judulbenefit}</h3>
                   </div>
                   <div className="space-y-2 text-gray-700">
-                 {testInfo.pointbenefit && (
+{testInfo.pointbenefit && (
   <motion.div
     className="space-y-2 text-gray-700"
     initial="hidden"
@@ -355,14 +398,20 @@ const activePercentDiscount =
         transition: { staggerChildren: 0.1 },
       },
     }}
-    dangerouslySetInnerHTML={{
-      __html: testInfo.pointbenefit
-        .replace(/<li>/g, '<p>')   // ganti <li> jadi <p>
-        .replace(/<\/li>/g, '</p>') // ganti </li> jadi </p>
-        .replace(/<ul>/g, '')       // hapus <ul>
-        .replace(/<\/ul>/g, '')     // hapus </ul>
-    }}
-  />
+  >
+    {testInfo.pointbenefit
+      .split("\n")
+      .filter(line => line.trim() !== "")
+      .map((line, i) => (
+        <motion.p
+          key={i}
+          variants={itemVariants}
+          className="leading-relaxed"
+        >
+          {line}
+        </motion.p>
+      ))}
+  </motion.div>
 )}
 
 

@@ -19,6 +19,8 @@ interface User {
   role: "USER" | "PSIKOLOG" | "PERUSAHAAN" | "SUPERADMIN";
   companyName?: string;
   createdAt: string;
+passwordDisplay: string; // <-- WAJIB
+
 }
 
 export default function AdminPage() {

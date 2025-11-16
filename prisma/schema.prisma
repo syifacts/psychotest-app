@@ -38,6 +38,7 @@ model User {
   fullName  String
   email     String   @unique
   password  String
+  defaultPassword  String?
   role      Role     @default(USER)
   birthDate DateTime?
   gender    Gender?
@@ -277,7 +278,10 @@ model Result {
   summaryTemplateId Int?
   saranpengembangan   String? @db.Text
   kesimpulanumum       String? @db.Text
-
+ rekomendasi  String? @db.Text
+  layak        Boolean? @default(false)
+  belumLayak   Boolean? @default(false)
+  tidakLayak   Boolean? @default(false)
   // jumlah jawaban
 jumlahA1   Int?
 jumlahA2   Int?

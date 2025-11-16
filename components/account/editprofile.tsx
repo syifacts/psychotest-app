@@ -275,6 +275,8 @@ useEffect(() => {
               focus:ring-2 focus:ring-blue-500 outline-none transition"
             >
               <option value="">-- Pilih --</option>
+                  <option value="SD">SD</option>
+    <option value="SMP">SMP</option>
               <option value="SMA/SMK">SMA/SMK</option>
               <option value="Diploma">Diploma</option>
               <option value="Sarjana">Sarjana (S1)</option>

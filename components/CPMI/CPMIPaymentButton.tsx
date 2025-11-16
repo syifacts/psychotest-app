@@ -6,6 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { useToast } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/toaster"
 
 
 import {
@@ -55,6 +57,7 @@ const CPMIPaymentButton: React.FC<Props> = ({
 }) => {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+const { toast } = useToast();
 
   const [quantity, setQuantity] = useState(1);
   const [user, setUser] = useState<User | null>(null);
@@ -297,11 +300,16 @@ const handleSaveIdentity = async () => {
   if (role === "SUPERADMIN") return;
 
   if (!user || user.role === "GUEST") {
-    alert("Silakan login terlebih dahulu untuk membeli test!");
+    toast({
+      title: "Login diperlukan",
+      description: "Silakan login terlebih dahulu untuk membeli test!",
+      variant: "error",
+      duration: 8000,
+    });
+
     window.location.href = "/login";
     return;
   }
-
   if (!testInfo?.id) return;
 
   setLoading(true);
@@ -317,7 +325,13 @@ const handleSaveIdentity = async () => {
     });
 
     if (res.status === 401) {
-      alert("Silakan login terlebih dahulu untuk membeli test!");
+      toast({
+        title: "Login diperlukan",
+        description: "Silakan login terlebih dahulu untuk membeli test!",
+        variant: "error",
+        duration: 8000,
+      });
+
       window.location.href = "/login";
       return;
     }
@@ -598,9 +612,12 @@ return (
           Lanjutkan Pembayaran
         </Button>
       </div>
+      <Toaster />
     </div>
   </DialogContent>
 </Dialog>
+
+
 
 );
 

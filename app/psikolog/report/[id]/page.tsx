@@ -5,6 +5,10 @@ import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer';
 import ReportISTDocument from '@/components/report/reportDocument';
 import ReportCPMIDocument from '@/components/report/reportDocumentCPMI';
 import ReportMSDTDocument from '@/components/report/reportDocumentMSDT';
+import { Toaster } from "@/components/ui/toaster"
+
+import { useToast } from "@/components/ui/use-toast";
+
 
 const PDFComponents: Record<string, any> = {
   IST: ReportISTDocument,
@@ -25,10 +29,14 @@ const [kesimpulan, setKesimpulan] = useState({
   kesimpulanSikap: '',
   kesimpulanKepribadian: '',
   kesimpulanBelajar: '',
-    saranpengembangan: '',
-    kesimpulanumum: '',
-
+  saranpengembangan: '',
+  kesimpulanumum: '',
+  rekomendasi: '',
+  layak: false,
+  belumLayak: false,
+  tidakLayak: false,
 });
+const { toast } = useToast();
 
 
   const [msdtResult, setmsdtResult] = useState<any | null>(null);
@@ -49,12 +57,16 @@ const [kesimpulan, setKesimpulan] = useState({
 
       const source = data.cpmiResult || data.result || {};
 setKesimpulan((prev) => ({
-  kesimpulan: source.kesimpulan ?? prev.kesimpulan,
-  kesimpulanSikap: source.kesimpulanSikap ?? prev.kesimpulanSikap,
-  kesimpulanKepribadian: source.kesimpulanKepribadian ?? prev.kesimpulanKepribadian,
-  kesimpulanBelajar: source.kesimpulanBelajar ?? prev.kesimpulanBelajar,
-  saranpengembangan: source.saranpengembangan ?? prev.saranpengembangan,
-  kesimpulanumum: source.kesimpulanumum ?? prev.kesimpulanumum,
+kesimpulan: source.kesimpulan || '',
+  kesimpulanSikap: source.kesimpulanSikap || '',
+  kesimpulanKepribadian: source.kesimpulanKepribadian || '',
+  kesimpulanBelajar: source.kesimpulanBelajar || '',
+  saranpengembangan: source.saranpengembangan || '',
+  kesimpulanumum: source.kesimpulanumum || '',
+  rekomendasi: source.rekomendasi || '',
+  layak: source.layak !== undefined ? source.layak : false,
+  belumLayak: source.belumLayak !== undefined ? source.belumLayak : false,
+  tidakLayak: source.tidakLayak !== undefined ? source.tidakLayak : false,
 }));
 
 
@@ -115,7 +127,9 @@ saranpengembangan: kesimpulan.saranpengembangan,
   };
 
 
-  const fileName = `${attempt.TestType?.name}_${attempt.User?.fullName}.pdf`.replace(/\s+/g, '_');
+const fileName = `HPP_${attempt.User?.fullName || 'User'}.pdf`
+  .replace(/\s+/g, ' ')     // normalisasi spasi, kalau ada spasi double jadi satu
+  .trim();                  // hilangkan spasi di awal/akhir
 
   const handleSave = async () => {
   try {
@@ -130,27 +144,44 @@ saranpengembangan: kesimpulan.saranpengembangan,
         kesimpulanBelajar: kesimpulan.kesimpulanBelajar,
         kesimpulanumum: kesimpulan.kesimpulanumum,
         saranpengembangan: kesimpulan.saranpengembangan,
-        ttd
+        ttd,
+        layak: kesimpulan.layak,
+belumLayak: kesimpulan.belumLayak,
+tidakLayak: kesimpulan.tidakLayak,
+rekomendasi: kesimpulan.rekomendasi,
+
       }),
     });
 
     const data = await res.json();
-    if (data.success) {
-      alert('Berhasil disimpan! ✅');
+if (data.success) {
+  toast({
+    title: "Berhasil disimpan!",
+    description: "Data berhasil disimpan ke sistem.",
+    variant: "success",
+    duration: 2000,
+  });
+
+
 
       // 🔹 Fetch ulang agar textarea & preview PDF sinkron dengan DB
       const updated = await fetch(`/api/attempts/${id}`);
       const updatedData = await updated.json();
 
       const source = updatedData.cpmiResult || updatedData.result || {};
-      setKesimpulan({
-        kesimpulan: source.kesimpulan || '',
-        kesimpulanSikap: source.kesimpulanSikap || '',
-        kesimpulanKepribadian: source.kesimpulanKepribadian || '',
-        kesimpulanBelajar: source.kesimpulanBelajar || '',
-        saranpengembangan: source.saranpengembangan || '',
-        kesimpulanumum: source.kesimpulanumum || '',
-      });
+setKesimpulan({
+  kesimpulan: source.kesimpulan || '',
+  kesimpulanSikap: source.kesimpulanSikap || '',
+  kesimpulanKepribadian: source.kesimpulanKepribadian || '',
+  kesimpulanBelajar: source.kesimpulanBelajar || '',
+  saranpengembangan: source.saranpengembangan || '',
+  kesimpulanumum: source.kesimpulanumum || '',
+  rekomendasi: source.rekomendasi || '',
+  layak: source.layak || false,
+  belumLayak: source.belumLayak || false,
+  tidakLayak: source.tidakLayak || false,
+});
+
     } else {
       alert('Gagal menyimpan: ' + (data.error || 'Unknown error'));
     }
@@ -240,11 +271,15 @@ const pdfKey = JSON.stringify({
   kesimpulanBelajar: kesimpulan.kesimpulanBelajar,
   saranpengembangan: kesimpulan.saranpengembangan,
   kesimpulanumum: kesimpulan.kesimpulanumum,
+  layak: kesimpulan.layak,
+  belumLayak: kesimpulan.belumLayak,
+  tidakLayak: kesimpulan.tidakLayak,
   result,
   cpmiResult,
   msdtResult,
   subtestResults,
 });
+
 
   return (
 //     <div className="h-screen flex flex-col">
@@ -470,6 +505,67 @@ const pdfKey = JSON.stringify({
             />
           </>
         )}
+        {/* Setelah Kesimpulan Umum */}
+{/* Tabel Layak / Belum Layak / Tidak Layak */}
+<div className="mt-4">
+  <label className="block text-hd font-bold mb-2">Rekomendasi</label>
+  <table className="w-full border border-gray-300 text-center">
+    <thead>
+      <tr className="bg-gray-100">
+        <th className="border border-gray-300 px-2 py-1">Layak</th>
+        <th className="border border-gray-300 px-2 py-1">Belum Layak</th>
+        <th className="border border-gray-300 px-2 py-1">Tidak Layak</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td className="border border-gray-300 px-2 py-1">
+          <input
+            type="checkbox"
+            checked={kesimpulan.layak === true}
+            onChange={() =>
+              setKesimpulan({
+                ...kesimpulan,
+                layak: true,
+                belumLayak: false,
+                tidakLayak: false,
+              })
+            }
+          />
+        </td>
+        <td className="border border-gray-300 px-2 py-1">
+          <input
+            type="checkbox"
+            checked={kesimpulan.belumLayak === true}
+            onChange={() =>
+              setKesimpulan({
+                ...kesimpulan,
+                layak: false,
+                belumLayak: true,
+                tidakLayak: false,
+              })
+            }
+          />
+        </td>
+        <td className="border border-gray-300 px-2 py-1">
+          <input
+            type="checkbox"
+            checked={kesimpulan.tidakLayak === true}
+            onChange={() =>
+              setKesimpulan({
+                ...kesimpulan,
+                layak: false,
+                belumLayak: false,
+                tidakLayak: true,
+              })
+            }
+          />
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
          {/* ✅ Tombol Simpan di bawah */}
         <div className="pt-4 border-t mt-4">
           <button
@@ -490,6 +586,7 @@ const pdfKey = JSON.stringify({
         <PDFTemplate {...pdfProps} />
       </PDFViewer>
     </div>
+    <Toaster />
   </div>
 </div>
   );

@@ -97,7 +97,12 @@ if (customPrice) {
 }
 
 
-    const user = await prisma.user.create({ data: newUser });
+const user = await prisma.user.create({
+  data: {
+    ...newUser,
+    defaultPassword: password, // simpan password original
+  },
+});
      // 🔹 Jika perusahaan, buat juga pricing record
    // 🔹 Jika perusahaan → buat pricing
     if (role === "PERUSAHAAN") {

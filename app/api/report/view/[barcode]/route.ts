@@ -120,6 +120,12 @@ export async function GET(
       attempt: result.Attempt,
       result,
       kesimpulan: result.kesimpulan,
+      kesimpulanSikap: result.kesimpulanSikap,
+  kesimpulanKepribadian: result.kesimpulanKepribadian,
+  kesimpulanBelajar: result.kesimpulanBelajar,
+  kesimpulanUmum: result.kesimpulanumum,
+  saranPengembangan: result.saranpengembangan,
+
       ttd: result.User?.ttdUrl,
       barcode: result.barcode,
       expiresAt: result.expiresAt,

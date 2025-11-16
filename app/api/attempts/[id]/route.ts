@@ -269,7 +269,9 @@ const saranPengembangan = cpmiResultRaw.saranpengembangan && cpmiResultRaw.saran
    // kesimpulanumum: cpmiResultRaw.kesimpulanumum ?? "",
 //saranpengembangan: cpmiResultRaw.saranpengembangan ?? "",
 saranpengembangan: saranPengembangan,
-
+ layak: cpmiResultRaw.layak ?? false,
+  belumLayak: cpmiResultRaw.belumLayak ?? false,
+  tidakLayak:cpmiResultRaw.tidakLayak ?? false,
 
     ttdUrl: attempt.User?.ttdUrl || null,
     ttdHash: attempt.User?.ttdHash || null,

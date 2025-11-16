@@ -12,6 +12,10 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
+import { useToastConfirm } from "@/components/ui/use-toast-confirm";
+import { Toaster } from "@/components/ui/toaster"
+
 
 
 interface User {
@@ -21,6 +25,7 @@ interface User {
   role: "USER" | "PSIKOLOG" | "PERUSAHAAN" | "SUPERADMIN";
   companyName?: string;
   createdAt: string;
+passwordDisplay?: string | null;
 }
 
 interface UserTableProps {
@@ -40,6 +45,8 @@ const [filterDate, setFilterDate] = useState("all");
 const [startDate, setStartDate] = useState("");
 const [endDate, setEndDate] = useState("");
 const [testTypes, setTestTypes] = useState<any[]>([]);
+const { toast } = useToast();
+const { confirm } = useToastConfirm();
 
 
 React.useEffect(() => {
@@ -159,7 +166,11 @@ const handleSubmit = async () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Gagal menambahkan user");
 
-    onAddUser?.(data.user);
+    onAddUser?.({
+  ...data.user,
+  passwordDisplay: data.password,
+});
+
    // setShowModal(false);
    setOpen(true)
     setFormData({});
@@ -173,26 +184,33 @@ setTimeout(() => setShowNotif(false), 3000);
 };
 
 const handleDelete = async (id: number) => {
-  if (!confirm("Apakah yakin ingin menghapus user ini?")) return;
+  confirm("Apakah yakin ingin menghapus user ini?", async () => {
+    try {
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: "DELETE",
+      });
 
-  try {
-    const res = await fetch(`/api/admin/users/${id}`, {
-      method: "DELETE",
-    });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal menghapus user");
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Gagal menghapus user");
+      onRemoveUser?.(id);
 
-    // Hapus dari state agar UI update
-    onRemoveUser?.(id);
+      toast({
+        title: "Berhasil",
+        description: "User berhasil dihapus!",
+        variant: "success",
+        duration: 1500,
+      });
 
-    // Tampilkan notifikasi
-    setNotifMessage("User berhasil dihapus!");
-    setShowNotif(true);
-    setTimeout(() => setShowNotif(false), 1500);
-  } catch (err: any) {
-    alert(err.message);
-  }
+    } catch (err: any) {
+      toast({
+        title: "Gagal",
+        description: err.message,
+        variant: "error",
+        duration: 2000,
+      });
+    }
+  });
 };
 
   return (
@@ -295,7 +313,7 @@ const handleDelete = async (id: number) => {
   <tr className="bg-gradient-to-r from-indigo-200 to-indigo-300 text-gray-700">
     <th className="p-3 font-semibold text-left">Nama</th>
     <th className="p-3 font-semibold text-left">Email</th>
-
+      <th className="p-3 font-semibold text-left">Password</th>
     <th className="p-3 font-semibold text-center">
       <div className="flex items-center justify-center gap-2">
         <span>Role</span>
@@ -349,6 +367,18 @@ const handleDelete = async (id: number) => {
           >
             <td className="p-3 border-b border-gray-200 text-gray-700">{u.fullName}</td>
             <td className="p-3 border-b border-gray-200 text-gray-600">{u.email}</td>
+            {/* <td className="p-3 border-b border-gray-200 text-gray-700 font-mono">
+  <span className="blur-sm hover:blur-none cursor-pointer transition">
+    {u.passwordDisplay ?? "-"}
+  </span>
+</td> */}
+<td className="p-3 border-b border-gray-200 text-gray-700">
+  {u.passwordDisplay && u.passwordDisplay !== "-" 
+    ? u.passwordDisplay 
+    : "HASHED"}
+</td>
+
+
             <td className="p-3 border-b border-gray-200 text-center font-medium">
               <span
                 className={`px-2 py-1 rounded text-xs ${
@@ -583,7 +613,7 @@ const handleDelete = async (id: number) => {
   </DialogContent>
 </Dialog>
 
-
+  <Toaster />
     </div>
   );
 }

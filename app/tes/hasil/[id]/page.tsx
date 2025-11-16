@@ -185,7 +185,9 @@ const testType = String(rawTestType).toUpperCase();
 
   const PDFTemplate = PDFComponents[testType] || ReportISTDocument;
 
-  const fileName = `${attempt.TestType?.name || 'Tes'}_${attempt.User?.fullName || 'User'}.pdf`.replace(/\s+/g, '_');
+const fileName = `HPP_${attempt.User?.fullName || 'User'}.pdf`
+  .replace(/\s+/g, ' ')     // normalisasi spasi, kalau ada spasi double jadi satu
+  .trim();                  // hilangkan spasi di awal/akhir
 
   // Tentukan props yang akan dikirim ke PDF berdasarkan jenis tes
   const getPDFProps = () => {

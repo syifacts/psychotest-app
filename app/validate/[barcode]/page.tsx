@@ -46,6 +46,12 @@ export default function ValidatePage() {
             attempt={data.attempt}
             result={data.result}
             kesimpulan={data.kesimpulan}
+             kesimpulanSikap={data.kesimpulanSikap}
+  kesimpulanKepribadian={data.kesimpulanKepribadian}
+  kesimpulanBelajar={data.kesimpulanBelajar}
+  kesimpulanumum={data.kesimpulanUmum}
+  saranpengembangan={data.saranPengembangan}
+
             ttd={data.ttd}
             barcode={data.barcode}
             expiresAt={data.expiresAt}
@@ -66,9 +72,12 @@ export default function ValidatePage() {
                 height="800px"
                 style={{ border: "1px solid #ccc" }}
               />
+
               <a
                 href={url}
-                download={`Report-${barcode}.pdf`}
+download={`HPP_${(
+  data?.attempt?.User?.fullName || "User"
+)}.pdf`.replaceAll(" ", " ")}
                 style={{
                   display: "inline-block",
                   marginTop: 10,

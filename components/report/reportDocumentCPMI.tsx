@@ -42,6 +42,9 @@ interface Props {
     aspek3: string | AspekScore3[];
     aspek4: string | AspekScore4[];
     barcodettd?: string; // ✅ tambahkan
+    layak?: boolean;
+  tidakLayak?: boolean;
+  belumLayak?: boolean;
     ValidatedBy?: {
       fullName: string;
       lembagalayanan?: string;
@@ -105,7 +108,7 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, kesimp
 
   useEffect(() => {
     if (barcode) {
-      const url = `https://08227fc84894.ngrok-free.app/validate/${barcode}`;
+      const url = `https://cec2d2b4f9d2.ngrok-free.app/validate/${barcode}`;
       QRCode.toDataURL(url)
         .then(setQrCodeBase64)
         .catch((err) => console.error("QR generation error:", err));
@@ -681,8 +684,165 @@ const kategoriNormalized = (kategoriObj?.kategori || "").trim().toUpperCase();
     {kesimpulanumum || "Tidak ada kesimpulan tersedia"}
   </Text>
 </View>
+{/* Rekomendasi */}
+<View
+  style={[
+    styles.tableRow,
+    {
+      backgroundColor: "#fff",
+      paddingTop: 4,
+      paddingBottom: 4,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+    },
+  ]}
+>
+  <View style={{ marginTop: 5, marginLeft: 14, marginRight: 12 }}>
+    <Text style={{ fontFamily: "Times-Bold", marginBottom: 4 }}>
+      Rekomendasi
+    </Text>
+
+    {/* Tabel */}
+    <View
+      style={{
+        borderWidth: 1,
+        borderColor: "#000",
+        flexDirection: "column",
+        width: 300,
+      }}
+    >
+
+     {/* Baris LAYAK */}
+<View style={{ flexDirection: "row" }}>
+  {(() => {
+    const isBold = result?.layak === true;
+    return (
+      <>
+        <Text
+          style={{
+            width: 40,
+            textAlign: "center",
+            fontFamily: isBold ? "Times-Bold" : "Times-Roman",
+            paddingVertical: 4,
+            borderRightWidth: 1,
+            borderColor: "#000",
+          }}
+        >
+          {isBold ? "X" : ""}
+        </Text>
+
+        <Text
+          style={{
+            flex: 1,
+            fontFamily: isBold ? "Times-Bold" : "Times-Roman",
+            paddingVertical: 4,
+            paddingLeft: 6,
+          }}
+        >
+          Layak
+        </Text>
+      </>
+    );
+  })()}
+</View>
+
+
+     {/* Baris Belum Layak */}
+<View style={{ flexDirection: "row", borderTopWidth: 1, borderColor: "#000" }}>
+  {(() => {
+    const isBold = result?.belumLayak === true;
+
+    return (
+      <>
+        <Text
+          style={{
+            width: 40,
+            textAlign: "center",
+            fontFamily: isBold ? "Times-Bold" : "Times-Roman",
+            paddingVertical: 4,
+            borderRightWidth: 1,
+            borderColor: "#000",
+          }}
+        >
+          {isBold ? "X" : ""}
+        </Text>
+
+        <Text
+          style={{
+            flex: 1,
+            fontFamily: isBold ? "Times-Bold" : "Times-Roman",
+            paddingVertical: 4,
+            paddingLeft: 6,
+          }}
+        >
+          Belum Layak
+        </Text>
+      </>
+    );
+  })()}
+</View>
+
+    {/* Baris Tidak Layak */}
+<View style={{ flexDirection: "row", borderTopWidth: 1, borderColor: "#000" }}>
+  {(() => {
+    const isBold = result?.tidakLayak === true;
+
+    return (
+      <>
+        <Text
+          style={{
+            width: 40,
+            textAlign: "center",
+            fontFamily: isBold ? "Times-Bold" : "Times-Roman",
+            paddingVertical: 4,
+            borderRightWidth: 1,
+            borderColor: "#000",
+          }}
+        >
+          {isBold ? "X" : ""}
+        </Text>
+
+        <Text
+          style={{
+            flex: 1,
+            fontFamily: isBold ? "Times-Bold" : "Times-Roman",
+            paddingVertical: 4,
+            paddingLeft: 6,
+          }}
+        >
+          Tidak Layak
+        </Text>
+      </>
+    );
+  })()}
+</View>
 
     </View>
+
+
+
+     {/* Keterangan di bawah tabel */}
+     <View style={{ marginTop: 6 }}>
+       <Text style={{ fontSize: 13, fontFamily: "Times-Bold" }}>
+         Keterangan:
+       </Text>
+       <Text style={{ marginTop:5, fontSize: 13, fontFamily: "Times-Roman" }}>
+         Tanda "X" adalah potensi dari kandidat CPMI.
+       </Text>
+     </View>
+     </View>
+
+  </View>
+</View>
+</Page>
+{/* Halaman 4 */}
+<Page size="A4" style={styles.page}>
+  {/* HEADER */}
+  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 30 }}>
+    <Image src="/logoetp.png" style={{ width: 100, height: 40 }} />
+    <Image src="/logoklinik.png" style={{ width: 100, height: 40 }} />
+  </View>
+
 
 {/* Footer TTD & QR */}
 <View
