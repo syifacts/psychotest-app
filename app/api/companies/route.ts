@@ -27,15 +27,24 @@ export async function GET() {
       },
     });
 
-    const mapped = users.map((u) => ({
-      id: u.id,
-      fullName: u.fullName,
-      role: u.role,
-      token: u.tokens[0]?.token || null,
-      totalPackagePurchases: u.purchasedPackagesAsCompany.length,
-      totalPayments: u.companyPayments.length,
-      totalAttempts: u.role === "USER" ? u.attempts.length : 0, // jumlah test untuk user
-    }));
+    // const mapped = users.map((u) => ({
+    //   id: u.id,
+    //   fullName: u.fullName,
+    //   role: u.role,
+    //   token: u.tokens[0]?.token || null,
+    //   totalPackagePurchases: u.purchasedPackagesAsCompany.length,
+    //   totalPayments: u.companyPayments.length,
+    //   totalAttempts: u.role === "USER" ? u.attempts.length : 0, // jumlah test untuk user
+    // }));
+const mapped = users.map((u: any) => ({
+  id: u.id,
+  fullName: u.fullName,
+  role: u.role,
+  token: u.tokens[0]?.token || null,
+  totalPackagePurchases: u.purchasedPackagesAsCompany.length,
+  totalPayments: u.companyPayments.length,
+  totalAttempts: u.role === "USER" ? u.attempts.length : 0,
+}));
 
     return NextResponse.json(mapped);
   } catch (err) {
