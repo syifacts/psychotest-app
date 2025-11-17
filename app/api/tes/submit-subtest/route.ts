@@ -233,9 +233,15 @@ const totalSw = subTestResults.reduce(
       }
 
       const kategoriIq = iqCategory(iq);
+      // const ISTSubTests = ["SE", "WA", "AN", "GE", "RA", "ZR", "FA", "WU", "ME"];
+      // const swMap: Record<string, number> = {};
+      // ISTSubTests.forEach((name, idx) => (swMap[name] = subTestResults[idx]?.sw ?? 0));
       const ISTSubTests = ["SE", "WA", "AN", "GE", "RA", "ZR", "FA", "WU", "ME"];
-      const swMap: Record<string, number> = {};
-      ISTSubTests.forEach((name, idx) => (swMap[name] = subTestResults[idx]?.sw ?? 0));
+const swMap: Record<string, number> = {};
+ISTSubTests.forEach((name: string, idx: number) => {
+  swMap[name] = subTestResults[idx]?.sw ?? 0;
+});
+
       const dimensi = getDimensi(swMap["GE"], swMap["RA"], swMap["AN"], swMap["ZR"]);
 
       await prisma.result.update({
