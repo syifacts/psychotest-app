@@ -33,10 +33,10 @@ const lastUser = users.reduce(
     months[key] = 0;
   }
 
-  users.forEach(u => {
-    const month = u.createdAt.toISOString().slice(0, 7);
-    months[month] = (months[month] || 0) + 1;
-  });
+users.forEach((u: { createdAt: Date }) => {
+  const month = u.createdAt.toISOString().slice(0, 7);
+  months[month] = (months[month] || 0) + 1;
+});
 
   const data = Object.entries(months).map(([month, newUsers]) => ({ month, newUsers }));
 
