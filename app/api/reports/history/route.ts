@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
 
     console.log("DEBUG: hasil query =", results);
 
-    const formattedReports = results.map((r) => ({
+    const formattedReports = results.map((r:any) => ({
       id: r.id,
       User: r.Attempt?.User || null,
       TestType: r.Attempt?.TestType || null,

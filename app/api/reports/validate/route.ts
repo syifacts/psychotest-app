@@ -160,7 +160,7 @@ if (status && status !== "all") {
     });
 
     // === Mapping company fallback (untuk result)
-    const mappedResults = results.map((r) => {
+    const mappedResults = results.map((r:any) => {
       let company = null;
       if (r.Attempt?.PackagePurchase?.company) company = r.Attempt.PackagePurchase.company;
       else if (r.Attempt?.Payment?.company) company = r.Attempt.Payment.company;
@@ -181,7 +181,7 @@ if (status && status !== "all") {
     });
 
     // === Mapping company fallback (untuk personalityResult)
-    const mappedPersonality = personalityResults.map((r) => {
+    const mappedPersonality = personalityResults.map((r:any) => {
       let company = null;
       if (r.Attempt?.PackagePurchase?.company) company = r.Attempt.PackagePurchase.company;
       else if (r.Attempt?.Payment?.company) company = r.Attempt.Payment.company;
