@@ -49,3 +49,15 @@
 //     );
 //   }
 // }
+
+// app/api/tes/mbti/submit/route.ts
+
+import { NextResponse } from "next/server";
+
+export async function POST() {
+  // Placeholder: API belum diimplementasi
+  return NextResponse.json(
+    { message: "Endpoint MBTI belum tersedia." },
+    { status: 501 }, // 501 Not Implemented
+  );
+}
