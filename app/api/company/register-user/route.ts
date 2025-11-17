@@ -126,7 +126,8 @@ export async function POST(req: NextRequest) {
       }
 
       // Cek user sudah daftar test ini
-   if (payment.attempts.some((a) => a.userId === user!.id)) {
+  //  if (payment.attempts.some((a) => a.userId === user!.id)) {
+  if (payment.attempts.some((a: any) => a.userId === user!.id)) {
     return NextResponse.json(
       { error: "User sudah terdaftar di test ini" },
       { status: 400 }
