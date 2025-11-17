@@ -200,3 +200,9 @@
 // };
 
 // export default TesMBTIPage;
+
+
+// app/tes/mbti/page.tsx
+export default function MBTIPage() {
+  return <div>Halaman MBTI sedang dalam pengembangan.</div>;
+}
