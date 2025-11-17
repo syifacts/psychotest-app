@@ -52,7 +52,9 @@ export async function GET(req: Request) {
 
     // Mapping user yang sudah didaftarkan ke test
     const singlePayments = await Promise.all(
-      singlePaymentsRaw.map(async (payment) => {
+    //  singlePaymentsRaw.map(async (payment) => {
+      singlePaymentsRaw.map(async (payment: any) => {
+
         const registeredAttempts = await prisma.testAttempt.findMany({
           where: { paymentId: payment.id },
           include: { User: { include: { tokens: { take: 1, orderBy: { createdAt: "desc" }, select: { token: true } } } } },
