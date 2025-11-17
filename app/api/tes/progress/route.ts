@@ -162,16 +162,18 @@ userProgress = await prisma.userProgress.upsert({
       });
 
       const answered = await prisma.answer.findMany({
-        where: { attemptId: attempt.id, questionCode: { in: questions.map(q => q.code) } },
+        // where: { attemptId: attempt.id, questionCode: { in: questions.map(q => q.code) } },
+        where: { attemptId: attempt.id,questionCode: { in: questions.map((q: any) => q.code) },
+      },
         select: { questionCode: true },
       });
 
-      const answeredSet = new Set(answered.map(a => a.questionCode));
-      const nextQ = questions.find(q => !answeredSet.has(q.code));
+      const answeredSet = new Set(  answered.map((a: any) => a.questionCode));
+      const nextQ = questions.find((q: any) => !answeredSet.has(q.code));
 
       if (nextQ) {
         nextQuestionCode = nextQ.code;
-        nextQuestionIndex = questions.findIndex(q => q.code === nextQ.code);
+        nextQuestionIndex = questions.findIndex(  (q: any) => q.code === nextQ.code);
       } else {
         // Semua soal selesai → tandai progress & simpan SubtestResult
         await prisma.userProgress.update({
