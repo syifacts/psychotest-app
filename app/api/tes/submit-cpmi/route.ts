@@ -485,8 +485,8 @@ export async function POST(req: NextRequest) {
     // Hitung jumlah jawaban benar
     let jumlahBenar = 0;
 
-    const answerData = answers.map(a => {
-      const question = questions.find(q => q.id === a.questionId);
+    const answerData = answers.map((a: any) => {
+  const question = questions.find((q: any) => q.id === a.questionId);
       const normalizedChoice = String(a.choice).trim();
 
       let isCorrect: boolean | null = null;
