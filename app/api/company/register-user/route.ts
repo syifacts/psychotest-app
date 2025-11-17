@@ -68,7 +68,8 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      if (purchase.userPackages.some((u) => u.userId === user!.id)) {
+      // if (purchase.userPackages.some((u) => u.userId === user!.id)) {
+      if (purchase.userPackages.some((u: any) => u.userId === user!.id)) {
         return NextResponse.json({ error: "User sudah terdaftar di paket ini" }, { status: 400 });
       }
 
