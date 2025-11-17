@@ -130,7 +130,8 @@ export async function GET(req: NextRequest) {
     });
 
     // === Mapping Company (Result) ===
-    const mappedResults = results.map((r) => {
+    // const mappedResults = results.map((r) => {
+    const mappedResults = results.map((r: any) => {
       let company: { id: number; fullName: string } | null = null;
       if (r.Attempt?.PackagePurchase?.company) {
         company = r.Attempt.PackagePurchase.company;
