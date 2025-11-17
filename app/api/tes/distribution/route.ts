@@ -9,7 +9,7 @@ export async function GET() {
   });
 
   const data = await Promise.all(
-    attempts.map(async (a) => {
+    attempts.map(async (a:any) => {
       const testType = await prisma.testType.findUnique({
         where: { id: a.testTypeId },
       });

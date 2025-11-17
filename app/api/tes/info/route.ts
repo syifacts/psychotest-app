@@ -84,7 +84,7 @@ if (decoded?.role === "PERUSAHAAN") {
          discountNominal,
   price: finalPrice,
 
-      subTests: test.subTests.map((st) => {
+      subTests: test.subTests.map((st:any) => {
         let hapalan = null;
         let description = st.desc ?? "Deskripsi subtest belum tersedia";
 
