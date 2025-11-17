@@ -67,11 +67,14 @@ export async function GET() {
       select: { id: true, fullName: true },
     });
 
-    const companyMap = new Map(companies.map(c => [c.id, c.fullName]));
+    // const companyMap = new Map(companies.map(c => [c.id, c.fullName]));
+    const companyMap = new Map(
+  companies.map((c: { id: number; fullName: string }) => [c.id, c.fullName])
+);
 
     // Proses password display
     const result = await Promise.all(
-      users.map(async (u) => {
+  users.map(async (u: any) => {
         let passwordDisplay = "-";
 
         // Jika punya defaultPassword → cek apakah masih sama dengan hash
