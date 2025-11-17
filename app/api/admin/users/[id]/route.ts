@@ -17,6 +17,7 @@
 // }
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client"; // kalau belum ada
 
 // export async function DELETE(
 //   req: NextRequest,
@@ -82,53 +83,57 @@ import { NextRequest, NextResponse } from "next/server";
 //     return NextResponse.json({ error: err.message }, { status: 500 });
 //   }
 // }
-export async function DELETE(req: NextRequest, context: any) {
-  const { id } = await context.params; // Next.js 15 requires awaiting params
+export async function DELETE(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params; // tetap sama id-nya async
+  const userId = parseInt(id);
 
   try {
-    const userId = parseInt(id);
+    const result = await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        await tx.answer.deleteMany({ where: { userId } });
+        await tx.result.deleteMany({ where: { userId } });
+        await tx.testAttempt.deleteMany({ where: { userId } });
+        await tx.payment.deleteMany({ where: { userId } });
+        await tx.userProgress.deleteMany({ where: { userId } });
+        await tx.personalityResult.deleteMany({ where: { userId } });
+        await tx.token.deleteMany({ where: { userId } });
+        await tx.packagePurchase.deleteMany({ where: { userId } });
+        await tx.userPackage.deleteMany({ where: { userId } });
 
-    const result = await prisma.$transaction(async (tx) => {
-      await tx.answer.deleteMany({ where: { userId } });
-      await tx.result.deleteMany({ where: { userId } });
-      await tx.testAttempt.deleteMany({ where: { userId } });
-      await tx.payment.deleteMany({ where: { userId } });
-      await tx.userProgress.deleteMany({ where: { userId } });
-      await tx.personalityResult.deleteMany({ where: { userId } });
-      await tx.token.deleteMany({ where: { userId } });
-      await tx.packagePurchase.deleteMany({ where: { userId } });
-      await tx.userPackage.deleteMany({ where: { userId } });
+        await tx.payment.updateMany({
+          where: { companyId: userId },
+          data: { companyId: null },
+        });
 
-      await tx.payment.updateMany({
-        where: { companyId: userId },
-        data: { companyId: null },
-      });
+        await tx.testAttempt.updateMany({
+          where: { companyId: userId },
+          data: { companyId: null },
+        });
 
-      await tx.testAttempt.updateMany({
-        where: { companyId: userId },
-        data: { companyId: null },
-      });
+        await tx.token.updateMany({
+          where: { companyId: userId },
+          data: { companyId: null },
+        });
 
-      await tx.token.updateMany({
-        where: { companyId: userId },
-        data: { companyId: null },
-      });
+        await tx.packagePurchase.updateMany({
+          where: { companyId: userId },
+          data: { companyId: null },
+        });
 
-      await tx.packagePurchase.updateMany({
-        where: { companyId: userId },
-        data: { companyId: null },
-      });
+        await tx.companyPricing.deleteMany({
+          where: { companyId: userId },
+        });
 
-      await tx.companyPricing.deleteMany({
-        where: { companyId: userId },
-      });
+        const user = await tx.user.delete({
+          where: { id: userId },
+        });
 
-      const user = await tx.user.delete({
-        where: { id: userId },
-      });
-
-      return user;
-    });
+        return user;
+      }
+    );
 
     return NextResponse.json({ success: true, user: result });
   } catch (err: any) {
