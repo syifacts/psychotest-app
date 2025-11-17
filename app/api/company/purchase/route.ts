@@ -62,7 +62,8 @@ export async function GET(req: Request) {
 
         return {
           ...payment,
-          userPackages: registeredAttempts.map(a => ({
+          // userPackages: registeredAttempts.map(a => ({
+            userPackages: registeredAttempts.map((a: any) => ({
             ...a.User,
             token: a.User?.tokens?.[0]?.token ?? null,
           })),
