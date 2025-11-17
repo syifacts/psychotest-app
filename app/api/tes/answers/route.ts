@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const answerData = answers
       .map((a) => {
         if (a.questionId) {
-          const question = questions.find((q) => q.id === a.questionId);
+const question = questions.find((q: any) => q.id === a.questionId);
           const normalizedChoice =
   Array.isArray(a.choice) ? a.choice[0] : String(a.choice);
 const isCorrect = question ? question.answer === normalizedChoice : null;
