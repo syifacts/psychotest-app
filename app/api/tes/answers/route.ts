@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
 
 
     const formatted: Record<string, string> = {};
-    answers.forEach((a) => {
+    answers.forEach((a:any) => {
       if (a.questionCode) {
         formatted[a.questionCode] = a.choice;
       } else if (a.preferenceQuestionCode) {
