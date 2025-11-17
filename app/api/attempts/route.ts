@@ -59,16 +59,27 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Kuota paket habis atau tidak ditemukan" }, { status: 400 });
       }
 
-      const attempt = await prisma.$transaction(async (tx) => {
-        const newAttempt = await tx.testAttempt.create({
-          data: { userId, testTypeId, packagePurchaseId },
-        });
-        await tx.packagePurchase.update({
-          where: { id: packagePurchaseId },
-          data: { quantity: { decrement: 1 } },
-        });
-        return newAttempt;
-      });
+      // const attempt = await prisma.$transaction(async (tx) => {
+      //   const newAttempt = await tx.testAttempt.create({
+      //     data: { userId, testTypeId, packagePurchaseId },
+      //   });
+      //   await tx.packagePurchase.update({
+      //     where: { id: packagePurchaseId },
+      //     data: { quantity: { decrement: 1 } },
+      //   });
+      //   return newAttempt;
+      // });
+      const attempt = await prisma.$transaction(async (tx: any) => {
+  const newAttempt = await tx.testAttempt.create({
+    data: { userId, testTypeId, packagePurchaseId },
+  });
+  await tx.packagePurchase.update({
+    where: { id: packagePurchaseId },
+    data: { quantity: { decrement: 1 } },
+  });
+  return newAttempt;
+});
+
       return NextResponse.json(attempt);
     }
 
