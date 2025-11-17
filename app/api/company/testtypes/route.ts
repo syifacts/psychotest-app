@@ -23,7 +23,8 @@ export async function GET(req: Request) {
       },
     });
 
-  const result = tests.map((test) => {
+  // const result = tests.map((test) => {
+  const result = tests.map((test: any) => {
   const cp = test.companyPricings[0];
   const basePrice = test.price ?? 0; 
   const customPrice = cp?.customPrice ?? null;
