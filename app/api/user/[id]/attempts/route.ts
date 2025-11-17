@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       orderBy: { startedAt: "desc" },
     });
 
-    const mappedAttempts = attempts.map((a) => {
+    const mappedAttempts = attempts.map((a:any) => {
       const result = a.results?.[0];
        const personalityResult = a.personalityResults?.[0];
      
