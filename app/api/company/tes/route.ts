@@ -22,7 +22,8 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const formattedPackages = packagePurchases.map(p => ({
+    // const formattedPackages = packagePurchases.map(p => ({
+    const formattedPackages = packagePurchases.map((p: any) => ({
       id: `package-${p.id}`,
       type: "package",
       name: p.package.name,
@@ -31,12 +32,14 @@ export async function GET(req: NextRequest) {
       quantity: p.quantity,
       used: p.userPackages.length,
       remaining: p.quantity - p.userPackages.length,
-      users: p.userPackages.map(up => ({
+      // users: p.userPackages.map(up => ({
+        users: p.userPackages.map((up: any) => ({
         id: up.User.id,
         name: up.User.fullName,
         email: up.User.email,
       })),
-      tests: p.package.tests.map(t => t.testType.name),
+      // tests: p.package.tests.map(t => t.testType.name),
+        tests: p.package.tests.map((t: any) => t.testType.name),
     }));
 
     // --- Ambil pembelian tes satuan ---
@@ -48,7 +51,8 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const formattedPayments = payments.map(pay => ({
+    // const formattedPayments = payments.map(pay => ({
+    const formattedPayments = payments.map((pay: any) => ({
       id: `payment-${pay.id}`,
       type: "single",
       name: pay.TestType.name,
@@ -57,7 +61,8 @@ export async function GET(req: NextRequest) {
       quantity: pay.quantity,
       used: pay.attempts.length,
       remaining: pay.quantity - pay.attempts.length,
-      users: pay.attempts.map(a => ({
+      // users: pay.attempts.map(a => ({
+        users: pay.attempts.map((a: any) => ({
         id: a.User.id,
         name: a.User.fullName,
         email: a.User.email,
