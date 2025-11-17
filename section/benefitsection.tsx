@@ -1,6 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import AnimatedOnScroll from "../components/ui/animatedonscroll";
+import Link from "next/link";
 
 export default function BenefitSection() {
   return (
@@ -40,15 +41,13 @@ export default function BenefitSection() {
 </AnimatedOnScroll>
 
 
-              <AnimatedOnScroll delay={0.6} duration={0.8}>
-                <button
-  onClick={() => { window.location.href = "/login"; }}
-  className="font-poppins mt-6 px-8 py-4 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl"
->
-  Mulai Psikotes Sekarang
-</button>
-
-              </AnimatedOnScroll>
+ <AnimatedOnScroll delay={0.6} duration={0.8}>
+  <Link href="/login">
+    <button className="font-poppins mt-6 px-8 py-4 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl">
+      Mulai Psikotes Sekarang
+    </button>
+  </Link>
+</AnimatedOnScroll>
             </div>
 
             {/* Right Illustration with larger image + animated floating elements */}
