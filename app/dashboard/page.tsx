@@ -100,7 +100,8 @@ testsData = testsData.map(test => {
   if (test.name === "CPMI") return { ...test, originalName: "CPMI", name: "WPT" };
 
   // Tandai tes yang belum aktif sebagai comingSoon
-  const activeTests = ["WPT", "IST", "MBTI", "Holland", "Big Five", "TIU6"];
+  // const activeTests = ["WPT", "IST", "MBTI", "Holland", "Big Five", "TIU6"];
+    const activeTests = ["WPT", "MSDT"];
   if (!activeTests.includes(test.name)) return { ...test, comingSoon: true };
 
   return test;
