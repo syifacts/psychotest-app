@@ -73,8 +73,8 @@ export async function POST(req: NextRequest) {
     });
 
     // ✅ Simpan jawaban & cek kebenaran
-    const answerData = answers.map(a => {
-      const question = questions.find(q => q.id === a.questionId);
+  const answerData = answers.map((a: any) => {
+  const question = questions.find((q: any) => q.id === a.questionId);
       const questionCode = question?.code ?? "";
       let isCorrect = false;
 
@@ -95,8 +95,8 @@ export async function POST(req: NextRequest) {
     });
 
     await Promise.all(
-      answerData.map(ans =>
-        prisma.answer.upsert({
+answerData.map((ans: any) =>
+          prisma.answer.upsert({
           where: { attemptId_questionCode: { attemptId: ans.attemptId, questionCode: ans.questionCode } },
           update: { choice: ans.choice, isCorrect: ans.isCorrect },
           create: ans,
@@ -164,8 +164,16 @@ export async function POST(req: NextRequest) {
     const allDone = subTests.length === subTestResults.length;
 
     // ✅ Hitung total RW & SW
-    const totalRw = subTestResults.reduce((sum, s) => sum + (s.rw ?? 0), 0);
-    const totalSw = subTestResults.reduce((sum, s) => sum + (s.sw ?? 0), 0);
+    // const totalRw = subTestResults.reduce((sum, s) => sum + (s.rw ?? 0), 0);
+    // const totalSw = subTestResults.reduce((sum, s) => sum + (s.sw ?? 0), 0);
+    const totalRw = subTestResults.reduce(
+  (sum: number, s: any) => sum + (s.rw ?? 0),
+  0
+);
+const totalSw = subTestResults.reduce(
+  (sum: number, s: any) => sum + (s.sw ?? 0),
+  0
+);
 
     // ✅ Upsert result
     let result = await prisma.result.upsert({
@@ -236,8 +244,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const doneSubtests = subTestResults.map(r => r.subTestId);
-    const nextSubtest = subTests.find(st => !doneSubtests.includes(st.id));
+ const doneSubtests = subTestResults.map((r: any) => r.subTestId);
+const nextSubtest = subTests.find((st: any) => !doneSubtests.includes(st.id));
+
 
     return NextResponse.json({
       success: true,
