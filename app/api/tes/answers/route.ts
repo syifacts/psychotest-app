@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Ambil kode untuk PreferenceQuestion
-    const prefIds = answers.map((a) => a.preferenceQuestionId).filter(Boolean) as number[];
+    const prefIds = answers.map((a:any) => a.preferenceQuestionId).filter(Boolean) as number[];
     const prefQuestions = await prisma.preferenceQuestion.findMany({
       where: { id: { in: prefIds } },
       select: { id: true, code: true },
@@ -62,7 +62,7 @@ return {
 };
 
         } else if (a.preferenceQuestionId) {
-          const pref = prefQuestions.find((p) => p.id === a.preferenceQuestionId);
+          const pref = prefQuestions.find((p:any) => p.id === a.preferenceQuestionId);
           return {
             userId,
             attemptId,
@@ -78,7 +78,7 @@ return {
 
     // Simpan jawaban
     await Promise.all(
-      answerData.map((a) =>
+      answerData.map((a:any) =>
         prisma.answer.upsert({
           where: a.questionCode
             ? { attemptId_questionCode: { attemptId, questionCode: a.questionCode } }
