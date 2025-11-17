@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
           const normalize = (val: string) => val.split(",").map(s => s.trim()).sort().join(",");
           isCorrect = normalize(a.choice) === normalize(String(question.answer ?? ""));
         } else if (question.type === "essay" && isAnswerScoreArray(question.answerScores)) {
-          isCorrect = question.answerScores.some(({ keyword }) =>
+      isCorrect = question.answerScores.some(({ keyword }: any) =>
             a.choice.toLowerCase().includes(keyword.toLowerCase())
           );
         } else {
