@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
     // 5️⃣ Tentukan subtest berikutnya
     let nextSubtest: { id: number; name: string; desc?: string; duration?: number } | null = null;
     for (const sub of allSubtests) {
-      if (!userResults.some((r) => r.subTestId === sub.id)) {
+      if (!userResults.some((r:any) => r.subTestId === sub.id)) {
         nextSubtest = { id: sub.id, name: sub.name };
         break;
       }
