@@ -30,20 +30,24 @@ export async function GET(req: NextRequest) {
         where: { testTypeId: testType.id },
       });
 
-      console.log("🔍 ALL SUBTESTS:", allSubTests.map(st => ({ 
-        id: st.id, 
-        name: st.name, 
-        nameLower: st.name.toLowerCase() 
-      })));
+      console.log(
+  "🔍 ALL SUBTESTS:",
+  allSubTests.map((st: any) => ({
+    id: st.id,
+    name: st.name,
+    nameLower: st.name.toLowerCase(),
+  }))
+);
+
       console.log("🔍 SEARCHING FOR:", sub, "lowercase:", sub.toLowerCase());
 
-      const subTest = allSubTests.find(
-        (st) => st.name.toLowerCase() === sub.toLowerCase()
-      );
+     const subTest = allSubTests.find(
+  (st: any) => st.name.toLowerCase() === sub.toLowerCase()
+);
 
       if (!subTest) {
         console.error("❌ SubTest tidak ditemukan!");
-        console.error("Available subtests:", allSubTests.map(st => st.name).join(", "));
+        console.error("Available subtests:", allSubTests.map((st: any) => st.name).join(", "));
         return NextResponse.json(
           { 
             error: "SubTest tidak ditemukan",
@@ -102,12 +106,12 @@ export async function GET(req: NextRequest) {
       const savedAnswers = await prisma.answer.findMany({
         where: {
           userId,
-          questionCode: { in: questions.map((q) => q.code) },
+      questionCode: { in: questions.map((q: any) => q.code) },
         },
         select: { questionCode: true, choice: true },
       });
 
-      savedAnswers.forEach((a) => {
+  savedAnswers.forEach((a: any) => {
         if (a.questionCode) {
           const choiceStr = String(a.choice);
           userAnswers[a.questionCode] = choiceStr.includes(",")
