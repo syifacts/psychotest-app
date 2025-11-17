@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json(
           { 
             error: "SubTest tidak ditemukan",
-            available: allSubTests.map(st => st.name),
+    available: allSubTests.map((st: any) => st.name),
             searching: sub
           },
           { status: 404 }
