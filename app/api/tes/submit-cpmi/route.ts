@@ -493,8 +493,8 @@ export async function POST(req: NextRequest) {
       if (question?.answer) {
         if (Array.isArray(question.answer)) {
           const arr = question.answer
-            .filter(ans => ans != null)
-            .map(ans => String(ans).trim().toLowerCase());
+           .filter((ans: any) => ans != null)
+      .map((ans: any) => String(ans).trim().toLowerCase());
           isCorrect = arr.includes(normalizedChoice.toLowerCase());
         } else {
           isCorrect = normalizedChoice.toLowerCase() === String(question.answer).trim().toLowerCase();
@@ -515,15 +515,15 @@ export async function POST(req: NextRequest) {
     // Hitung skor tiap aspek
   const aspekScores = Object.entries(aspekQuestionsMap).map(([key, soalNums]) => {
   const totalAspek = soalNums.reduce((sum, qNum) => {
-    const ans = answers.find(a => a.questionId === qNum);
-    const question = questions.find(q => q.id === qNum);
+         const ans = answers.find((a: any) => a.questionId === qNum);
+      const question = questions.find((q: any) => q.id === qNum);
     if (!ans || !question?.answer) return sum;
 
     let score = 0;
     if (Array.isArray(question.answer)) {
       const arr = question.answer
-        .filter(a => a != null)
-        .map(a => String(a).trim().toLowerCase());
+      .filter((a: any) => a != null)
+          .map((a: any) => String(a).trim().toLowerCase());
       if (arr.includes(String(ans.choice).trim().toLowerCase())) score = 1;
     } else {
       if (
@@ -569,15 +569,15 @@ export async function POST(req: NextRequest) {
 // });
 const aspekScores2 = Object.entries(aspekQuestionsMap2).map(([key, soalNums]) => {
   const totalAspek = soalNums.reduce((sum, qNum) => {
-    const ans = answers.find(a => a.questionId === qNum);
-    const question = questions.find(q => q.id === qNum);
+     const ans = answers.find((a: any) => a.questionId === qNum);
+      const question = questions.find((q: any) => q.id === qNum);
     if (!ans || !question?.answer) return sum;
 
     let score = 0;
     if (Array.isArray(question.answer)) {
       const arr = question.answer
-        .filter(a => a != null)
-        .map(a => String(a).trim().toLowerCase());
+         .filter((a: any) => a != null)
+          .map((a: any) => String(a).trim().toLowerCase());
       if (arr.includes(String(ans.choice).trim().toLowerCase())) score = 1;
     } else {
       if (
@@ -600,15 +600,15 @@ const aspekScores2 = Object.entries(aspekQuestionsMap2).map(([key, soalNums]) =>
 // Versi 3
 const aspekScores3 = Object.entries(aspekQuestionsMap3).map(([key, soalNums]) => {
   const totalAspek = soalNums.reduce((sum, qNum) => {
-    const ans = answers.find(a => a.questionId === qNum);
-    const question = questions.find(q => q.id === qNum);
+    const ans = answers.find((a: any) => a.questionId === qNum);
+      const question = questions.find((q: any) => q.id === qNum);
     if (!ans || !question?.answer) return sum;
 
     let score = 0;
     if (Array.isArray(question.answer)) {
       const arr = question.answer
-        .filter(a => a != null)
-        .map(a => String(a).trim().toLowerCase());
+        .filter((a: any) => a != null)
+          .map((a: any) => String(a).trim().toLowerCase());
       if (arr.includes(String(ans.choice).trim().toLowerCase())) score = 1;
     } else {
       if (
@@ -632,15 +632,15 @@ const aspekScores3 = Object.entries(aspekQuestionsMap3).map(([key, soalNums]) =>
 // Versi 4
 const aspekScores4 = Object.entries(aspekQuestionsMap4).map(([key, soalNums]) => {
   const totalAspek = soalNums.reduce((sum, qNum) => {
-    const ans = answers.find(a => a.questionId === qNum);
-    const question = questions.find(q => q.id === qNum);
+    const ans = answers.find((a: any) => a.questionId === qNum);
+      const question = questions.find((q: any) => q.id === qNum);
     if (!ans || !question?.answer) return sum;
 
     let score = 0;
     if (Array.isArray(question.answer)) {
       const arr = question.answer
-        .filter(a => a != null)
-        .map(a => String(a).trim().toLowerCase());
+        .filter((a: any) => a != null)
+          .map((a: any) => String(a).trim().toLowerCase());
       if (arr.includes(String(ans.choice).trim().toLowerCase())) score = 1;
     } else {
       if (
@@ -665,8 +665,8 @@ const aspekScores4 = Object.entries(aspekQuestionsMap4).map(([key, soalNums]) =>
 
     // Simpan jawaban
     await Promise.all(
-      answerData.map(a =>
-        prisma.answer.upsert({
+answerData.map((a: any) =>       
+   prisma.answer.upsert({
           where: { attemptId_questionCode: { attemptId, questionCode: a.questionCode! } },
           update: { choice: a.choice, isCorrect: a.isCorrect },
           create: { ...a },
