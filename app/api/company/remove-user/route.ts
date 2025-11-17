@@ -15,7 +15,9 @@ export async function POST(req: Request) {
       select: { id: true },
     });
 
-    const attemptIds = attempts.map(a => a.id);
+    // const attemptIds = attempts.map(a => a.id);
+    const attemptIds = attempts.map((a: any) => a.id);
+
 
     if (attemptIds.length > 0) {
       // 2️⃣ Hapus semua personalityResult terkait attempt
