@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { PaymentStatus } from "@prisma/client";
+//import { PaymentStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
@@ -87,17 +87,30 @@ export async function POST(req: NextRequest) {
 
     // 6️⃣ USER/GUEST tanpa paymentId
     if (!assignedPaymentId && (role === "USER" || role === "GUEST")) {
+      // const lastPayment = await prisma.payment.findFirst({
+      //   where: { userId, testTypeId, status: PaymentStatus.SUCCESS, quantity: { gt: 0 } },
+      //   orderBy: { createdAt: "desc" },
+      // });
       const lastPayment = await prisma.payment.findFirst({
-        where: { userId, testTypeId, status: PaymentStatus.SUCCESS, quantity: { gt: 0 } },
-        orderBy: { createdAt: "desc" },
-      });
+  where: { userId, testTypeId, status: "SUCCESS", quantity: { gt: 0 } },
+  orderBy: { createdAt: "desc" },
+});
 
       if (lastPayment) {
         assignedPaymentId = lastPayment.id;
       } else {
+        // const newPayment = await prisma.payment.create({
+        //   data: { testTypeId, quantity: 1, amount: testType.price || 0, status: PaymentStatus.SUCCESS, userId },
+        // });
         const newPayment = await prisma.payment.create({
-          data: { testTypeId, quantity: 1, amount: testType.price || 0, status: PaymentStatus.SUCCESS, userId },
-        });
+  data: {
+    testTypeId,
+    quantity: 1,
+    amount: testType.price || 0,
+    status: "SUCCESS",
+    userId,
+  },
+});
         assignedPaymentId = newPayment.id;
       }
     }
