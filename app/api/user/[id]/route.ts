@@ -4,11 +4,11 @@ import bcrypt from "bcryptjs";
 
 export async function GET(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await context.params; // ← WAJIB pakai await  try {
-    const userId = Number(id);
+    //const { id } = await context.params; // ← WAJIB pakai await  try {
+    const userId = Number(params.id);
     if (isNaN(userId)) {
       return NextResponse.json({ error: "ID tidak valid" }, { status: 400 });
     }
