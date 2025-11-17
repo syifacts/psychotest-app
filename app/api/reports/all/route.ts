@@ -158,7 +158,7 @@ export async function GET(req: NextRequest) {
     });
 
     // === Mapping Company (PersonalityResult) ===
-    const mappedPersonality = personalityResults.map((r) => {
+    const mappedPersonality = personalityResults.map((r:any) => {
       let company: { id: number; fullName: string } | null = null;
       if (r.Attempt?.PackagePurchase?.company) {
         company = r.Attempt.PackagePurchase.company;
