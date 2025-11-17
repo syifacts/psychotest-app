@@ -15,7 +15,10 @@ function generateToken() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, packagePurchaseId, paymentId, userId, companyId, testCustomId } = body;
+const { email, paymentId, userId, companyId, testCustomId } = body;
+if (!paymentId) {
+  return NextResponse.json({ error: "paymentId (test) wajib diisi" }, { status: 400 });
+}
 
     if (!email && !userId) {
       return NextResponse.json({ error: "Email atau User ID wajib diisi" }, { status: 400 });
@@ -31,57 +34,56 @@ export async function POST(req: NextRequest) {
     }
 
     // --- PACKAGE ---
-    if (packagePurchaseId) {
-      const purchase = await prisma.packagePurchase.findUnique({
-        where: { id: Number(packagePurchaseId) },
-        include: { userPackages: true },
-      });
+    // if (packagePurchaseId) {
+    //   const purchase = await prisma.packagePurchase.findUnique({
+    //     where: { id: Number(packagePurchaseId) },
+    //     include: { userPackages: true },
+    //   });
 
-      if (!purchase) {
-        return NextResponse.json({ error: "Package purchase not found" }, { status: 404 });
-      }
+    //   if (!purchase) {
+    //     return NextResponse.json({ error: "Package purchase not found" }, { status: 404 });
+    //   }
 
-      // ✅ CEK KUOTA DULU sebelum buat user
-      if (purchase.userPackages.length >= purchase.quantity) {
-        return NextResponse.json({ error: "Kuota habis" }, { status: 400 });
-      }
+    //   // ✅ CEK KUOTA DULU sebelum buat user
+    //   if (purchase.userPackages.length >= purchase.quantity) {
+    //     return NextResponse.json({ error: "Kuota habis" }, { status: 400 });
+    //   }
 
-      // ✅ Baru buat user kalau belum ada DAN kuota masih ada
-      if (!user) {
-        if (!companyId) {
-          return NextResponse.json({ error: "CompanyId wajib untuk user baru" }, { status: 400 });
-        }
+    //   // ✅ Baru buat user kalau belum ada DAN kuota masih ada
+    //   if (!user) {
+    //     if (!companyId) {
+    //       return NextResponse.json({ error: "CompanyId wajib untuk user baru" }, { status: 400 });
+    //     }
         
-        const hashedPassword = await bcrypt.hash(userId, 10);
-        const count = await prisma.user.count({ where: { companyId: Number(companyId) } });
-        const fullName = `Karyawan ${count + 1}`;
+    //     const hashedPassword = await bcrypt.hash(userId, 10);
+    //     const count = await prisma.user.count({ where: { companyId: Number(companyId) } });
+    //     const fullName = `Karyawan ${count + 1}`;
 
-        user = await prisma.user.create({
-          data: {
-            email: email ?? `${userId}@gmail.com`,
-            fullName,
-            password: hashedPassword,
-            role: "USER",
-            customId: userId,
-            companyId: Number(companyId),
-          },
-        });
-      }
+    //     user = await prisma.user.create({
+    //       data: {
+    //         email: email ?? `${userId}@gmail.com`,
+    //         fullName,
+    //         password: hashedPassword,
+    //         role: "USER",
+    //         customId: userId,
+    //         companyId: Number(companyId),
+    //       },
+    //     });
+    //   }
 
-      // if (purchase.userPackages.some((u) => u.userId === user!.id)) {
-      if (purchase.userPackages.some((u: any) => u.userId === user!.id)) {
-        return NextResponse.json({ error: "User sudah terdaftar di paket ini" }, { status: 400 });
-      }
+    //   if (purchase.userPackages.some((u) => u.userId === user!.id)) {
+    //     return NextResponse.json({ error: "User sudah terdaftar di paket ini" }, { status: 400 });
+    //   }
 
-      const userPackage = await prisma.userPackage.create({
-        data: { userId: user!.id, packagePurchaseId: Number(packagePurchaseId) },
-      });
+    //   const userPackage = await prisma.userPackage.create({
+    //     data: { userId: user!.id, packagePurchaseId: Number(packagePurchaseId) },
+    //   });
 
-      return NextResponse.json({
-        message: "User berhasil didaftarkan ke package",
-        userPackage,
-      });
-    }
+    //   return NextResponse.json({
+    //     message: "User berhasil didaftarkan ke package",
+    //     userPackage,
+    //   });
+    // }
 
     // --- TEST SATUAN ---
     if (paymentId) {
@@ -126,8 +128,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Cek user sudah daftar test ini
-  //  if (payment.attempts.some((a) => a.userId === user!.id)) {
-  if (payment.attempts.some((a: any) => a.userId === user!.id)) {
+   if (payment.attempts.some((a) => a.userId === user!.id)) {
     return NextResponse.json(
       { error: "User sudah terdaftar di test ini" },
       { status: 400 }
@@ -164,7 +165,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ error: "Pilih package atau test" }, { status: 400 });
+    // return NextResponse.json({ error: "Pilih package atau test" }, { status: 400 });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

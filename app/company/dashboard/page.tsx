@@ -116,21 +116,53 @@ const [verifyingUsers, setVerifyingUsers] = useState(0);
 const [generatedTestId, setGeneratedTestId] = useState("");
 
 
+// useEffect(() => {
+//   const generateIds = async () => {
+//     if (!companyId) return;
+
+//     let testTypeName = "";
+//     if (assignTarget === "TEST") {
+//       const testObj = singlePayments.find(p => p.id === selectedTest);
+//       testTypeName = testObj?.TestType?.name ?? "";
+//     }
+
+//     try {
+//       const res = await fetch(
+//         `/api/company/generate-ids?companyId=${companyId}&testTypeName=${testTypeName}`
+//       );
+//       if (!res.ok) throw new Error("Gagal generate ID");
+//       const { userId, testId } = await res.json();
+//       setGeneratedUserId(userId);
+//       setGeneratedTestId(testId ?? "");
+//     } catch (err) {
+//       console.error(err);
+//     }
+//   };
+
+//   // hanya generate kalau ada paket/test yang dipilih
+//   if ((assignTarget === "PACKAGE" && selectedPurchase) || 
+//       (assignTarget === "TEST" && selectedTest)) {
+//     generateIds();
+//   }
+// }, [companyId, selectedPurchase, selectedTest, assignTarget, singlePayments]);
+
+// Fungsi generate random ID
+
+
 useEffect(() => {
   const generateIds = async () => {
-    if (!companyId) return;
+    if (!companyId || !selectedTest) return;
 
-    let testTypeName = "";
-    if (assignTarget === "TEST") {
-      const testObj = singlePayments.find(p => p.id === selectedTest);
-      testTypeName = testObj?.TestType?.name ?? "";
-    }
+    // cari nama test berdasarkan selectedTest
+    const testObj = singlePayments.find(p => p.id === selectedTest);
+    const testTypeName = testObj?.TestType?.name ?? "";
 
     try {
       const res = await fetch(
         `/api/company/generate-ids?companyId=${companyId}&testTypeName=${testTypeName}`
       );
       if (!res.ok) throw new Error("Gagal generate ID");
+
       const { userId, testId } = await res.json();
       setGeneratedUserId(userId);
       setGeneratedTestId(testId ?? "");
@@ -139,14 +171,12 @@ useEffect(() => {
     }
   };
 
-  // hanya generate kalau ada paket/test yang dipilih
-  if ((assignTarget === "PACKAGE" && selectedPurchase) || 
-      (assignTarget === "TEST" && selectedTest)) {
+  // generate hanya jika test dipilih
+  if (selectedTest) {
     generateIds();
   }
-}, [companyId, selectedPurchase, selectedTest, assignTarget, singlePayments]);
+}, [companyId, selectedTest, singlePayments]);
 
-// Fungsi generate random ID
 const generateId = (prefix: string) => {
   const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -162,6 +192,25 @@ const handleGenerate = async () => {
     const { userId, testId } = await res.json();
     setGeneratedUserId(userId);
     if (testId) setGeneratedTestId(testId);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const generateIdsManual = async (paymentId: number) => {
+  if (!companyId) return;
+
+  const testObj = singlePayments.find(p => p.id === paymentId);
+  const testTypeName = testObj?.TestType?.name ?? "";
+
+  try {
+    const res = await fetch(
+      `/api/company/generate-ids?companyId=${companyId}&testTypeName=${testTypeName}`
+    );
+
+    const { userId, testId } = await res.json();
+    setGeneratedUserId(userId);
+    setGeneratedTestId(testId ?? "");
   } catch (err) {
     console.error(err);
   }
@@ -230,42 +279,54 @@ useEffect(() => {
 const handleAddUser = async () => {
   if (!companyId) return;
 
+  // pastikan user sudah pilih test
+  if (!selectedTest) {
+    alert("Pilih test dulu");
+    return;
+  }
+
   try {
-    // 1️⃣ Minta ID dari BE
-const selectedTestObj = singlePayments.find(p => p.id === selectedTest);
-const testName = selectedTestObj?.TestType?.name ?? "";
-const idRes = await fetch(
-  `/api/company/generate-ids?companyId=${companyId}&testTypeName=${testName}`
-);
+    // 1️⃣ Minta ID dari BE (userId & testId)
+    const selectedTestObj = singlePayments.find(p => p.id === selectedTest);
+    const testName = selectedTestObj?.TestType?.name ?? "";
+
+    const idRes = await fetch(
+      `/api/company/generate-ids?companyId=${companyId}&testTypeName=${testName}`
+    );
 
     if (!idRes.ok) throw new Error("Gagal generate ID");
     const { userId, testId } = await idRes.json();
 
-    // 2️⃣ Daftarkan user ke package / test
+    // 2️⃣ Daftarkan user ke test satuan
     const res = await fetch("/api/company/register-user", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userId, // 🔥 pake userId dari BE, bukan email
-        packagePurchaseId: assignTarget === "PACKAGE" ? selectedPurchase : null,
-        paymentId: assignTarget === "TEST" ? selectedTest : null,
-        testCustomId: testId ?? null, // kalau test satuan
+        userId,                 // dari generate-ids
+        paymentId: selectedTest, // ⬅️ selalu kirim ini
+        testCustomId: testId ?? null,
+        companyId,              // dipakai backend untuk create user baru
       }),
     });
 
     const data = await res.json();
-    if (!res.ok) return alert(data.error);
+    if (!res.ok) {
+      alert(data.error || "Gagal mendaftarkan user");
+      return;
+    }
 
-toast({
-  title: "✅ User berhasil didaftarkan!",
-  description: `Token: ${data.token ?? "-"}`,
-})
+    toast({
+      title: "✅ User berhasil didaftarkan!",
+      description: `Token: ${data.token ?? "-"}`,
+    });
+
     fetchDashboard();
   } catch (err) {
     console.error(err);
     alert("Terjadi kesalahan saat mendaftarkan user");
   }
 };
+
 
 
 const handleRemoveUser = (
@@ -771,80 +832,50 @@ const iconColor: Record<string, string> = {
       <DialogTitle>Daftarkan Karyawan</DialogTitle>
     </DialogHeader>
 
-    <div className="space-y-4">
-      {/* Tipe Pendaftaran */}
-      <div>
-        <label className="block text-sm font-medium mb-1">Tipe Pendaftaran</label>
-        <select
-          value={assignTarget}
-          onChange={(e) => setAssignTarget(e.target.value as "PACKAGE" | "TEST")}
-          className="w-full border rounded-lg p-2"
-        >
-          <option value="PACKAGE">Paket</option>
-          <option value="TEST">Test Satuan</option>
-        </select>
-      </div>
+<div className="space-y-4">
 
-      {/* Pilih Paket / Test */}
-      <div>
-        
-        <label className="block text-sm font-medium mb-1">
-          {assignTarget === "PACKAGE" ? "Pilih Paket" : "Pilih Test"}
-        </label>
-        {assignTarget === "PACKAGE" ? (
-          <select
-            value={selectedPurchase ?? ""}
-            onChange={(e) => setSelectedPurchase(parseInt(e.target.value))}
-            className="w-full border rounded-lg p-2"
-          >
-            <option value="">-- Pilih Paket --</option>
-            {packagePurchases.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.package?.name} (Sisa {p.quantity - (p.userPackages?.length ?? 0)})
-              </option>
-            ))}
-          </select>
-        ) : (
-         <select
-  value={selectedTest ?? ""}
-  onChange={(e) => setSelectedTest(parseInt(e.target.value))}
-  className="w-full border rounded-lg p-2"
->
-  <option value="">-- Pilih Test --</option>
-  {mergedSinglePayments.map((p) => (
-    <option key={p.id} value={p.id}>
-      {p.TestType?.name} (Sisa {p.remainingQuota})
-    </option>
-  ))}
-</select>
+  {/* Pilih Test Satuan */}
+  <div>
+    <label className="block text-sm font-medium mb-1">Pilih Test</label>
 
-        )}
-      </div>
+    <select
+      value={selectedTest ?? ""}
+      onChange={(e) => setSelectedTest(parseInt(e.target.value))}
+      className="w-full border rounded-lg p-2"
+    >
+      <option value="">-- Pilih Test --</option>
 
-      {/* User ID Auto */}
-      <div>
-        <label className="block text-sm font-medium mb-1">User ID (Auto)</label>
-        <input
-          type="text"
-          value={generatedUserId}
-          readOnly
-          className="w-full border rounded-lg p-2 bg-gray-100"
-        />
-      </div>
+      {mergedSinglePayments.map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.TestType?.name} (Sisa {p.remainingQuota})
+        </option>
+      ))}
+    </select>
+  </div>
 
-      {/* Test ID Auto jika Test Satuan */}
-      {assignTarget === "TEST" && (
-        <div>
-          <label className="block text-sm font-medium mb-1">Test ID (Auto)</label>
-          <input
-            type="text"
-            value={generatedTestId}
-            readOnly
-            className="w-full border rounded-lg p-2 bg-gray-100"
-          />
-        </div>
-      )}
-    </div>
+  {/* User ID Auto */}
+  <div>
+    <label className="block text-sm font-medium mb-1">User ID (Auto)</label>
+    <input
+      type="text"
+      value={generatedUserId}
+      readOnly
+      className="w-full border rounded-lg p-2 bg-gray-100"
+    />
+  </div>
+
+  {/* Test ID Auto */}
+  <div>
+    <label className="block text-sm font-medium mb-1">Test ID (Auto)</label>
+    <input
+      type="text"
+      value={generatedTestId}
+      readOnly
+      className="w-full border rounded-lg p-2 bg-gray-100"
+    />
+  </div>
+
+</div>
 
     <DialogFooter>
 <Button
@@ -866,8 +897,9 @@ const iconColor: Record<string, string> = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId,
-          packagePurchaseId: assignTarget === "PACKAGE" ? selectedPurchase : null,
-          paymentId: assignTarget === "TEST" ? selectedTest : null,
+          // packagePurchaseId: assignTarget === "PACKAGE" ? selectedPurchase : null,
+          // paymentId: assignTarget === "TEST" ? selectedTest : null,
+          paymentId: selectedTest,  
           testCustomId: testId ?? null,
           companyId,
         }),
@@ -909,10 +941,11 @@ const iconColor: Record<string, string> = {
       });
     }
   }}
-  disabled={
-    (assignTarget === "PACKAGE" && !selectedPurchase) ||
-    (assignTarget === "TEST" && !selectedTest)
-  }
+  // disabled={
+  //   (assignTarget === "PACKAGE" && !selectedPurchase) ||
+  //   (assignTarget === "TEST" && !selectedTest)
+  // }
+   disabled={!selectedTest}
   className="bg-indigo-600 text-white hover:bg-indigo-700"
 >
   Tambahkan
@@ -1137,10 +1170,15 @@ setGeneratedTestId(testId ?? "");
         <th className="p-4 font-semibold text-center">
           <div className="flex items-center justify-center gap-2">
             <span>Tipe Pendaftaran</span>
-            <Select
-              value={filterType}
-              onValueChange={(v) => { setFilterType(v as "ALL" | "PACKAGE" | "TEST"); setCurrentPage(1); }}
-            >
+<Select
+  onValueChange={(value) => {
+    setSelectedTest(Number(value)); // tetap update state
+
+    // ⬅ langsung generate baru setiap user pilih test
+    generateIdsManual(Number(value));
+  }}
+>
+
               <SelectTrigger className="w-5 h-5 p-0 bg-transparent border-none shadow-none hover:bg-gray-200 rounded-full">
                 <span className="material-icons text-sm"></span>
               </SelectTrigger>
