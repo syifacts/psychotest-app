@@ -1212,7 +1212,6 @@ const handleSaveIdentity = async () => {
         </DialogContent>
       </Dialog>
 
-      <Toaster />
     </>
   );
 }

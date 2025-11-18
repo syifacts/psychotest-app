@@ -11,7 +11,8 @@ type ToastProps = React.HTMLAttributes<HTMLDivElement> & {
 
 export function Toast({ className, children, variant = "success",  position = "top",
  ...props  }: ToastProps) {
-  const base = "fixed z-50 top-6 left-1/2 -translate-x-1/2 rounded-lg shadow-lg px-6 py-3 animate-in fade-in-50 animate-out fade-out-50";
+const base =
+  "fixed z-[9999] rounded-lg shadow-lg px-6 py-3 animate-in fade-in-50 animate-out fade-out-50";
 
   const variantClasses = {
     success: "bg-green-600 text-white",
