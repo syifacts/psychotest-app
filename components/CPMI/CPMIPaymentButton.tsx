@@ -848,27 +848,62 @@ function CPMIPaymentInner({
     checkPayment();
   }, [user, testInfo, setHasAccess, paymentStatus, hasAccess]);
 
-  const handleSaveIdentity = async () => {
-    try {
-      const res = await fetch("/api/user/update-payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: user?.id,
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone,
-        }),
-      });
+  // const handleSaveIdentity = async () => {
+  //   try {
+  //     const res = await fetch("/api/user/update-payment", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({
+  //         id: user?.id,
+  //         fullName: formData.fullName,
+  //         email: formData.email,
+  //         phone: formData.phone,
+  //       }),
+  //     });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal update user");
-      alert("✅ Data identitas berhasil diperbarui");
-    } catch (err) {
-      console.error(err);
-      alert("❌ Gagal menyimpan identitas");
+  //     const data = await res.json();
+  //     if (!res.ok) throw new Error(data.error || "Gagal update user");
+  //     alert("✅ Data identitas berhasil diperbarui");
+  //   } catch (err) {
+  //     console.error(err);
+  //     alert("❌ Gagal menyimpan identitas");
+  //   }
+  // };
+
+const handleSaveIdentity = async () => {
+  try {
+    const res = await fetch("/api/user/update-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: user?.id,
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Gagal update user");
     }
-  };
+
+    toast({
+      title: "Berhasil",
+      description: "Data identitas berhasil diperbarui.",
+      duration: 4000,
+    });
+  } catch (err) {
+    console.error(err);
+    toast({
+      title: "Gagal menyimpan",
+      description: "Terjadi kesalahan saat menyimpan identitas.",
+      variant: "error", // atau "destructive" kalau varianmu pakai itu
+      duration: 5000,
+    });
+  }
+};
+
 
   const handlePayment = async () => {
     if (role === "SUPERADMIN") return;
