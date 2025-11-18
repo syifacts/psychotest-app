@@ -7,6 +7,8 @@ import { motion, Variants, cubicBezier } from "framer-motion"
 import CPMIPaymentButton from "./CPMIPaymentButton"
 import Navbar from "../layout/navbar"
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
 
 
 interface Props {
@@ -583,9 +585,13 @@ const activePercentDiscount =
       hover:shadow-2xl 
       transition-all 
       duration-300
+      prose prose-invert max-w-none
     "
-    dangerouslySetInnerHTML={{ __html: testInfo.cp }}
-  />
+  >
+    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+      {testInfo.cp}
+    </ReactMarkdown>
+  </motion.div>
 )}
 
 

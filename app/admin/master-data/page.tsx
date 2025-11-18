@@ -22,7 +22,7 @@ interface TestType {
   priceDiscount?: number;
 noteDiscount?: string;
 percentDiscount?: number;
-
+  cp?: string;
   duration?: string;
 }
 
@@ -364,6 +364,17 @@ export default function MasterTestPage() {
                 placeholder="Rincian point benefit"
               />
             </div>
+             <div className="flex flex-col md:col-span-2">
+      <label className="font-medium mb-1">CP (Contact Person)</label>
+      <input
+        className="border rounded px-3 py-2 focus:ring-2 focus:ring-yellow-400 focus:outline-none"
+        value={selected.cp || ""}
+        onChange={(e) =>
+          setSelected({ ...selected, cp: e.target.value })
+        }
+        placeholder="Contoh: Admin HRD - 0812xxxxxxx"
+      />
+    </div>
           </div>
         </div>
 

@@ -6,6 +6,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Navbar from '@/components/layout/navbar';
 import Footer from '@/components/layout/footer';
+import ResetPasswordModal from "@/components/auth/ResetPasswordModal";
+
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -14,6 +16,8 @@ export default function LoginPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const [showReset, setShowReset] = useState(false);
+
 
 // 🔹 Cek login saat mount
 
@@ -116,6 +120,16 @@ export default function LoginPage() {
                         Lupa password?
                       </a>
                     </div> */}
+                    <div className="text-sm">
+  <button 
+    type="button"
+    onClick={() => setShowReset(true)}
+    className="font-medium text-blue-500 hover:underline hover:text-blue-600"
+  >
+    Lupa password?
+  </button>
+</div>
+
                   </div>
                   <div className="mt-1">
                     <input
@@ -163,6 +177,8 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+      {showReset && <ResetPasswordModal onClose={() => setShowReset(false)} />}
+
     </main>
   );
 }

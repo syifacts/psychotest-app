@@ -94,6 +94,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
       priceDiscount: true,
       percentDiscount: true,
       noteDiscount: true,
+      cp: true,
     },
   });
 
@@ -132,6 +133,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
       priceDiscount: body.priceDiscount,
       noteDiscount: body.noteDiscount,
       percentDiscount: body.percentDiscount,
+      cp: body.cp,
     },
   });
 

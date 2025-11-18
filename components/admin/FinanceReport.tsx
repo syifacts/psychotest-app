@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { Download, Search, Wallet, Calendar, TrendingUp, BarChart3 } from "lucide-react";
 import * as XLSX from "xlsx-js-style";
 import FinancePromoForm from "@/components/admin/FinancePromo";
+import { useToast } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/toaster"
+import { useToastConfirm } from "@/components/ui/use-toast-confirm";
+
 
 import {
   LineChart,
@@ -45,9 +49,29 @@ export default function FinanceReportPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
+  const { toast } = useToast();
+  const { confirm } = useToastConfirm();
 
 
-  const updateStatus = async (id: number, status: string) => {
+  // const updateStatus = async (id: number, status: string) => {
+  // const res = await fetch(`/api/payment/${id}/status`, {
+  //   method: "PUT",
+  //   headers: { "Content-Type": "application/json" },
+  //   body: JSON.stringify({ status }),
+  // });
+
+  // if (!res.ok) {
+  //   alert("Gagal update status");
+  //   return;
+  // }
+
+  
+  // update state tanpa reload
+//   setPayments((prev) =>
+//     prev.map((p) => (p.id === id ? { ...p, status } : p))
+//   );
+// };
+const updateStatus = async (id: number, status: string) => {
   const res = await fetch(`/api/payment/${id}/status`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -55,15 +79,35 @@ export default function FinanceReportPage() {
   });
 
   if (!res.ok) {
-    alert("Gagal update status");
+    toast({
+      title: "Gagal update status",
+      description: `Status pembayaran #${id} gagal diupdate.`,
+      variant: "error",
+      duration: 4000,
+    });
     return;
   }
 
-  // update state tanpa reload
   setPayments((prev) =>
-    prev.map((p) => (p.id === id ? { ...p, status } : p))
+    prev.map((p) => (p.id === id ? { ...p, status } : p)),
   );
+
+  // pesan berbeda sesuai status baru
+  const desc =
+    status === "REFUND"
+      ? `Pembayaran #${id} berhasil diubah menjadi REFUND.`
+      : status === "SUCCESS"
+      ? `Refund untuk pembayaran #${id} dibatalkan (kembali ke SUCCESS).`
+      : `Status pembayaran #${id} diupdate menjadi ${status}.`;
+
+  toast({
+    title: "Status berhasil diupdate",
+    description: desc,
+    variant: "success",
+    duration: 4000,
+  });
 };
+
 
   useEffect(() => {
     fetch("/api/payment")
@@ -607,22 +651,48 @@ if (totalValueCell) {
 </td>
   {/* <td className="border px-4 py-2">{p.psychologist}</td> */}
 <td className="p-2 border text-center">
-          {p.status === "SUCCESS" ? (
-            <button
-              className="px-3 py-1 text-xs rounded bg-yellow-200 
-                         text-yellow-800 hover:bg-yellow-300 border border-yellow-400"
-              onClick={() => {
-                if (confirm(`Yakin ingin REFUND pembayaran #${p.id}?`)) {
-                  updateStatus(p.id, "REFUND");
-                }
-              }}
-            >
-              Refund
-            </button>
-          ) : (
-            <span className="text-gray-400 text-xs">-</span>
-          )}
-        </td>
+{p.status === "SUCCESS" && (
+  <button
+    className="px-3 py-1 text-xs rounded bg-yellow-200 
+               text-yellow-800 hover:bg-yellow-300 border border-yellow-400"
+    onClick={() => {
+      confirm(
+        `Yakin ingin REFUND pembayaran #${p.id}?`,
+        () => {
+          updateStatus(p.id, "REFUND");
+        }
+      );
+    }}
+  >
+    Refund
+  </button>
+)}
+
+
+ {p.status === "REFUND" && (
+  <button
+    className="px-3 py-1 text-xs rounded bg-red-200 
+               text-red-800 hover:bg-red-300 border border-red-400 ml-1"
+    onClick={() => {
+      confirm(
+        `Batalkan REFUND untuk pembayaran #${p.id}?`,
+        () => {
+          updateStatus(p.id, "SUCCESS");
+        }
+      );
+    }}
+  >
+    Batalkan Refund
+  </button>
+)}
+
+
+  {p.status !== "SUCCESS" && p.status !== "REFUND" && (
+    <span className="text-gray-400 text-xs">-</span>
+  )}
+</td>
+
+
 
               </tr>
             ))}
@@ -671,6 +741,7 @@ if (totalValueCell) {
         )}
       </div>
 
+  <Toaster />
       {/* Promo Form 
       <FinancePromoForm /> */}
     </div>
