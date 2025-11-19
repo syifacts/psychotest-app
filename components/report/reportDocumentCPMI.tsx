@@ -108,7 +108,7 @@ export default function ReportCPMIDocument({ attempt, result, kesimpulan, kesimp
 
   useEffect(() => {
     if (barcode) {
-      const url = `https://cec2d2b4f9d2.ngrok-free.app/validate/${barcode}`;
+      const url = `https://psychotest-app.vercel.app/validate/${barcode}`;
       QRCode.toDataURL(url)
         .then(setQrCodeBase64)
         .catch((err) => console.error("QR generation error:", err));
