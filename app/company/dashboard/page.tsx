@@ -1278,7 +1278,7 @@ setGeneratedTestId(testId ?? "");
           <td className="p-4 text-center">
             {u.token ? (
               <a
-                href={`http://localhost:3000/tes/cpmi?token=${u.token}`}
+                href={`https://psychotest-app.vercel.app/tes/cpmi?token=${u.token}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-indigo-600 hover:underline text-sm"
