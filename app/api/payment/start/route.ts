@@ -348,7 +348,7 @@ order_items: [
 
     if (TRIPAY_CALLBACK_URL) payload.callback_url = TRIPAY_CALLBACK_URL;
 
-    const response = await fetch("https://tripay.co.id/api/transaction/create", {
+    const response = await fetch("https://www.ruangtespsikologi.com/api/transaction/create", {
       method: "POST",
       headers: { Authorization: `Bearer ${TRIPAY_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify(payload),
