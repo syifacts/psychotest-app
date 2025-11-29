@@ -103,6 +103,8 @@ export async function POST(req: NextRequest) {
   try {
     // Ambil semua input sekaligus
     const { testTypeId, quantity = 1, userId: targetUserId, method = "BRIVA", guestToken } = await req.json();
+        console.log("DEBUG method from client:", method);
+
 
     // ----------------------
     // 1️⃣ Cek guest token CPMI
