@@ -930,7 +930,7 @@ const handleSaveIdentity = async () => {
           userId: user.id,
           testTypeId: testInfo.id,
           quantity: user.role === "PERUSAHAAN" ? quantity : 1,
-           method, 
+          method,
         }),
       });
 
@@ -1133,15 +1133,28 @@ const handleSaveIdentity = async () => {
               <h4 className="font-medium mb-2">Metode Pembayaran</h4>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {paymentMethods.map(pm => (
-  <button
-    key={pm.code}
-    onClick={() => setMethod(pm.code)}
-    className={method === pm.code ? "selected" : ""}
-  >
-    {pm.label}
-  </button>
-))}
+                {paymentMethods.map((pm) => (
+                  <div
+                    key={pm.code}
+                    className={`cursor-pointer border rounded-lg p-3 flex flex-col items-center justify-center text-center transition hover:border-blue-500 ${
+                      method === pm.code
+                        ? "border-blue-600 ring-2 ring-blue-200"
+                        : "border-gray-300"
+                    }`}
+                    onClick={() => setMethod(pm.code)}
+                  >
+                    <Image
+                      src={pm.logo}
+                      alt={pm.label}
+                      width={40}
+                      height={40}
+                      className="mb-2"
+                    />
+                    <span className="text-sm font-medium">
+                      {pm.label}
+                    </span>
+                  </div>
+                ))}
               </div>
 
               {user?.role === "PERUSAHAAN" && (
