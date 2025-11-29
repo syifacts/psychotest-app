@@ -673,10 +673,10 @@ interface User {
 const paymentMethods = [
   { code: "BRIVA", label: "BRIVA", logo: "/logos/briva.png" },
   { code: "QRIS", label: "QRIS", logo: "/logos/qris.png" },
-  { code: "SPAY", label: "ShopeePay", logo: "/logos/spay.png" },
+  { code: "ShopeePay", label: "ShopeePay", logo: "/logos/spay.png" },
   { code: "DANA", label: "DANA", logo: "/logos/dana.png" },
-  { code: "GOPAY", label: "GoPay", logo: "/logos/gopay.png" },
-  { code: "MANDIRI", label: "Mandiri", logo: "/logos/mandiri.png" },
+  { code: "OVO", label: "OVO", logo: "/logos/ovo.png" },
+  { code: "mandiri", label: "Mandiri", logo: "/logos/mandiri.png" },
   { code: "BCA", label: "BCA", logo: "/logos/bca.png" },
   { code: "BNI", label: "BNI", logo: "/logos/bni.png" },
 ];
