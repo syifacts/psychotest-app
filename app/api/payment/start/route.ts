@@ -105,7 +105,23 @@ export async function POST(req: NextRequest) {
     const { testTypeId, quantity = 1, userId: targetUserId, method = "BRIVA", guestToken } = await req.json();
         console.log("DEBUG method from client:", method);
 
+const methodMap: Record<string, string> = {
+      briva: "BRIVA",
+      qris: "QRIS",
+      shopeepay: "SHOPEEPAY",
+      dana: "DANA",
+      ovo: "OVO",
+      mandiri: "MANDIRIVA",
+      mandiriva: "MANDIRIVA",
+      bca: "BCAVA",
+      bcava: "BCAVA",
+      bni: "BNIVA",
+      bniva: "BNIVA",
+    };
+    const normalized = method.toString().trim().toLowerCase();
+    const payMethod = methodMap[normalized] || "BRIVA";
 
+    console.log("DEBUG normalized method:", normalized, "=>", payMethod);
     // ----------------------
     // 1️⃣ Cek guest token CPMI
     // ----------------------
@@ -288,7 +304,7 @@ if (decoded.role === "PERUSAHAAN") {
         companyId: decoded.role === "PERUSAHAAN" ? decoded.id : null,
         companyPricingId: companyPricingRecord?.id ?? null, // ✅ tambahkan ini
         quantity,
-        method,
+        method: payMethod,
       },
     });
 
@@ -327,7 +343,7 @@ const attempt = await prisma.testAttempt.create({
       .digest("hex");
 
     const payload: any = {
-      method,
+        method: payMethod,
       merchant_ref: merchantRef,
       amount: totalAmount,
       customer_name: user?.fullName || `User ${finalUserId}`,
