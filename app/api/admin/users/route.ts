@@ -30,14 +30,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Role dan email wajib diisi" }, { status: 400 });
     }
 
+    // let customIdPrefix = "";
+    // if (role === "PSIKOLOG") customIdPrefix = "PSI100-";
+    // else if (role === "PERUSAHAAN") customIdPrefix = "CP100-";
+
     let customIdPrefix = "";
-    if (role === "PSIKOLOG") customIdPrefix = "PSI100-";
-    else if (role === "PERUSAHAAN") customIdPrefix = "CP100-";
+if (role === "PSIKOLOG") customIdPrefix = "PSI100-";
+else if (role === "PERUSAHAAN") customIdPrefix = "CP100-";
+
+// cari user terakhir untuk role itu, urut dari customId terbesar
+const lastUser = await prisma.user.findFirst({
+  where: { role },
+  orderBy: { customId: "desc" },
+});
+
+// ambil angka belakang, misal "PSI100-007" -> 7
+const lastNumber = lastUser?.customId
+  ? parseInt(lastUser.customId.split("-")[1] ?? "0", 10)
+  : 0;
+
+const number = (lastNumber + 1).toString().padStart(3, "0");
+const customId = customIdPrefix + number;
 
     // hitung user sesuai role untuk generate nomor
     const count = await prisma.user.count({ where: { role } });
-    const number = (count + 1).toString().padStart(3, "0");
-    const customId = customIdPrefix + number;
+    // const number = (count + 1).toString().padStart(3, "0");
+    // const customId = customIdPrefix + number;
 
     // gunakan customId sebagai password sementara
     const password = customId;
