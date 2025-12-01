@@ -25,12 +25,13 @@ interface User {
   role: "USER" | "PSIKOLOG" | "PERUSAHAAN" | "SUPERADMIN";
   companyName?: string;
   createdAt: string;
-passwordDisplay?: string | null;
+passwordDisplay: string; // <-- WAJIB
 }
 
 interface UserTableProps {
   users: User[];
-  onAddUser?: (user: Partial<User> & { role: "PSIKOLOG" | "PERUSAHAAN" }) => void;
+//  onAddUser?: (user: Partial<User> & { role: "PSIKOLOG" | "PERUSAHAAN" }) => void;
+  onAddUser?: (user: User) => void;
   onRemoveUser?: (id: number) => void;
 }
 

@@ -67,7 +67,13 @@ export default function AdminPage() {
       .then((data) => setUsers(data))
       .catch(console.error);
   }, []);
+const handleAddUser = (user: User) => {
+    setUsers((prev) => [user, ...prev]);
+  };
 
+  const handleRemoveUser = (id: number) => {
+    setUsers((prev) => prev.filter((u) => u.id !== id));
+  };
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Navbar />
@@ -157,7 +163,11 @@ export default function AdminPage() {
         {/* User Table */}
         <div className="mt-10 bg-white p-4 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-4">Daftar User</h2>
-          <UserTable users={users} />
+         <UserTable
+        users={users}
+        onAddUser={handleAddUser}
+        onRemoveUser={handleRemoveUser}
+      />
         </div>
         {/* Attempt Table */}
 <div className="mt-10 bg-white p-4 rounded-lg shadow">
