@@ -147,54 +147,50 @@ export async function DELETE(
   const userId = parseInt(id, 10);
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Null-kan semua relasi companyId yang menunjuk ke user ini
-      await tx.payment.updateMany({
-        where: { companyId: userId },
-        data: { companyId: null },
-      });
-      await tx.testAttempt.updateMany({
-        where: { companyId: userId },
-        data: { companyId: null },
-      });
-      await tx.token.updateMany({
-        where: { companyId: userId },
-        data: { companyId: null },
-      });
-      await tx.packagePurchase.updateMany({
-        where: { companyId: userId },
-        data: { companyId: null },
-      });
-
-      await tx.companyPricing.deleteMany({
-        where: { companyId: userId },
-      });
-
-      // 2. Hapus semua data yang terkait userId
-      await tx.answer.deleteMany({ where: { userId } });
-      await tx.result.deleteMany({ where: { userId } });
-      await tx.testAttempt.deleteMany({ where: { userId } });
-      await tx.payment.deleteMany({ where: { userId } });
-      await tx.userProgress.deleteMany({ where: { userId } });
-      await tx.personalityResult.deleteMany({ where: { userId } });
-      await tx.token.deleteMany({ where: { userId } });
-      await tx.packagePurchase.deleteMany({ where: { userId } });
-      await tx.userPackage.deleteMany({ where: { userId } });
-
-      // 3. Terakhir, hapus user
-      const user = await tx.user.delete({
-        where: { id: userId },
-      });
-
-      return user;
+    // 1. Null-kan relasi companyId
+    await prisma.payment.updateMany({
+      where: { companyId: userId },
+      data: { companyId: null },
+    });
+    await prisma.testAttempt.updateMany({
+      where: { companyId: userId },
+      data: { companyId: null },
+    });
+    await prisma.token.updateMany({
+      where: { companyId: userId },
+      data: { companyId: null },
+    });
+    await prisma.packagePurchase.updateMany({
+      where: { companyId: userId },
+      data: { companyId: null },
     });
 
-    return NextResponse.json({ success: true, user: result });
-} catch (err: any) {
-  console.error("DELETE /api/admin/users/[id] error:", err);
-  return NextResponse.json(
-    { error: err.message ?? "Internal server error" },
-    { status: 500 }
-  );
-}
+    await prisma.companyPricing.deleteMany({
+      where: { companyId: userId },
+    });
+
+    // 2. Hapus semua data yang terkait userId
+    await prisma.answer.deleteMany({ where: { userId } });
+    await prisma.result.deleteMany({ where: { userId } });
+    await prisma.testAttempt.deleteMany({ where: { userId } });
+    await prisma.payment.deleteMany({ where: { userId } });
+    await prisma.userProgress.deleteMany({ where: { userId } });
+    await prisma.personalityResult.deleteMany({ where: { userId } });
+    await prisma.token.deleteMany({ where: { userId } });
+    await prisma.packagePurchase.deleteMany({ where: { userId } });
+    await prisma.userPackage.deleteMany({ where: { userId } });
+
+    // 3. Terakhir, hapus user
+    const user = await prisma.user.delete({
+      where: { id: userId },
+    });
+
+    return NextResponse.json({ success: true, user });
+  } catch (err: any) {
+    console.error("DELETE /api/admin/users/[id] error:", err);
+    return NextResponse.json(
+      { error: err.message ?? "Internal server error" },
+      { status: 500 }
+    );
+  }
 }
