@@ -190,9 +190,11 @@ export async function DELETE(
     });
 
     return NextResponse.json({ success: true, user: result });
-  } catch (err: any) {
-    // Untuk debug: kirim stack di log server, bukan ke client
-    console.error(err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
+} catch (err: any) {
+  console.error("DELETE /api/admin/users/[id] error:", err);
+  return NextResponse.json(
+    { error: err.message ?? "Internal server error" },
+    { status: 500 }
+  );
+}
 }
