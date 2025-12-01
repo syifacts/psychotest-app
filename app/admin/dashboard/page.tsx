@@ -62,10 +62,19 @@ export default function AdminPage() {
       .catch(console.error);
 
     // Fetch all users
-    fetch("/api/user")
-      .then((res) => res.json())
-      .then((data) => setUsers(data))
-      .catch(console.error);
+// Fetch all users
+fetch("/api/user")
+  .then((res) => res.json())
+  .then((data) =>
+    setUsers(
+      data.map((u: any) => ({
+        ...u,
+        passwordDisplay: u.passwordDisplay ?? "HASHED", // atau "-"
+      }))
+    )
+  )
+  .catch(console.error);
+
   }, []);
 const handleAddUser = (user: User) => {
     setUsers((prev) => [user, ...prev]);
