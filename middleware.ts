@@ -94,6 +94,15 @@ if (path.startsWith("/account")) {
 }
 
 export const config = {
-  matcher: ["/((?!_next|api|static|favicon.ico).*)"],
+  matcher: [
+    "/admin/:path*",
+    "/psikolog/:path*",
+    "/company/:path*",
+    "/account/:path*",
+    "/tes/:path*",
+    "/login",
+    "/register",
+    "/",
+  ],
   runtime: "nodejs",
 };
