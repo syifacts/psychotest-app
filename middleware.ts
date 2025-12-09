@@ -24,6 +24,13 @@ export async function middleware(req: NextRequest) {
   const authToken = req.cookies.get("token")?.value;
   const testToken = url.searchParams.get("token");
 
+  // 🚫 Jika path butuh login tapi tidak ada authToken
+  const protectedPaths = ["/admin", "/psikolog", "/company", "/account"];
+  if (protectedPaths.some(p => path.startsWith(p)) && !authToken) {
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+  
   // 1️⃣ Jika ada JWT login
   if (authToken) {
     try {
