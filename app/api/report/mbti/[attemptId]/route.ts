@@ -65,3 +65,18 @@
 //   }
 // }
 
+
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { attemptId: string } }
+) {
+  return NextResponse.json(
+    {
+      message: "MBTI report API belum diimplementasi.",
+      attemptId: params.attemptId,
+    },
+    { status: 501 } // Not Implemented
+  );
+}
