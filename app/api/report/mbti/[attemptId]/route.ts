@@ -68,14 +68,16 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { attemptId: string } }
-) {
+export async function GET(req: NextRequest) {
+  // Ambil attemptId dari URL
+  const pathname = req.nextUrl.pathname;
+  const segments = pathname.split("/");
+  const attemptId = segments[segments.length - 1];
+
   return NextResponse.json(
     {
       message: "MBTI report API belum diimplementasi.",
-      attemptId: params.attemptId,
+      attemptId,
     },
     { status: 501 } // Not Implemented
   );
