@@ -27,9 +27,9 @@ export async function GET(req: NextRequest) {
 
     // 3. Gabungin keduanya
     const combined = [
-      ...reports.map(r => ({ ...r, type: "IQ/CPMI" })),
-      ...personalityReports.map(p => ({ ...p, type: "Personality" })),
-    ].sort((a, b) => {
+      ...reports.map((r: any) => ({ ...r, type: "IQ/CPMI" })),
+      ...personalityReports.map((p: any) => ({ ...p, type: "Personality" })),
+].sort((a: any, b: any) => {
       // urutkan semua berdasarkan createdAt terbaru
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });

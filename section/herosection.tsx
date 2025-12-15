@@ -41,16 +41,17 @@ export default function HeroSection() {
               <div className="absolute bottom-2 right-1/3 w-4 h-4 bg-yellow-200 rounded-full animate-wave"></div>
               <div className="absolute -top-4 right-1/4 w-2 h-2 bg-purple-200 rounded-full animate-fade-in-out"></div>
               <div className="absolute bottom-6 left-1/3 w-2.5 h-2.5 bg-pink-200 rounded-full animate-bounce"></div>
+<div className="relative flex justify-center items-center">
+<Image
+  src="/ilustrasi.png"
+  alt="Hero Left"
+  width={1200}
+  height={800}
+  className="object-contain w-[600px] h-auto mx-auto z-10 -translate-x-20"
+  priority
+/>
 
-              <div className="relative">
-                <Image
-                  src="/hero1.png"
-                  alt="Hero Right"
-                  width={400}
-                  height={300}
-                  className="object-contain max-h-[300px] w-auto rounded-xl relative z-10 shadow-lg"
-                  priority
-                />
+
                 {/* Glow besar di belakang gambar */}
                 <div className="absolute inset-0 -translate-x-4 -translate-y-4 rounded-2xl bg-gradient-to-br from-blue-300/40 to-transparent blur-3xl z-0"></div>
               </div>

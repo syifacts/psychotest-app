@@ -1,6 +1,8 @@
 "use client";
 import React from "react";
 import styles from "../../app/tes/ist/Ist.module.css";
+import { useEffect, useState } from 'react';
+
 
 interface Question {
   id: number;
@@ -12,12 +14,16 @@ interface Question {
 interface Props {
   question: Question;
   answer: string | string[];
+  subtestDesc: string; // 🆕 deskripsi subtest
   onAnswer: (qid: number, choice: string | string[]) => void;
+  onShowSubtestDetail: () => void; // 🆕 callback ke parent untuk tampilkan SubtestDetail
 }
 
-const QuestionCard: React.FC<Props> = ({ question, answer, onAnswer }) => {
+const QuestionCard: React.FC<Props> = ({ question, answer, subtestDesc, onAnswer, onShowSubtestDetail }) => {
   const isMC = question.type === "mc";
   const isImageQuestion = question.type === "image";
+  //  const [showDesc, setShowDesc] = useState(false);
+
 
   const handleOptionChange = (idx: number) => {
     const choice = isMC || isImageQuestion ? question.options![idx] : String.fromCharCode(65 + idx);
@@ -36,6 +42,23 @@ const QuestionCard: React.FC<Props> = ({ question, answer, onAnswer }) => {
 
   return (
     <div className={styles.questionSection}>
+      {/* Tombol lihat instruksi subtest */}
+      <button
+        className={styles.btn}
+        style={{ marginBottom: "16px" }}
+        onClick={onShowSubtestDetail}
+      >
+        📖 Lihat Instruksi Subtest
+      </button>
+
+      {/* Render deskripsi subtest jika toggle aktif */}
+      {/* {showDesc && (
+        <div
+          className={styles.subtestDesc}
+          dangerouslySetInnerHTML={{ __html: subtestDesc }}
+          style={{ marginBottom: "24px", padding: "12px", border: "1px solid #ccc", borderRadius: "12px", background: "#f9f9f9" }}
+        />
+      )} */}
       {/* Render soal */}
       {question.content.match(/\.(jpg|jpeg|png|gif)$/i) ? (
         <img
@@ -62,12 +85,10 @@ const QuestionCard: React.FC<Props> = ({ question, answer, onAnswer }) => {
           {optionIndices.map((idx) => {
             const inputType = isMC ? "checkbox" : "radio";
 
-            // VALUE untuk backend
             const valueForBackend = isMC || isImageQuestion
               ? question.options![idx]
               : String.fromCharCode(65 + idx);
 
-            // DISPLAY → tambahkan huruf hanya untuk single/image, bukan MC
             const displayContent = question.options![idx].match(/\.(jpg|jpeg|png|gif)$/i)
               ? <img
                   src={question.options![idx]}

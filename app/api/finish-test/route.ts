@@ -18,12 +18,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Attempt belum dimulai atau sudah selesai" }, { status: 400 });
     }
 
-    await prisma.testAttempt.update({
-      where: { id: attemptId },
-      data: { status: "FINISHED", finishedAt: new Date(), isCompleted: true },
-    });
+   const updatedAttempt = await prisma.testAttempt.update({
+  where: { id: attemptId },
+  data: { status: "FINISHED", finishedAt: new Date(), isCompleted: true },
+});
 
-    return NextResponse.json({ message: "Test selesai" });
+return NextResponse.json({
+  message: "Test selesai",
+  attempt: updatedAttempt,
+});
+
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

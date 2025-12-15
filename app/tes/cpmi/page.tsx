@@ -4,13 +4,19 @@ import React, { useState, useEffect } from "react";
 import styles from "./cpmi.module.css";
 import { useRouter } from "next/navigation";
 import CPMIIntro from "../../../components/CPMI/CPMIIntro";
+import CPMIInstruction from "@/components/CPMI/CPMIInstruction";
+import BiodataForm from "@/components/CPMI/BiodataForm";
+import { ArrowLeft } from "lucide-react";
+import { motion } from "framer-motion";
+
 
 interface Question {
   id: number;
   code: string;
   content: string;
+  image: string;
   options: string[];
-  type: "single";
+   type: "single" | "essay";
 }
 
 type AnswerPayload = {
@@ -18,251 +24,335 @@ type AnswerPayload = {
   questionCode?: string;
   choice: string;
 };
+type CPMIUser = {
+  id: number;
+  role: "USER" | "PERUSAHAAN" | "GUEST";
+  name?: string;
+  email?: string;
+};
 
 const CPMIPage = () => {
   const router = useRouter();
 
-  const [user, setUser] = useState<{ id: number; role: "USER" | "PERUSAHAAN" } | null>(null);
-  const [role, setRole] = useState<"USER" | "PERUSAHAAN">("USER");
+  // const [user, setUser] = useState<{ id: number; role: "USER" | "PERUSAHAAN" } | null>(null);
+  // const [role, setRole] = useState<"USER" | "PERUSAHAAN">("USER");
+  const [user, setUser] = useState<CPMIUser | null>(null);
+const [role, setRole] = useState<"USER" | "PERUSAHAAN" | "GUEST">("USER");
   const [testInfo, setTestInfo] = useState<{ id: number; name: string; duration: number; price: number | null } | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
+  const [accessReason, setAccessReason] = useState("");
 
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
+const [answers, setAnswers] = useState<Record<string, string>>({});
+
   const [loading, setLoading] = useState(false);
+  const [loadingIntro, setLoadingIntro] = useState(true);
 
-  const [showIntro, setShowIntro] = useState(true);
-  const [showQuestions, setShowQuestions] = useState(false);
 
+  const [attemptId, setAttemptId] = useState<number | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30 * 60);
 
-  const [attemptId, setAttemptId] = useState<number | null>(null);
-  const [accessReason, setAccessReason] = useState(""); // Tambahan
+  const [exampleQuestions, setExampleQuestions] = useState<Question[]>([]);
+//   const [endTime, setEndTime] = useState<Date | null>(() => {
+//   const saved = localStorage.getItem("endTime");
+//   return saved ? new Date(saved) : null;
+// });
+
+//   useEffect(() => {
+//   const saved = localStorage.getItem("endTime");
+//   if (saved) setEndTime(new Date(saved));
+// }, []);
+
+const [endTime, setEndTime] = useState<Date | null>(null);
+useEffect(() => {
+  const saved = localStorage.getItem("endTime");
+  if (saved) setEndTime(new Date(saved));
+}, []);
+  // Step: intro -> biodata -> instruction -> questions
+  const [step, setStep] = useState<"intro" | "biodata" | "instruction" | "questions">("intro");
 
   // -------------------------
-  // Ambil user & test info dari server
+  // Fetch user & test info
   // -------------------------
-  useEffect(() => {
-    const fetchUserAndTest = async () => {
-      try {
-        // fetch user
+ useEffect(() => {
+  const fetchUserAndTest = async () => {
+    try {
+      setLoadingIntro(true); // mulai loading intro
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get("token");
+
+      if (token) {
+        // Ambil info token
+        const tokenRes = await fetch(`/api/token/info?token=${token}`);
+        const tokenData = await tokenRes.json();
+        if (tokenRes.ok && tokenData.companyName) {
+          setUser({ id: 0, name: tokenData.companyName, role: "GUEST", email: "" });
+          setRole("GUEST");
+          // cek akses otomatis
+          setHasAccess(true);
+        } else {
+          console.warn(tokenData.error);
+        }
+      } else {
+        // Hanya fetch user login kalau tidak ada token
         const userRes = await fetch("/api/auth/me", { credentials: "include" });
-        if (!userRes.ok) {
-          router.push("/login");
-          return;
-        }
         const userData = await userRes.json();
-        if (!userData.user) {
-          router.push("/login");
-          return;
-        }
+        if (!userRes.ok || !userData.user) return router.push("/login");
+
         setUser(userData.user);
         setRole(userData.user.role === "PERUSAHAAN" ? "PERUSAHAAN" : "USER");
-
-        // fetch test info
-        const testRes = await fetch("/api/tes/info?type=CPMI");
-        const testData = await testRes.json();
-        setTestInfo(testData);
 
         // cek akses
         const accessRes = await fetch(`/api/tes/check-access?userId=${userData.user.id}&type=CPMI`);
         const accessData = await accessRes.json();
         setHasAccess(accessData.access);
         setAccessReason(accessData.reason || "");
-      } catch (err) {
-        console.error("Gagal fetch user/test info CPMI:", err);
       }
-    };
-    fetchUserAndTest();
-  }, [router]);
 
-  // -------------------------
-  // Load CPMI Questions
-  // -------------------------
-  const loadQuestions = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/tes?type=CPMI`, { credentials: "include" });
-      const data = await res.json();
-      const qList: Question[] = Array.isArray(data) ? data : data.questions;
-      setQuestions(qList || []);
-      setTimeLeft(testInfo?.duration ? testInfo.duration * 60 : 30 * 60);
+      // load test info tetap dilakukan
+      const testRes = await fetch("/api/tes/info?type=CPMI");
+      const testData = await testRes.json();
+      setTestInfo(testData);
+
     } catch (err) {
-      console.error("Gagal load soal CPMI:", err);
-    } finally {
-      setLoading(false);
+      console.error("Gagal fetch user/test info CPMI:", err);
+    }finally {
+      setTimeout(() => setLoadingIntro(false), 600); // kasih jeda biar transisi halus
     }
   };
 
-  // -------------------------
-  // Load existing answers
-  // -------------------------
-  const loadExistingAnswers = async (attemptId: number) => {
-    try {
-      const res = await fetch(`/api/attempts/${attemptId}`, { credentials: "include" });
-      const data = await res.json();
+  fetchUserAndTest();
+}, [router]);
 
-      if (res.ok && data.attempt?.answers) {
-        const mapped: Record<number, string> = {};
-        data.attempt.answers.forEach((a: any) => {
-          const q = questions.find((q) => q.code === a.questionCode);
-          if (q) mapped[q.id] = a.choice;
-        });
-        setAnswers(mapped);
-      }
-    } catch (err) {
-      console.error("❌ Gagal load jawaban:", err);
-    }
-  };
 
   // -------------------------
-  // Start Attempt
+  // Load questions
   // -------------------------
-  const startAttempt = async () => {
-    if (!testInfo?.id || !user) return;
-
-    localStorage.removeItem("attemptId");
-    localStorage.removeItem("endTime");
-    localStorage.removeItem("currentIndex");
-    setAttemptId(null);
-    setAnswers({});
-    setCurrentIndex(0);
-    setTimeLeft(testInfo.duration ? testInfo.duration * 60 : 30 * 60);
-
-    try {
-      const res = await fetch("/api/attempts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, testTypeId: testInfo.id }),
-        credentials: "include",
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal memulai attempt");
-
-      setAttemptId(data.id);
-      localStorage.setItem("attemptId", data.id.toString());
-
-      const duration = testInfo.duration || 30;
-      const endTime = new Date();
-      endTime.setMinutes(endTime.getMinutes() + duration);
-      localStorage.setItem("endTime", endTime.toISOString());
-
-      setCurrentIndex(0);
-      localStorage.setItem("currentIndex", "0");
-
-      await loadQuestions();
-    } catch (err) {
-      console.error("Gagal memulai attempt:", err);
-    }
-  };
-
-  // -------------------------
-  // Timer
-  // -------------------------
-  useEffect(() => {
-    if (!showQuestions) return;
-
-    const savedEnd = localStorage.getItem("endTime");
-    if (!savedEnd) return;
-
-    const endTime = new Date(savedEnd);
-
-    const timer = setInterval(() => {
-      const diff = Math.max(0, Math.floor((endTime.getTime() - Date.now()) / 1000));
-      setTimeLeft(diff);
-
-      if (diff <= 0) {
-        handleSubmit();
-        clearInterval(timer);
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [showQuestions]);
-
-  // -------------------------
-  // Select Answer
-  // -------------------------
-  const handleSelectAnswer = async (qid: number, choice: string) => {
-    setAnswers((prev) => ({ ...prev, [qid]: choice }));
-
-    if (!user || !attemptId) return;
-
-    try {
-      await fetch("/api/tes/save-answers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.id,
-          attemptId,
-          questionCode: questions.find((q) => q.id === qid)?.code,
-          choice,
-        }),
-        credentials: "include",
-      });
-    } catch (err) {
-      console.error("❌ Gagal simpan jawaban:", err);
-    }
-  };
-
-  // -------------------------
-  // Submit Test
-  // -------------------------
-// -------------------------
-// Submit Test
-// -------------------------
-const handleSubmit = async () => {
-  if (!user || !attemptId) return;
-
+const loadQuestions = async (attemptId?: number) => {
+  setLoading(true);
   try {
-    const payload: AnswerPayload[] = Object.entries(answers).map(([qid, choice]) => {
-      const q = questions.find((q) => q.id === Number(qid));
-      return { questionId: Number(qid), questionCode: q?.code, choice };
-    });
+    const res = await fetch(`/api/tes?type=CPMI`, { credentials: "include" });
+    const data = await res.json();
 
-    const res = await fetch("/api/tes/submit-cpmi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, type: "CPMI", attemptId, answers: payload }),
+    // console.log("API raw questions:", data); // <-- lihat data mentah dari API
+
+    // pastikan ambil array questions
+    let qList: Question[] = Array.isArray(data) ? data : data.questions || [];
+
+    // 🔴 FILTER contoh soal (CPMI-1, CPMI-2, CPMI-3)
+    qList = qList.filter((q) => !["CPMI-1", "CPMI-2", "CPMI-3"].includes(q.code));
+
+    // 🔹 Pastikan setiap question punya field image (fallback ke "")
+    qList = qList.map((q) => ({
+      ...q,
+      image: q.image || "", // jika undefined atau null, set ke ""
+    }));
+
+    console.log("Filtered questions with images:", qList); // <-- cek image sudah ada
+
+    setQuestions(qList || []);
+   // setTimeLeft(testInfo?.duration ? testInfo.duration * 60 : 30 * 60);
+
+    // cari index soal awal
+    const startIndex = qList.findIndex((q) => q.code === "CPMI-4" || q.id === 329);
+    setCurrentIndex(startIndex >= 0 ? startIndex : 0);
+    localStorage.setItem("currentIndex", (startIndex >= 0 ? startIndex : 0).toString());
+
+    // load jawaban lama jika ada attempt
+    if (attemptId) {
+      await loadExistingAnswers(attemptId, qList);
+    }
+  } catch (err) {
+    console.error("Gagal load soal CPMI:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+const loadExistingAnswers = async (attemptId: number, qList?: Question[]) => {
+  try {
+    const res = await fetch(`/api/tes/answers?attemptId=${attemptId}`, {
       credentials: "include",
     });
-
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Gagal submit CPMI");
+    console.log("🔍 API answers:", data.answers);
 
-    // Hapus attempt lama dari localStorage
-    localStorage.removeItem("attemptId");
-    localStorage.removeItem("endTime");
-    localStorage.removeItem("currentIndex");
-
-    // Reset akses supaya harus bayar lagi
-    setHasAccess(false);
-
-    alert("🎉 Tes CPMI selesai! Hasil bisa dilihat di Dashboard.");
-    router.push("/dashboard");
-  } catch (err: any) {
-    alert(err.message);
-    localStorage.removeItem("attemptId");
-    localStorage.removeItem("endTime");
-    localStorage.removeItem("currentIndex");
-    setHasAccess(false);
+    if (res.ok && data.answers) {
+      // langsung assign object hasil API
+      setAnswers(data.answers);
+      console.log("✅ restored answers:", data.answers);
+    }
+  } catch (err) {
+    console.error("❌ Gagal load jawaban:", err);
   }
 };
 
 
   // -------------------------
-  // Restore attempt on refresh
+  // Start attempt
+  // -------------------------
+ const startAttempt = async () => {
+  if (!testInfo?.id || !user) return;
+
+  // Jika sudah ada attempt, jangan reset timer
+  if (attemptId) {
+    await loadQuestions(attemptId);
+    return;
+  }
+
+  // Reset localStorage & state untuk attempt baru
+  localStorage.removeItem("attemptId");
+  localStorage.removeItem("endTime");
+  localStorage.removeItem("currentIndex");
+  setAttemptId(null);
+  setAnswers({});
+  setCurrentIndex(0);
+
+  try {
+    const body: any = { testTypeId: testInfo.id };
+
+    if (role === "GUEST") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const guestToken = urlParams.get("token");
+      if (!guestToken) throw new Error("Guest token tidak ditemukan");
+      body.guestToken = guestToken;
+    } else {
+      body.userId = user.id;
+    }
+
+    const res = await fetch("/api/attempts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      credentials: "include",
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Gagal memulai attempt");
+
+    setAttemptId(data.id);
+    localStorage.setItem("attemptId", data.id.toString());
+
+    // Set endTime baru
+    const duration = testInfo.duration || 30;
+    const newEndTime = new Date();
+    newEndTime.setSeconds(newEndTime.getSeconds() + duration * 60);
+    setEndTime(newEndTime);
+    localStorage.setItem("endTime", newEndTime.toISOString());
+
+    await loadQuestions(data.id); // load soal
+
+  } catch (err) {
+    console.error("Gagal memulai attempt:", err);
+  }
+};
+
+
+  // -------------------------
+  // Timer
+  // -------------------------
+useEffect(() => {
+  if (!endTime) return;
+
+  const timer = setInterval(() => {
+    const diff = Math.max(0, Math.floor((endTime.getTime() - Date.now()) / 1000));
+    setTimeLeft(diff);
+    if (diff <= 0) {
+      handleSubmit();
+      clearInterval(timer);
+    }
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, [endTime]);
+
+
+  // -------------------------
+  // Select answer
+  // -------------------------
+ // -------------------------
+// Select answer
+// -------------------------
+const handleSelectAnswer = async (
+  qid: number,
+  qcode: string,
+  choice: string,
+  optIndex?: number
+) => {
+  const finalChoice = optIndex !== undefined ? String(optIndex + 1) : choice;
+
+  // simpan ke state pakai qcode
+  setAnswers((prev) => ({ ...prev, [qcode]: finalChoice }));
+
+  if (!user || !attemptId) return;
+
+  try {
+    await fetch("/api/tes/answers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        attemptId,
+        answers: [{ questionId: qid, choice: finalChoice }],
+      }),
+      credentials: "include",
+    });
+  } catch (err) {
+    console.error("❌ Gagal simpan jawaban:", err);
+  }
+};
+
+
+  // -------------------------
+  // Submit
+  // -------------------------
+  const handleSubmit = async () => {
+    if (!user || !attemptId) return;
+
+    try {
+     const payload: AnswerPayload[] = Object.entries(answers).map(([qcode, choice]) => {
+  const q = questions.find((q) => q.code === qcode);
+  return {
+    questionId: q?.id ?? 0, // tetap kirim id biar relasi aman
+    questionCode: qcode,
+    choice: choice,
+  };
+});
+
+      const res = await fetch("/api/tes/submit-cpmi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, type: "CPMI", attemptId, answers: payload }),
+        credentials: "include",
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal submit CPMI");
+
+      localStorage.removeItem("attemptId");
+      localStorage.removeItem("endTime");
+      localStorage.removeItem("currentIndex");
+      setHasAccess(false);
+
+      alert("🎉 Tes CPMI selesai! Hasil bisa dilihat di Dashboard.");
+      router.push("/dashboard");
+    } catch (err: any) {
+      alert(err.message);
+      localStorage.removeItem("attemptId");
+      localStorage.removeItem("endTime");
+      localStorage.removeItem("currentIndex");
+      setHasAccess(false);
+    }
+  };
+
+  // -------------------------
+  // Restore attempt
   // -------------------------
   useEffect(() => {
     const restoreAttempt = async () => {
       if (!user) return;
-
       const savedAttemptId = localStorage.getItem("attemptId");
-      const savedIndex = localStorage.getItem("currentIndex");
-      const savedEnd = localStorage.getItem("endTime");
-
       if (!savedAttemptId) return;
 
       try {
@@ -274,34 +364,32 @@ const handleSubmit = async () => {
           localStorage.removeItem("endTime");
           localStorage.removeItem("currentIndex");
           setAttemptId(null);
-          setShowIntro(true);
-          setShowQuestions(false);
+          setStep("intro");
           setHasAccess(false);
           return;
         }
 
         setAttemptId(Number(savedAttemptId));
+        const savedIndex = localStorage.getItem("currentIndex");
         setCurrentIndex(savedIndex ? Number(savedIndex) : 0);
 
+        const savedEnd = localStorage.getItem("endTime");
         if (savedEnd) {
           const endTime = new Date(savedEnd);
           const diff = Math.max(0, Math.floor((endTime.getTime() - Date.now()) / 1000));
           setTimeLeft(diff);
         }
 
-        await loadQuestions();
-        await loadExistingAnswers(Number(savedAttemptId));
+        await loadQuestions(Number(savedAttemptId)); // langsung load beserta jawaban lama
+setStep("questions");
 
-        setShowIntro(false);
-        setShowQuestions(true);
       } catch (err) {
         console.error("Gagal restore attempt:", err);
         localStorage.removeItem("attemptId");
         localStorage.removeItem("endTime");
         localStorage.removeItem("currentIndex");
         setAttemptId(null);
-        setShowIntro(true);
-        setShowQuestions(false);
+        setStep("intro");
         setHasAccess(false);
       }
     };
@@ -309,92 +397,283 @@ const handleSubmit = async () => {
   }, [user]);
 
   useEffect(() => {
-    if (attemptId && questions.length > 0) loadExistingAnswers(attemptId);
-  }, [attemptId, questions]);
-
-  useEffect(() => localStorage.setItem("currentIndex", currentIndex.toString()), [currentIndex]);
+    localStorage.setItem("currentIndex", currentIndex.toString());
+  }, [currentIndex]);
 
   const currentQuestion = questions[currentIndex];
-  const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+  const formatTime = (s: number) =>
+    `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+  useEffect(() => {
+  const loadExampleQuestions = async () => {
+    try {
+      const res = await fetch("/api/tes/cpmi-examples");
+      const data = await res.json();
+      if (res.ok) setExampleQuestions(data);
+      else console.warn(data.error);
+    } catch (err) {
+      console.error("Gagal load contoh soal:", err);
+    }
+  };
+
+  loadExampleQuestions();
+}, []);
+
 
   // -------------------------
   // Render
   // -------------------------
-  if (showIntro) {
-    return (
+  if (step === "intro" && loadingIntro) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
+      <motion.div
+        className="flex flex-col items-center"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        {/* Spinner */}
+        <motion.div
+          className="w-14 h-14 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"
+          initial={{ rotate: 0 }}
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
+        />
+
+        <motion.p
+          className="mt-5 text-blue-700 font-semibold text-lg animate-pulse"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          Menyiapkan halaman tes CPMI...
+        </motion.p>
+
+        <motion.p
+          className="mt-2 text-gray-500 text-sm italic"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+        >
+          “Mohon tunggu sebentar, sistem sedang memuat test.”
+        </motion.p>
+      </motion.div>
+    </div>
+  );
+}
+
+  switch (step) {
+   case "intro":
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+    >
       <CPMIIntro
         testInfo={testInfo}
         hasAccess={hasAccess}
-          accessReason={accessReason} // baru
+        accessReason={accessReason}
         setHasAccess={setHasAccess}
-        startAttempt={async () => {
-          await startAttempt();
-          setShowIntro(false);
-          setShowQuestions(true);
+        startAttempt={async (): Promise<void> => {
+          setStep("biodata");
         }}
         role={role}
       />
-    );
+    </motion.div>
+  );
+
+    case "biodata":
+      return (
+        <BiodataForm
+         // userId={user!.id}
+          onSaved={() => setStep("instruction")}
+        />
+      );
+
+    case "instruction":
+      return (
+        <CPMIInstruction
+          exampleQuestions={exampleQuestions}
+          onFinishExamples={async () => {
+            await startAttempt();
+            setStep("questions");
+          }}
+        />
+      );
+case "questions":
+  if (!currentQuestion) return null;
+  // console.log("currentQuestion:", currentQuestion);
+  // console.log("currentQuestion.image:", currentQuestion.image); 
+  return (
+    <div className={styles.container}>
+      <div className={styles.header}>
+<h1 className={`${styles.title} mt-15`}>Soal Tes WPT untuk CPMI</h1>
+<div className={`${styles.timer} mt-15`}>⏳ {formatTime(timeLeft)}</div>
+      </div>
+
+      <div className={styles.mainContent}>
+        <div className={styles.questionSection}>
+          
+          {/* Soal */}
+ <div className={styles.questionContent}>
+  {/* Inline teks + gambar dari content */}
+{currentQuestion.content.split("\n").map((line, idx) => {
+  const isImage = /\.(png|jpg|jpeg|gif)$/i.test(line.trim());
+  return isImage ? (
+    <img
+      key={idx}
+      src={line.trim()}
+      alt={`Soal ${currentIndex + 1} part ${idx}`}
+      style={{ maxWidth: "300px", display: "block", margin: "10px 0" }}
+    />
+  ) : (
+    <p key={idx} style={{ margin: "5px 0" }}>{line}</p>
+  );
+})}
+
+
+{/* Gambar utama soal (jika ada) */}
+{currentQuestion.image && (
+  <div style={{ marginTop: "15px" }}>
+    <img
+      src={currentQuestion.image}
+      alt={`Soal ${currentIndex + 1} utama`}
+      style={{ maxWidth: "400px", display: "block" }}
+    />
+    
+  </div>
+)}
+
+
+</div>
+
+{/* Opsi */}
+{currentQuestion.type === "single" ? (
+  <ul className={styles.optionsList}>
+    {currentQuestion.options.map((opt, idx) => {
+      const isImage = opt.startsWith("/") || /\.(png|jpg|jpeg|gif)$/i.test(opt);
+      return (
+        <li key={idx}>
+          <label className={styles.optionLabel}>
+            <input
+              type="radio"
+              name={`q-${currentQuestion.id}`}
+              value={idx + 1}
+              checked={answers[currentQuestion.code] === String(idx + 1)}
+              onChange={() =>
+                handleSelectAnswer(currentQuestion.id, currentQuestion.code, String(idx + 1))
+              }
+            />
+           <span className="flex items-center gap-3">
+  {isImage ? (
+    <img
+      src={opt}
+      alt={`Pilihan ${idx + 1}`}
+      className="w-28 h-auto rounded-md object-contain border"
+    />
+  ) : (
+    <span className="text-gray-700 font-medium">{`${idx + 1}. ${opt}`}</span>
+  )}
+</span>
+
+          </label>
+        </li>
+      );
+    })}
+  </ul>
+  
+) : (
+   <div>
+    {/* Gambar referensi untuk essay */}
+    {currentQuestion.options?.length > 0 && (
+      <div style={{ marginBottom: "10px" }}>
+        {currentQuestion.options.map((opt, idx) => (
+          <img
+            key={idx}
+            src={opt.trim()}
+            alt={`Referensi ${idx + 1}`}
+            style={{ maxWidth: "200px", display: "block", margin: "8px 0" }}
+          />
+        ))}
+      </div>
+    )}
+  <textarea
+  className="mt-5 w-full p-4 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all duration-200 shadow-sm bg-gray-50 resize-none text-gray-800 placeholder-gray-400"
+  value={answers[currentQuestion.code] || ""}
+  onChange={(e) =>
+    handleSelectAnswer(currentQuestion.id, currentQuestion.code, e.target.value)
   }
+  placeholder="✏️ Tuliskan jawaban Anda di sini..."
+  rows={6}
+/>
 
-  if (showQuestions && currentQuestion) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>Soal CPMI</h1>
-          <div className={styles.timer}>⏳ {formatTime(timeLeft)}</div>
-        </div>
+ </div>
+          )}
 
-        <div className={styles.mainContent}>
-          <div className={styles.questionSection}>
-            <p><b>{currentIndex + 1}. </b>{currentQuestion.content}</p>
-            <ul className={styles.optionsList}>
-              {currentQuestion.options.map((opt, idx) => (
-                <li key={idx}>
-                  <label className={styles.optionLabel}>
-                    <input
-                      type="radio"
-                      name={`q-${currentQuestion.id}`}
-                      value={opt}
-                      checked={answers[currentQuestion.id] === opt}
-                      onChange={() => handleSelectAnswer(currentQuestion.id, opt)}
-                    />
-                    <span>{opt}</span>
-                  </label>
-                </li>
-              ))}
-            </ul>
+          {/* Navigasi Back / Next / Submit */}
+<div className="flex justify-between items-center mt-10 space-x-4">
+  <button
+    onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+    disabled={currentIndex === 0}
+    className={`px-6 py-3 rounded-lg font-semibold transition-all shadow-sm border
+      ${
+        currentIndex === 0
+          ? "bg-gray-200 text-gray-400 cursor-not-allowed border-gray-200"
+          : "bg-white text-blue-600 border-blue-500 hover:bg-blue-50 hover:scale-[1.03]"
+      }`}
+  >
+    ← Kembali
+  </button>
 
-            <div className={styles.navButtons}>
-              <button className={styles.backBtn} onClick={() => setCurrentIndex(i => i - 1)} disabled={currentIndex === 0}>← Back</button>
-              {currentIndex < questions.length - 1 ? (
-                <button className={styles.btn} onClick={() => setCurrentIndex(i => i + 1)}>Next →</button>
-              ) : (
-                <button className={styles.btn} onClick={handleSubmit}>Submit Tes</button>
-              )}
-            </div>
-          </div>
+  {currentIndex < questions.length - 1 ? (
+    <button
+      onClick={() =>
+        setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))
+      }
+      className="px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-indigo-600 hover:to-blue-600 hover:scale-[1.03] transition-all shadow-md"
+    >
+      Selanjutnya →
+    </button>
+  ) : (
+    <button
+      onClick={handleSubmit}
+      className="px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-emerald-600 hover:to-green-600 hover:scale-[1.03] transition-all shadow-md"
+    >
+      ✅ Submit Tes
+    </button>
+  )}
+</div>
 
-          <div className={styles.answerCard}>
-            <h3>Ringkasan Jawaban</h3>
-            <div className={styles.answerGrid}>
-              {questions.map((q, idx) => (
-                <button
-                  key={q.id}
-                  className={`${styles.answerNumber} ${answers[q.id] ? styles.answered : styles.unanswered} ${currentIndex === idx ? styles.current : ""}`}
-                  onClick={() => setCurrentIndex(idx)}
-                >
-                  {idx + 1}
-                </button>
-              ))}
-            </div>
+        <div className="mt-8 flex justify-center pb-8 mt-30">
+    <button
+      onClick={() => setStep("instruction")}
+      className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-300 hover:bg-gray-100 transition-all duration-200 text-sm font-medium text-gray-700 shadow-sm bg-white"
+    >
+      <ArrowLeft size={16} /> Kembali ke Instruksi
+    </button>
+  </div>
+</div>
+        
+
+        {/* Ringkasan Jawaban */}
+        <div className={styles.answerCard}>
+          <h3>Ringkasan Jawaban</h3>
+          <div className={styles.answerGrid}>
+            {questions.map((q, idx) => (
+              <button
+                key={q.id}
+                className={`${styles.answerNumber} ${
+                  answers[q.code] ? styles.answered : styles.unanswered
+                } ${currentIndex === idx ? styles.current : ""}`}
+                onClick={() => setCurrentIndex(idx)}
+              >
+                {idx + 1}
+              </button>
+            ))}
           </div>
         </div>
       </div>
-    );
-  }
-
-  return null;
-};
-
+    </div>
+  );
+  }}
 export default CPMIPage;

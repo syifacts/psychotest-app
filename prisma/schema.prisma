@@ -38,18 +38,20 @@ model User {
   fullName  String
   email     String   @unique
   password  String
+  defaultPassword  String?
   role      Role     @default(USER)
   birthDate DateTime?
   gender    Gender?
   education String?
   phone     String?
   address   String?
- ttdUrl   String?     
+ ttdUrl   String?     @db.Text
   ttdHash  String? @db.Text // simpan hash SHA256 dari file untuk validasi
   profileImage String?
   tujuan      String?
   strNumber   String? // Nomor STR/SIK / Registration Number
   sippNumber  String? // Nomor SIPP/SIPPK / Licence Number
+  companyId   Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -65,16 +67,22 @@ model User {
   userPackages                 UserPackage[]
   purchasedPackagesAsCompany   PackagePurchase[] @relation("CompanyPackagePurchase")
   purchasedPackagesAsUser      PackagePurchase[] @relation("UserPackagePurchase")
+  companyTokens Token[] @relation("CompanyToken") // tokens yang dibuat perusahaan
   validatedResults             Result[]          @relation("ValidatedResults")
   personalityResults           PersonalityResult[] // Relasi ke hasil personality
   validatedPersonalityResults  PersonalityResult[] @relation("PersonalityValidatedResults")
   companyPayments              Payment[] @relation("CompanyPayments") 
   tokens      Token[]
+    companyAttempts    TestAttempt[]       @relation("CompanyTestAttempt")
+      companyPricings  CompanyPricing[]
+
+
 }
 
 model Token {
   id            Int          @id @default(autoincrement())
-  userId        Int
+  userId        Int?
+  companyId     Int?  
   testTypeId    Int
   token         String       @unique
   used          Boolean      @default(false)
@@ -83,7 +91,8 @@ model Token {
   createdAt     DateTime     @default(now())
 
   // Relasi
-  User          User         @relation(fields: [userId], references: [id])
+  User          User?         @relation(fields: [userId], references: [id])
+   Company       User?        @relation("CompanyToken", fields: [companyId], references: [id])
   TestType      TestType     @relation(fields: [testTypeId], references: [id])
   testAttempt   TestAttempt? @relation("TokenTestAttempt") // cukup nama relasi
 }
@@ -94,10 +103,27 @@ model Token {
 model TestType {
   id            Int            @id @default(autoincrement())
   name          String         @unique
+  code      String?   @unique // contoh: "CPMI", "IST", "PAULI"
   desc          String?
   createdAt     DateTime       @default(now())
   duration      Int
   price         Int?
+  priceDiscount  Int?     // harga diskon otomatis
+  percentDiscount Int?     // ⬅️ ubah ke Int
+  noteDiscount   String?  // keterangan promo, misal: "Flash Sale Oktober"
+  judul         String?
+  deskripsijudul  String? @db.Text
+  juduldesk1     String?
+  desk1         String? @db.Text
+  juduldesk2    String?
+  desk2         String? @db.Text
+  judulbenefit  String?
+  pointbenefit  String? @db.Text
+  cp            String? @db.Text
+  img2          String?
+  img3          String?
+  img4          String?
+  img5          String?
   img           String?
   subTests      SubTest[]
   questions     Question[]
@@ -109,6 +135,8 @@ model TestType {
   preferenceQuestions PreferenceQuestion[]
   personalityDescriptions PersonalityDescription[] // Relasi ke deskripsi personality
   personalityResults      PersonalityResult[]    // Relasi ke hasil personality
+  companyPricings  CompanyPricing[]
+
 }
 
 // ------------------
@@ -118,7 +146,7 @@ model SubTest {
   id             Int             @id @default(autoincrement())
   testTypeId     Int
   name           String
-  desc           String?
+  desc           String? @db.Text
   createdAt      DateTime        @default(now())
   duration       Int?
   questions      Question[]
@@ -159,7 +187,8 @@ model TestAttempt {
   testTypeId         Int
   paymentId          Int?
   packagePurchaseId  Int?
-  startedAt          DateTime            @default(now())
+  companyId          Int?                // 🔑 tambahin ini
+  startedAt          DateTime?            //@default(now())
   finishedAt         DateTime?
   isCompleted        Boolean             @default(false)
   reservedAt         DateTime            @default(now())
@@ -172,7 +201,8 @@ model TestAttempt {
   PackagePurchase    PackagePurchase?    @relation(fields: [packagePurchaseId], references: [id])
   token              Token?              @relation("TokenTestAttempt", fields: [tokenId], references: [id])
   tokenId            Int?                @unique
-  
+  Company            User?               @relation("CompanyTestAttempt", fields: [companyId], references: [id]) // 🔑 relasi ke User perusahaan
+
   answers            Answer[]
   subtestResults     SubtestResult[]
   results            Result[]
@@ -232,16 +262,27 @@ model Result {
   iq            Float?
   keteranganiq  String?
   dominasi      String?
-  kategoriiq    String?
+  //kategoriiq    String?
   jumlahbenar   Int?
   scoreiq       Int?
   keteranganiqCPMI String?
-  aspekSTK         Json?
+  aspek1         Json?
+  aspek2         Json?
+  aspek3         Json?
+  aspek4         Json?
   url           String? @db.Text 
   kesimpulan    String? @db.Text
+  kesimpulanSikap    String? @db.Text
+  kesimpulanKepribadian    String? @db.Text
+  kesimpulanBelajar    String? @db.Text
   ttd           String? @db.Text
   summaryTemplateId Int?
-
+  saranpengembangan   String? @db.Text
+  kesimpulanumum       String? @db.Text
+ rekomendasi  String? @db.Text
+  layak        Boolean? @default(false)
+  belumLayak   Boolean? @default(false)
+  tidakLayak   Boolean? @default(false)
   // jumlah jawaban
 jumlahA1   Int?
 jumlahA2   Int?
@@ -318,6 +359,7 @@ model SummaryTemplate {
   minScore   Int?
   maxScore   Int?
   category   String?
+  section    String?
   template   String  @db.Text
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -346,19 +388,38 @@ model NormaIq {
 // Pembayaran Tes
 // ------------------
 model Payment {
-  id         Int           @id @default(autoincrement())
-  userId     Int?
-  testTypeId Int
-  amount     Int
-  quantity   Int           @default(1)
-  companyId  Int?
-  status     PaymentStatus @default(PENDING)
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-  User       User?         @relation(fields: [userId], references: [id])
-  TestType   TestType      @relation(fields: [testTypeId], references: [id])
-  attempts   TestAttempt[]
-  company    User?         @relation("CompanyPayments", fields: [companyId], references: [id])
+  id          Int           @id @default(autoincrement())
+  userId      Int?
+  testTypeId  Int
+  companyId   Int?
+  
+  // Informasi transaksi
+  amount      Int
+  quantity    Int           @default(1)
+  method      String?       // metode pembayaran: VA_BCA, QRIS, dll; nullable untuk gratis
+  reference   String?       @unique // reference dari Tripay; nullable untuk gratis
+  status      String        @default("pending") // pending | SUCCESS | FAILED | FREE
+  paymentUrl  String?       // URL pembayaran dari Tripay (opsional)
+  payload     Json?         // response lengkap dari Tripay (opsional)
+  paidAt      DateTime?    
+  expiredAt   DateTime? 
+  promoId Int? 
+  companyPricingId Int? // harga khusus yang dipakai kalau ada
+
+   
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relasi
+  User        User?         @relation(fields: [userId], references: [id])
+  TestType    TestType      @relation(fields: [testTypeId], references: [id])
+  attempts    TestAttempt[]
+  company     User?         @relation("CompanyPayments", fields: [companyId], references: [id])
+  Promo   Promo? @relation(fields: [promoId], references: [id])
+  CompanyPricing    CompanyPricing? @relation(fields: [companyPricingId], references: [id])
+
+
 }
 
 // ------------------
@@ -389,7 +450,8 @@ model UserProgress {
   User        User     @relation(fields: [userId], references: [id])
   TestAttempt TestAttempt? @relation(fields: [attemptId], references: [id])
 
-  @@unique([userId, subtest, attemptId]) // ⚡ kombinasi unik baru
+ @@unique([userId, subtest, attemptId])
+
 }
 
 
@@ -501,4 +563,42 @@ model PersonalityDescription {
   PersonalityResults PersonalityResult[]
 
   @@unique([testTypeId, type])
+}
+model CompanyPricing {
+  id           Int       @id @default(autoincrement())
+  companyId    Int
+  testTypeId   Int
+  customPrice  Int?      // harga khusus
+  discountNominal Int?   // potongan nominal (optional)
+  discountNote String?   // catatan, misal: "Deal dokter Piet 200k"
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+payments Payment[]
+
+  company      User      @relation(fields: [companyId], references: [id])
+  testType     TestType  @relation(fields: [testTypeId], references: [id])
+
+  @@unique([companyId, testTypeId])
+}
+model Promo {
+  id           Int        @id @default(autoincrement())
+  name         String
+  code         String?    @unique // kalau mau promo pakai kode
+  type         String     // 'NOMINAL', 'PERCENT', 'BUNDLE'
+  value        Int        // misal 50000 untuk nominal, 10 untuk persen, 1 untuk bundle gratis
+  minPurchase  Int?       // minimal pembelian (untuk bundle/promo tertentu)
+  maxDiscount  Int?       // batas maksimal diskon
+  validFrom    DateTime?
+  validUntil   DateTime?
+  isActive     Boolean    @default(true)
+
+  // Optional: promo hanya untuk perusahaan/test tertentu
+  //applicableCompanies CompanyPricingPromo[]
+  //applicableTests     TestPromo[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+    payments     Payment[]
+
 }

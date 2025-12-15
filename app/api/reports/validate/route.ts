@@ -23,6 +23,10 @@ async function getLoggedUserId(req: NextRequest) {
 // === GET untuk filter reports (Pending & History) ===
 export async function GET(req: NextRequest) {
   try {
+        const userId = await getLoggedUserId(req);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const url = new URL(req.url);
     const companyId = url.searchParams.get("companyId");
     const testTypeId = url.searchParams.get("testTypeId");
@@ -69,11 +73,22 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Filter Status
-    if (status && status !== "all") {
-      if (status === "pending") whereClause.AND.push({ validated: false });
-      if (status === "selesai") whereClause.AND.push({ validated: true });
-    }
+   // Filter Status
+if (status && status !== "all") {
+  if (status === "pending") {
+    whereClause.AND.push({ validated: false });
+  }
+  if (status === "selesai") {
+    whereClause.AND.push({
+       validatedById: userId,
+      OR: [
+        { validated: true },
+        { Attempt: { status: "FINISHED" } }
+      ],
+    });
+  }
+}
+
 
     // Filter Tanggal Pemeriksaan (validatedAt)
     if (validatedAt) {
@@ -96,6 +111,7 @@ export async function GET(req: NextRequest) {
           select: {
             id: true,
             startedAt: true,
+            status: true, // tambahkan ini
             PackagePurchase: { select: { company: true } },
             Payment: { select: { company: true } },
           },
@@ -106,6 +122,8 @@ export async function GET(req: NextRequest) {
             fullName: true,
             ttdUrl: true,
             ttdHash: true,
+             strNumber: true,   // tambahkan
+        sippNumber: true,
           },
         },
       },
@@ -122,6 +140,7 @@ export async function GET(req: NextRequest) {
           select: {
             id: true,
             startedAt: true,
+            status: true,
             PackagePurchase: { select: { company: true } },
             Payment: { select: { company: true } },
           },
@@ -132,6 +151,8 @@ export async function GET(req: NextRequest) {
             fullName: true,
             ttdUrl: true,
             ttdHash: true,
+             strNumber: true,   // tambahkan
+        sippNumber: true,
           },
         },
       },
@@ -139,7 +160,7 @@ export async function GET(req: NextRequest) {
     });
 
     // === Mapping company fallback (untuk result)
-    const mappedResults = results.map((r) => {
+    const mappedResults = results.map((r:any) => {
       let company = null;
       if (r.Attempt?.PackagePurchase?.company) company = r.Attempt.PackagePurchase.company;
       else if (r.Attempt?.Payment?.company) company = r.Attempt.Payment.company;
@@ -149,7 +170,8 @@ export async function GET(req: NextRequest) {
         id: r.id,
         User: r.User,
         TestType: r.TestType,
-        Attempt: r.Attempt ? { id: r.Attempt.id, startedAt: r.Attempt.startedAt } : null,
+        Attempt: r.Attempt ? { id: r.Attempt.id, startedAt: r.Attempt.startedAt,status: r.Attempt.status ?? null // tambahkan ini
+ } : null,
         Company: company,
         validated: r.validated,
         validatedAt: r.validatedAt,
@@ -159,7 +181,7 @@ export async function GET(req: NextRequest) {
     });
 
     // === Mapping company fallback (untuk personalityResult)
-    const mappedPersonality = personalityResults.map((r) => {
+    const mappedPersonality = personalityResults.map((r:any) => {
       let company = null;
       if (r.Attempt?.PackagePurchase?.company) company = r.Attempt.PackagePurchase.company;
       else if (r.Attempt?.Payment?.company) company = r.Attempt.Payment.company;
@@ -169,7 +191,8 @@ export async function GET(req: NextRequest) {
         id: r.id,
         User: r.User,
         TestType: r.TestType,
-        Attempt: r.Attempt ? { id: r.Attempt.id, startedAt: r.Attempt.startedAt } : null,
+        Attempt: r.Attempt ? { id: r.Attempt.id, startedAt: r.Attempt.startedAt, status: r.Attempt.status ?? null // tambahkan ini
+ } : null,
         Company: company,
         validated: r.validated,
         validatedAt: r.validatedAt,
@@ -177,10 +200,12 @@ export async function GET(req: NextRequest) {
         source: "personalityResult",
       };
     });
+// console.log("🔍 Hasil mapping:", mappedResults, mappedPersonality);
 
     // Gabungkan hasil dan sort by createdAt descending
     const combined = [...mappedResults, ...mappedPersonality];
     const sortedCombined = combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+// console.log("🔍 sortedCombined:", sortedCombined);
 
     return NextResponse.json(sortedCombined);
   } catch (err) {
@@ -211,7 +236,8 @@ export async function POST(req: NextRequest) {
       result = await prisma.result.findUnique({
         where: { id: reportId },
         include: {
-          User: { select: { id: true, fullName: true, ttdUrl: true, ttdHash: true } },
+          User: { select: { id: true, fullName: true, ttdUrl: true, ttdHash: true,  strNumber: true,   // tambahkan
+        sippNumber: true, } },
           ValidatedBy: true,
         },
       });
@@ -235,15 +261,18 @@ export async function POST(req: NextRequest) {
     const expiry = new Date();
     expiry.setFullYear(expiry.getFullYear() + 1);
 
-    console.log("🔥 validator ttdHash:", result?.ValidatedBy?.ttdHash);
-    console.log("🔥 validator ttdUrl:", result?.ValidatedBy?.ttdUrl);
-
+    // console.log("🔥 validator ttdHash:", result?.ValidatedBy?.ttdHash);
+    // console.log("🔥 validator ttdUrl:", result?.ValidatedBy?.ttdUrl);
+const validatorUser = await prisma.user.findUnique({
+  where: { id: userId },
+  select: { ttdHash: true },
+});
     // === Generate QR dari ttdHash psikolog ===
-    let barcodettd: string | null = null;
-    if (result?.ValidatedBy?.ttdHash) {
-      barcodettd = await QRCode.toDataURL(result.ValidatedBy.ttdHash.toString());
-      console.log("✅ Generated barcodettd:", barcodettd.substring(0, 50));
-    }
+let barcodettd: string | null = null;
+if (validatorUser?.ttdHash) {
+  barcodettd = await QRCode.toDataURL(validatorUser.ttdHash);
+  // console.log("✅ Generated barcodettd:", barcodettd.substring(0, 50));
+}
 
     // Update data sesuai source
     let updated;
@@ -277,7 +306,17 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    console.log("✅ saved barcodettd:", updated.barcodettd?.substring(0, 50));
+    // console.log("✅ saved barcodettd:", updated.barcodettd?.substring(0, 50));
+
+    // === Tambahkan update testAttempt di sini ===
+await prisma.testAttempt.update({
+  where: { id: result.attemptId },
+  data: {
+    status: "FINISHED", // bisa jadi logika lain jika perlu
+    finishedAt: new Date(),
+    isCompleted: true,
+  },
+});
 
     return NextResponse.json({
       success: true,

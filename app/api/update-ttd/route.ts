@@ -11,18 +11,27 @@ export async function POST(req: Request) {
     }
 
     // base64 string murni (sudah tanpa prefix data:image/png;base64,)
-    const buffer = Buffer.from(ttd, "base64");
+   let base64Data = ttd;
 
-    // Hash SHA256 untuk validasi
-    const hash = createHash("sha256").update(buffer).digest("hex");
+// Jika ttd memiliki prefix data:image/png;base64, hapus dulu
+if (ttd.startsWith("data:image")) {
+  base64Data = ttd.split(",")[1];
+}
 
-    const updatedUser = await prisma.user.update({
-      where: { id: Number(userId) },
-      data: {
-        ttdUrl: ttd,   // simpan base64 langsung
-        ttdHash: hash, // simpan hash untuk validasi
-      },
-    });
+const buffer = Buffer.from(base64Data, "base64");
+
+// Hash SHA256
+const hash = createHash("sha256").update(buffer).digest("hex");
+
+// Simpan di DB
+const updatedUser = await prisma.user.update({
+  where: { id: Number(userId) },
+  data: {
+    ttdUrl: ttd,   // simpan full base64 beserta prefix
+    ttdHash: hash, // simpan hash untuk validasi
+  },
+});
+
 
     return NextResponse.json({ success: true, user: updatedUser });
   } catch (err) {

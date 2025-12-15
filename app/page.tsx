@@ -3,7 +3,7 @@ import Navbar from '../components/layout/navbar';
 import HeroSection from "../section/herosection";
 import BenefitSection from '@/section/benefitsection';
 import TestSection from '@/section/testsection';
-//import Footer from '@/components/layout/footer';
+import Footer from '@/components/layout/footer';
 
 export default function Page() {
   return (
@@ -13,7 +13,7 @@ export default function Page() {
       <AboutSection />
       <BenefitSection />
       <TestSection />
-     {/*  <Footer /> */}
+       <Footer /> 
       {/* Konten landing page lainnya */}
     </div>
   );

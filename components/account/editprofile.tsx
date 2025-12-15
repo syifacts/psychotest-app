@@ -1,26 +1,37 @@
-// components/account/editprofile.tsx
-
 'use client';
 
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/toaster"
 
-// Fungsi helper untuk memformat tanggal
+
 const formatDateForInput = (dateString?: string) => {
   if (!dateString) return '';
   try {
     const date = new Date(dateString);
-    return date.toISOString().split('T')[0]; // Format YYYY-MM-DD
+    return date.toISOString().split('T')[0];
   } catch {
     return '';
   }
 };
 
 interface User {
-  id: number;
+   id: number;
   email: string;
   fullName: string;
+  role?: string;
   birthDate?: string;
-  profileImage?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  profileImage?: string; 
+  ttdUrl?: string;
+  lembagalayanan?:string;
+  strNumber?: number;
+  sippNumber?: number;
+  phone?: number;
+  address?: number;
+  education?: string;
 }
 
 interface EditProfileProps {
@@ -30,19 +41,37 @@ interface EditProfileProps {
 }
 
 export default function EditProfile({ user, onClose, onSave }: EditProfileProps) {
-  const [formData, setFormData] = useState({
-    fullName: user.fullName || '',
-    email: user.email || '',
-    birthDate: formatDateForInput(user.birthDate),
-  });
+const [formData, setFormData] = useState({
+  fullName: user.fullName || '',
+  email: user.email || '',
+  birthDate: formatDateForInput(user.birthDate),
+  education: user.education ?? '',
+  lembagalayanan: user.lembagalayanan ?? '',
+  strNumber: user.strNumber ?? '',
+  sippNumber: user.sippNumber ?? '',
+  phone: user.phone ?? '',
+  address: user.address ?? '',
+});
+
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(user.profileImage || null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const [showPasswords, setShowPasswords] = useState(false);
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [role, setRole] = useState(user.role || "USER");
+  const { toast } = useToast();
+
+
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,100 +82,347 @@ export default function EditProfile({ user, onClose, onSave }: EditProfileProps)
     }
   };
 
+  const validateBeforeSubmit = () => {
+    if (!formData.fullName.trim()) return setError('Nama tidak boleh kosong.'), false;
+    if (!formData.email.trim()) return setError('Email tidak boleh kosong.'), false;
+
+    const wantsChangePassword = currentPassword || newPassword || confirmNewPassword;
+    if (wantsChangePassword) {
+      if (!currentPassword) return setError('Masukkan password lama.'), false;
+      if (newPassword.length < 10) return setError('Password baru minimal 10 karakter.'), false;
+      if (newPassword !== confirmNewPassword) return setError('Konfirmasi password tidak cocok.'), false;
+    }
+    setError('');
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true);
-    setError('');
+    if (!validateBeforeSubmit()) return;
 
+    setIsSaving(true);
     const dataToSubmit = new FormData();
-    dataToSubmit.append('fullName', formData.fullName);
-    dataToSubmit.append('email', formData.email);
-    dataToSubmit.append('birthDate', formData.birthDate);
-    if (selectedFile) {
-      dataToSubmit.append('profileImage', selectedFile);
+Object.entries(formData).forEach(([key, value]) => {
+  dataToSubmit.append(key, value != null ? String(value) : "");
+});
+    if (selectedFile) dataToSubmit.append('profileImage', selectedFile);
+    if (currentPassword && newPassword) {
+      dataToSubmit.append('currentPassword', currentPassword);
+      dataToSubmit.append('newPassword', newPassword);
     }
 
     try {
-      const response = await fetch(`/api/users/${user.id}`, {
-        method: 'PUT',
-        body: dataToSubmit,
-      });
+  const res = await fetch(`/api/user/${user.id}`, { method: 'PUT', body: dataToSubmit });
+  if (!res.ok) throw new Error(await res.text());
+  const payload = await res.json();
+  onSave(payload.data || payload);
 
-      if (!response.ok) {
-        throw new Error('Gagal menyimpan perubahan. Silakan coba lagi.');
-      }
+  toast({
+    title: "Berhasil!",
+    description: "Profil berhasil disimpan.",
+    position: "center",
+    variant: "success",
+    duration: 3000,
+  });
 
-      const updatedUser = await response.json();
-      onSave(updatedUser.data);
-    } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan.');
-    } finally {
-      setIsSaving(false);
-    }
+  onClose(); // opsional: tutup modal setelah simpan
+} catch (err: any) {
+  setError(err.message || 'Terjadi kesalahan.');
+  toast({
+    title: "Gagal!",
+    description: err.message || "Profil gagal disimpan.",
+      position: "center",
+    variant: "error",
+    duration: 3000,
+  });
+} finally {
+  setIsSaving(false);
+}
+
   };
 
+useEffect(() => {
+  if (user) {
+    setFormData({
+      fullName: user.fullName || '',
+      email: user.email || '',
+      birthDate: formatDateForInput(user.birthDate),
+      education: user.education ?? '',
+      lembagalayanan: user.lembagalayanan ?? '',
+      strNumber: user.strNumber ?? '',
+      sippNumber: user.sippNumber ?? '',
+      phone: user.phone ?? '',
+      address: user.address ?? '',
+    });
+  }
+}, [user]);
+
+  // 🔹 Generate avatar otomatis jika belum ada foto
+  const avatarUrl =
+    previewUrl ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      formData.fullName || 'User'
+    )}&background=1D4ED8&color=fff&size=128&bold=true`;
+
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">Edit Profile</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="flex justify-center mb-6">
-            <div className="relative">
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center items-center p-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 200 }}
+          className="bg-white rounded-3xl shadow-2xl overflow-hidden w-full max-w-3xl flex flex-col md:flex-row"
+        >
+          {/* Left side - Photo */}
+          <motion.div
+            initial={{ x: -30, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="bg-gradient-to-br from-blue-500 to-blue-700 flex flex-col items-center justify-center p-8 text-white md:w-1/3 relative"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="relative"
+            >
               <img
-                src={previewUrl || "https://fonts.gstatic.com/s/i/materialicons/person/v12/24px.svg"}
-                alt="Profile Preview"
-                className="w-28 h-28 rounded-full object-cover border-4 border-gray-100"
+                src={avatarUrl}
+                alt="Profile"
+                className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
               />
-              <button
+              {/* <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 bg-blue-600 text-white rounded-full p-2 hover:bg-blue-700"
+                className="absolute bottom-1 right-1 bg-white text-blue-600 rounded-full p-2 shadow-md hover:bg-blue-100 transition"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" /><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
               </button>
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
-            </div>
-          </div>
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" /> */}
+            </motion.div>
+            <h2 className="mt-4 text-xl font-semibold text-center">{formData.fullName || 'User Name'}</h2>
+            <p className="text-sm opacity-80">{formData.email}</p>
+          </motion.div>
 
-          <div className="space-y-6">
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-semibold text-gray-600 mb-1">Full Name</label>
-              <input
-                type="text" name="fullName" id="fullName" value={formData.fullName}
-                onChange={handleTextChange}
-                className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg"
-                required
-              />
-            </div>
-             <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-gray-600 mb-1">Email</label>
-              <input
-                type="email" name="email" id="email" value={formData.email}
-                onChange={handleTextChange}
-                className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="birthDate" className="block text-sm font-semibold text-gray-600 mb-1">Date of Birth</label>
-              <input
-                type="date" name="birthDate" id="birthDate" value={formData.birthDate}
-                onChange={handleTextChange}
-                className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg"
-              />
-            </div>
-          </div>
+          {/* Right side - Form */}
+          <div className="p-8 md:w-2/3">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Edit Profil</h2>
+       <form onSubmit={handleSubmit} className="space-y-8">
+  {/* ==========================
+      GRID LAYOUT DENGAN DIVIDER
+     ========================== */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
+    {/* Divider vertical hanya muncul di desktop */}
+    <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-gray-200"></div>
 
-          {error && <p className="text-red-600 text-sm mt-4 text-center">{error}</p>}
+    {/* Kolom kiri */}
+    <div className="space-y-6">
+      {/* Nama Lengkap */}
+      <motion.div whileHover={{ scale: 1.01 }}>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+        <input
+          name="fullName"
+          value={formData.fullName}
+          onChange={handleTextChange}
+          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg 
+          focus:ring-2 focus:ring-blue-500 outline-none transition"
+        />
+      </motion.div>
 
-          <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end gap-4">
-            <button type="button" onClick={onClose} className="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200">Cancel</button>
-            <button type="submit" disabled={isSaving} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-blue-400">
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
-      </div>
+      {/* Email */}
+      <motion.div whileHover={{ scale: 1.01 }}>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+        <input
+          type="email"
+          name="email"
+          value={formData.email}
+          onChange={handleTextChange}
+          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg 
+          focus:ring-2 focus:ring-blue-500 outline-none transition"
+        />
+      </motion.div>
+
+      {/* Kondisi User */}
+      {role === "USER" && (
+        <>
+          <motion.div whileHover={{ scale: 1.01 }}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Lahir</label>
+            <input
+              type="date"
+              name="birthDate"
+              value={formData.birthDate}
+              onChange={handleTextChange}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg 
+              focus:ring-2 focus:ring-blue-500 outline-none transition"
+            />
+          </motion.div>
+
+          <motion.div whileHover={{ scale: 1.01 }}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Pendidikan Terakhir</label>
+            <select
+              name="education"
+              value={formData.education}
+              onChange={handleTextChange}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg 
+              focus:ring-2 focus:ring-blue-500 outline-none transition"
+            >
+              <option value="">-- Pilih --</option>
+                  <option value="SD">SD</option>
+    <option value="SMP">SMP</option>
+              <option value="SMA/SMK">SMA/SMK</option>
+              <option value="Diploma">Diploma</option>
+              <option value="Sarjana">Sarjana (S1)</option>
+              <option value="Magister">Magister (S2)</option>
+              <option value="Doktor">Doktor (S3)</option>
+            </select>
+          </motion.div>
+        </>
+      )}
+
+      {/* Kondisi PSIKOLOG */}
+      {role === "PSIKOLOG" && (
+        <>
+          <motion.div whileHover={{ scale: 1.01 }}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nama Fasyankes/Lembaga Layanan Psikologi
+            </label>
+            <input
+              name="lembagalayanan"
+              value={formData.lembagalayanan || ""}
+              onChange={handleTextChange}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg 
+              focus:ring-2 focus:ring-blue-500 outline-none transition"
+            />
+          </motion.div>
+
+          <motion.div whileHover={{ scale: 1.01 }}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nomor STR/SIK</label>
+            <input
+              name="strNumber"
+              value={formData.strNumber || ""}
+              onChange={handleTextChange}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg 
+              focus:ring-2 focus:ring-blue-500 outline-none transition"
+            />
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.01 }}>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Nomor SIPP/SIPPK</label>
+        <input
+          name="sippNumber"
+          value={formData.sippNumber || ""}
+          onChange={handleTextChange}
+          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+        />
+      </motion.div>
+        </>
+      )}
+
+      {/* Kondisi PERUSAHAAN */}
+      {role === "PERUSAHAAN" && (
+        <>
+          <motion.div whileHover={{ scale: 1.01 }}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
+            <input
+              name="address"
+              value={formData.address || ""}
+              onChange={handleTextChange}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg 
+              focus:ring-2 focus:ring-blue-500 outline-none transition"
+            />
+          </motion.div>
+
+          <motion.div whileHover={{ scale: 1.01 }}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
+            <input
+              name="phone"
+              value={formData.phone || ""}
+              onChange={handleTextChange}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg 
+              focus:ring-2 focus:ring-blue-500 outline-none transition"
+            />
+          </motion.div>
+        </>
+      )}
     </div>
+
+    {/* Kolom kanan */}
+    <div className="space-y-6">
+     {/* Ubah Password Section */}
+<div className="pt-4">
+  <div className="flex justify-between items-center mb-3">
+    <h3 className="text-sm font-semibold text-gray-700">Ubah Password</h3>
+    <button
+      type="button"
+      onClick={() => setShowPasswords((s) => !s)}
+      className="text-xs text-blue-600 underline"
+    >
+      {showPasswords ? 'Sembunyikan' : 'Tampilkan'}
+    </button>
+  </div>
+
+  <div className="space-y-3">
+    <input
+      type={showPasswords ? 'text' : 'password'}
+      placeholder="Password Lama"
+      value={currentPassword}
+      onChange={(e) => setCurrentPassword(e.target.value)}
+      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+    />
+    <input
+      type={showPasswords ? 'text' : 'password'}
+      placeholder="Password Baru"
+      value={newPassword}
+      onChange={(e) => setNewPassword(e.target.value)}
+      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+    />
+    <input
+      type={showPasswords ? 'text' : 'password'}
+      placeholder="Konfirmasi Password Baru"
+      value={confirmNewPassword}
+      onChange={(e) => setConfirmNewPassword(e.target.value)}
+      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+    />
+  </div>
+</div>
+
+
+{/* Error + Buttons */}
+{error && <p className="text-center text-red-600 text-sm">{error}</p>}
+
+<div className="flex justify-end gap-3 pt-3 border-t border-gray-100 mt-2">
+  <button
+    type="button"
+    onClick={onClose}
+    className="px-4 py-1.5 rounded-md font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 text-sm transition"
+  >
+    Batal
+  </button>
+  <motion.button
+    whileTap={{ scale: 0.96 }}
+    type="submit"
+    disabled={isSaving}
+    className="px-5 py-1.5 rounded-md font-semibold text-white bg-blue-600 hover:bg-blue-700 text-sm transition disabled:bg-blue-300"
+  >
+    {isSaving ? "Menyimpan..." : "Simpan"}
+  </motion.button>
+</div>
+
+    </div>
+  </div>
+</form>
+          <Toaster />
+
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 }

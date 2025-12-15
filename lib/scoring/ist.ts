@@ -32,15 +32,27 @@ function isAnswerScoreArray(val: JsonValue | null | undefined): val is AnswerSco
  * @param userId - ID peserta
  * @param subtest - nama subtest, ex: "SE"
  */
-export async function scoreIST(userId: number, subtest: string): Promise<IstScoreResult> {
+export async function scoreIST(userId: number, subtest: string, attemptId?: number): Promise<IstScoreResult> {
   // Ambil jawaban peserta untuk subtest ini
-  const answers = await prisma.answer.findMany({
-    where: {
-      userId,
-      Question: { SubTest: { is: { name: subtest } } },
+   const noQuestionSubtests = ["hapalanme", "mehapalan", "me_hapalan"];
+  if (noQuestionSubtests.includes(subtest.toLowerCase())) {
+    return { rw: 0, score: 0, norma: 0 };
+  }
+
+ const allAnswers = await prisma.answer.findMany({
+  where: { userId, attemptId },
+  include: {
+    Question: {
+      include: { SubTest: true },
     },
-    include: { Question: true },
-  });
+  },
+});
+
+const answers = allAnswers.filter(
+  (a) => a.Question?.SubTest?.name?.toLowerCase() === subtest.toLowerCase()
+);
+console.log("🧩 Jumlah answers ditemukan:", answers.length);
+
 
   let rw = 0;
 
@@ -96,6 +108,7 @@ export async function scoreIST(userId: number, subtest: string): Promise<IstScor
     });
     norma = normaData?.sw;
   }
+console.log(`📊 Hasil skor ${subtest}: RW=${rw}, SW=${norma ?? "-"}, usia=${age}`);
 
   return { rw, score, norma };
 }

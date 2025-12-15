@@ -50,9 +50,26 @@ const UserProfileForm: React.FC<Props> = ({
         </div>
       )}
 
-      <button className={styles.btn} onClick={onSave}>
-        Mulai Tes
-      </button>
+     <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "20px" }}>
+  <button
+    className={styles.btn}
+    onClick={onSave}
+  >
+    Simpan Data Diri
+  </button>
+
+  <button
+    className={styles.btn}
+    style={{ backgroundColor: "#4CAF50" }}
+    onClick={() => {
+      window.dispatchEvent(new CustomEvent("startTestAfterProfile"));
+    }}
+  >
+    Mulai Tes
+  </button>
+</div>
+
+
     </div>
   );
 };

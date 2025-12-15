@@ -13,13 +13,12 @@ export async function GET(req: NextRequest) {
   try {
     const attempts = await prisma.testAttempt.findMany({
       where: { userId },
-      include: { TestType: true, results: true, personalityResults: true 
+      include: { TestType: true, results: true,  personalityResults: true, User: true,
  },
       orderBy: { startedAt: "desc" },
     });
 
-    const mappedAttempts = attempts.map((a) => {
-      // --- Pilih result ---
+    const mappedAttempts = attempts.map((a:any) => {
       const result = a.results?.[0];
       const personalityResult = a.personalityResults?.[0];
      

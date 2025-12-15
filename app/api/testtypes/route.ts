@@ -9,8 +9,22 @@ export async function GET() {
       name: true,
       desc: true,
       price: true,
+      priceDiscount: true,      // ✅ tambahkan ini
+      percentDiscount: true,    // ✅ tambahkan ini
+      noteDiscount: true,       // ✅ tambahkan ini
       img: true,
+      duration: true,
+      judul: true,
+      deskripsijudul: true,
+      juduldesk1: true,
+      desk1: true,
+      juduldesk2: true,
+      desk2: true,
+      cp: true,
+      judulbenefit: true,
+      pointbenefit: true,
     },
+    
     orderBy: { id: "asc" },
   });
 
