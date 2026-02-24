@@ -33,6 +33,7 @@ interface Props {
     percentDiscount?: number | null;
   } | null;
   role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN";
+  savedStage?: string | null;
 }
 
 interface User {
@@ -88,6 +89,7 @@ function CPMIPaymentInner({
   startAttempt,
   testInfo,
   role,
+  savedStage,
 }: Props) {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -111,6 +113,7 @@ function CPMIPaymentInner({
     phone: "",
   });
   const [method, setMethod] = useState("BRIVA");
+  const buttonText = savedStage === "questions" ? "Lanjutkan Tes" : "Mulai Tes";
 
   const displayPrice = getFinalPrice(testInfo);
   const unitPrice = displayPrice;
@@ -365,7 +368,7 @@ function CPMIPaymentInner({
           <span>Sudah didaftarkan oleh perusahaan ({tokenUser.name})</span>
         </motion.p>
         <button className={`${styles.btn} mt-1`} onClick={startAttempt}>
-          Mulai Tes
+          {buttonText}
         </button>
       </div>
     );
@@ -378,7 +381,7 @@ function CPMIPaymentInner({
           ✅ Sudah didaftarkan oleh perusahaan: <b>{user.name}</b>
         </p>
         <button className={styles.btn} onClick={startAttempt}>
-          Mulai Tes
+          {buttonText}
         </button>
       </div>
     );
@@ -388,7 +391,7 @@ function CPMIPaymentInner({
     return (
       <div>
         <button className={styles.btn} onClick={startAttempt}>
-          Mulai Tes
+          {buttonText}
         </button>
       </div>
     );

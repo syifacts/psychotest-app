@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import styles from "./cpmi.module.css";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import CPMIIntro from "../../../components/CPMI/CPMIIntro";
 import CPMIInstruction from "@/components/CPMI/CPMIInstruction";
 import BiodataForm from "@/components/CPMI/BiodataForm";
 import { ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
+import CPMIQuestionCard from "@/components/CPMI/CPMIQuestionCard";
+import CPMIAnswerSummary from "@/components/CPMI/CPMIAnswerSummary";
 
 interface Question {
   id: number;
@@ -25,7 +26,7 @@ type AnswerPayload = {
 };
 type CPMIUser = {
   id: number;
-  role: "USER" | "PERUSAHAAN" | "GUEST";
+  role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN";
   name?: string;
   email?: string;
 };
@@ -34,7 +35,9 @@ const CPMIPage = () => {
   const router = useRouter();
 
   const [user, setUser] = useState<CPMIUser | null>(null);
-  const [role, setRole] = useState<"USER" | "PERUSAHAAN" | "GUEST">("USER");
+  const [role, setRole] = useState<
+    "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN"
+  >("USER");
   const [testInfo, setTestInfo] = useState<{
     id: number;
     name: string;
@@ -57,14 +60,27 @@ const CPMIPage = () => {
   const [exampleQuestions, setExampleQuestions] = useState<Question[]>([]);
 
   const [endTime, setEndTime] = useState<Date | null>(null);
-  useEffect(() => {
-    const saved = localStorage.getItem("endTime");
-    if (saved) setEndTime(new Date(saved));
-  }, []);
 
   const [step, setStep] = useState<
     "intro" | "biodata" | "instruction" | "questions"
   >("intro");
+
+  const [isSubmittingTest, setIsSubmittingTest] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<{
+    show: boolean;
+    isTimeout: boolean;
+    message: string;
+    error?: boolean;
+  }>({ show: false, isTimeout: false, message: "" });
+
+  const clearLocalState = () => {
+    localStorage.removeItem("attemptId");
+    localStorage.removeItem("endTime");
+    localStorage.removeItem("currentIndex");
+    localStorage.removeItem("stage");
+    setAttemptId(null);
+    setEndTime(null);
+  };
 
   useEffect(() => {
     const fetchUserAndTest = async () => {
@@ -84,7 +100,6 @@ const CPMIPage = () => {
               email: "",
             });
             setRole("GUEST");
-
             setHasAccess(true);
           } else {
             console.warn(tokenData.error);
@@ -96,8 +111,11 @@ const CPMIPage = () => {
           const userData = await userRes.json();
           if (!userRes.ok || !userData.user) return router.push("/login");
 
-          setUser(userData.user);
-          setRole(userData.user.role === "PERUSAHAAN" ? "PERUSAHAAN" : "USER");
+          setUser({
+            ...userData.user,
+            role: userData.user.role,
+          });
+          setRole(userData.user.role);
 
           const accessRes = await fetch(
             `/api/tes/check-access?userId=${userData.user.id}&type=CPMI`,
@@ -120,6 +138,69 @@ const CPMIPage = () => {
     fetchUserAndTest();
   }, [router]);
 
+  useEffect(() => {
+    const restoreAttempt = async () => {
+      if (!user) return;
+
+      const savedAttemptId = localStorage.getItem("attemptId");
+      const savedStage = localStorage.getItem("stage");
+      const savedEnd = localStorage.getItem("endTime");
+
+      if (savedAttemptId && savedStage) {
+        if (savedEnd) {
+          const endDate = new Date(savedEnd);
+          const diff = Math.floor((endDate.getTime() - Date.now()) / 1000);
+          if (diff <= 0) {
+            clearLocalState();
+            setHasAccess(false);
+            return;
+          }
+        }
+
+        try {
+          const res = await fetch(`/api/attempts/${savedAttemptId}`, {
+            credentials: "include",
+          });
+          const data = await res.json();
+
+          if (!res.ok || data.attempt?.isCompleted) {
+            clearLocalState();
+            setStep("intro");
+            setHasAccess(false);
+            return;
+          }
+
+          setAttemptId(Number(savedAttemptId));
+          const savedIndex = localStorage.getItem("currentIndex");
+          if (savedIndex) setCurrentIndex(Number(savedIndex));
+
+          if (savedEnd) {
+            const endDate = new Date(savedEnd);
+            setEndTime(endDate);
+            const diff = Math.max(
+              0,
+              Math.floor((endDate.getTime() - Date.now()) / 1000),
+            );
+            setTimeLeft(diff);
+          }
+
+          setStep(
+            savedStage as "intro" | "biodata" | "instruction" | "questions",
+          );
+          if (savedStage === "questions") {
+            await loadQuestions(Number(savedAttemptId));
+          }
+        } catch (err) {
+          console.error("Gagal restore attempt:", err);
+          clearLocalState();
+          setStep("intro");
+          setHasAccess(false);
+        }
+      }
+    };
+    restoreAttempt();
+  }, [user]);
+
   const loadQuestions = async (attemptId?: number) => {
     setLoading(true);
     try {
@@ -137,18 +218,21 @@ const CPMIPage = () => {
         image: q.image || "",
       }));
 
-      console.log("Filtered questions with images:", qList);
-
       setQuestions(qList || []);
 
-      const startIndex = qList.findIndex(
-        (q) => q.code === "CPMI-4" || q.id === 329,
-      );
-      setCurrentIndex(startIndex >= 0 ? startIndex : 0);
-      localStorage.setItem(
-        "currentIndex",
-        (startIndex >= 0 ? startIndex : 0).toString(),
-      );
+      const savedIndex = localStorage.getItem("currentIndex");
+      if (savedIndex) {
+        setCurrentIndex(Number(savedIndex));
+      } else {
+        const startIndex = qList.findIndex(
+          (q) => q.code === "CPMI-4" || q.id === 329,
+        );
+        setCurrentIndex(startIndex >= 0 ? startIndex : 0);
+        localStorage.setItem(
+          "currentIndex",
+          (startIndex >= 0 ? startIndex : 0).toString(),
+        );
+      }
 
       if (attemptId) {
         await loadExistingAnswers(attemptId, qList);
@@ -166,11 +250,9 @@ const CPMIPage = () => {
         credentials: "include",
       });
       const data = await res.json();
-      console.log("🔍 API answers:", data.answers);
 
       if (res.ok && data.answers) {
         setAnswers(data.answers);
-        console.log("✅ restored answers:", data.answers);
       }
     } catch (err) {
       console.error("❌ Gagal load jawaban:", err);
@@ -180,15 +262,13 @@ const CPMIPage = () => {
   const startAttempt = async () => {
     if (!testInfo?.id || !user) return;
 
-    if (attemptId) {
+    if (attemptId && step !== "intro") {
       await loadQuestions(attemptId);
       return;
     }
 
-    localStorage.removeItem("attemptId");
-    localStorage.removeItem("endTime");
-    localStorage.removeItem("currentIndex");
-    setAttemptId(null);
+    clearLocalState();
+
     setAnswers({});
     setCurrentIndex(0);
 
@@ -216,6 +296,7 @@ const CPMIPage = () => {
 
       setAttemptId(data.id);
       localStorage.setItem("attemptId", data.id.toString());
+      localStorage.setItem("stage", "biodata");
 
       const duration = testInfo.duration || 30;
       const newEndTime = new Date();
@@ -224,28 +305,35 @@ const CPMIPage = () => {
       localStorage.setItem("endTime", newEndTime.toISOString());
 
       await loadQuestions(data.id);
+
+      setStep("biodata");
     } catch (err) {
       console.error("Gagal memulai attempt:", err);
     }
   };
 
-  useEffect(() => {
-    if (!endTime) return;
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-    const timer = setInterval(() => {
+  useEffect(() => {
+    if (step !== "questions" || !endTime) return;
+
+    timerRef.current = setInterval(() => {
       const diff = Math.max(
         0,
         Math.floor((endTime.getTime() - Date.now()) / 1000),
       );
       setTimeLeft(diff);
+
       if (diff <= 0) {
-        handleSubmit();
-        clearInterval(timer);
+        if (timerRef.current) clearInterval(timerRef.current);
+        handleSubmit(true);
       }
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [endTime]);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [endTime, step]);
 
   const handleSelectAnswer = async (
     qid: number,
@@ -274,8 +362,13 @@ const CPMIPage = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!user || !attemptId) return;
+  const handleSubmit = async (isTimeOut = false) => {
+    if (!user || !attemptId) {
+      clearLocalState();
+      return;
+    }
+
+    setIsSubmittingTest(true);
 
     try {
       const payload: AnswerPayload[] = Object.entries(answers).map(
@@ -302,74 +395,42 @@ const CPMIPage = () => {
       });
 
       const data = await res.json();
+
+      clearLocalState();
+      setHasAccess(false);
+
       if (!res.ok) throw new Error(data.error || "Gagal submit CPMI");
 
-      localStorage.removeItem("attemptId");
-      localStorage.removeItem("endTime");
-      localStorage.removeItem("currentIndex");
-      setHasAccess(false);
+      setIsSubmittingTest(false);
 
-      alert("🎉 Tes CPMI selesai! Hasil bisa dilihat di Dashboard.");
-      router.push("/dashboard");
+      setSubmitStatus({
+        show: true,
+        isTimeout: isTimeOut,
+        message: isTimeOut
+          ? "Waktu pengerjaan telah habis. Jawaban kamu otomatis tersimpan dan sedang menunggu verifikasi psikolog."
+          : "Tes CPMI berhasil diselesaikan! Hasil bisa kamu lihat di menu Dashboard.",
+      });
+
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 3500);
     } catch (err: any) {
-      alert(err.message);
-      localStorage.removeItem("attemptId");
-      localStorage.removeItem("endTime");
-      localStorage.removeItem("currentIndex");
+      clearLocalState();
       setHasAccess(false);
+      setIsSubmittingTest(false);
+
+      setSubmitStatus({
+        show: true,
+        isTimeout: false,
+        error: true,
+        message: err.message || "Terjadi kesalahan saat mensubmit tes.",
+      });
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 3000);
     }
   };
-
-  useEffect(() => {
-    const restoreAttempt = async () => {
-      if (!user) return;
-      const savedAttemptId = localStorage.getItem("attemptId");
-      if (!savedAttemptId) return;
-
-      try {
-        const res = await fetch(`/api/attempts/${savedAttemptId}`, {
-          credentials: "include",
-        });
-        const data = await res.json();
-
-        if (!res.ok || data.attempt?.isCompleted) {
-          localStorage.removeItem("attemptId");
-          localStorage.removeItem("endTime");
-          localStorage.removeItem("currentIndex");
-          setAttemptId(null);
-          setStep("intro");
-          setHasAccess(false);
-          return;
-        }
-
-        setAttemptId(Number(savedAttemptId));
-        const savedIndex = localStorage.getItem("currentIndex");
-        setCurrentIndex(savedIndex ? Number(savedIndex) : 0);
-
-        const savedEnd = localStorage.getItem("endTime");
-        if (savedEnd) {
-          const endTime = new Date(savedEnd);
-          const diff = Math.max(
-            0,
-            Math.floor((endTime.getTime() - Date.now()) / 1000),
-          );
-          setTimeLeft(diff);
-        }
-
-        await loadQuestions(Number(savedAttemptId));
-        setStep("questions");
-      } catch (err) {
-        console.error("Gagal restore attempt:", err);
-        localStorage.removeItem("attemptId");
-        localStorage.removeItem("endTime");
-        localStorage.removeItem("currentIndex");
-        setAttemptId(null);
-        setStep("intro");
-        setHasAccess(false);
-      }
-    };
-    restoreAttempt();
-  }, [user]);
 
   useEffect(() => {
     localStorage.setItem("currentIndex", currentIndex.toString());
@@ -380,6 +441,7 @@ const CPMIPage = () => {
     `${Math.floor(s / 60)
       .toString()
       .padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+
   useEffect(() => {
     const loadExampleQuestions = async () => {
       try {
@@ -397,46 +459,112 @@ const CPMIPage = () => {
 
   if (step === "intro" && loadingIntro) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
-        <motion.div
-          className="flex flex-col items-center"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          {/* Spinner */}
-          <motion.div
-            className="w-14 h-14 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"
-            initial={{ rotate: 0 }}
-            animate={{ rotate: 360 }}
-            transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
-          />
-
-          <motion.p
-            className="mt-5 text-blue-700 font-semibold text-lg animate-pulse"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            Menyiapkan halaman tes CPMI...
-          </motion.p>
-
-          <motion.p
-            className="mt-2 text-gray-500 text-sm italic"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-          >
-            “Mohon tunggu sebentar, sistem sedang memuat test.”
-          </motion.p>
-        </motion.div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-cyan-50">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
+        <p className="text-gray-600 font-medium animate-pulse">
+          Menyiapkan Tes CPMI...
+        </p>
       </div>
     );
   }
 
-  switch (step) {
-    case "intro":
-      return (
+  return (
+    <>
+      {(isSubmittingTest || submitStatus.show) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 transition-all duration-300">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full flex flex-col items-center text-center animate-in zoom-in-95 duration-300 border border-gray-100">
+            {isSubmittingTest ? (
+              <>
+                <div className="relative mb-6 mt-4">
+                  <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full opacity-50"></div>
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">
+                  Menyimpan Jawaban...
+                </h3>
+                <p className="text-gray-500 text-sm mb-4">
+                  Mohon tunggu sebentar ya.
+                </p>
+              </>
+            ) : (
+              <>
+                {submitStatus.error ? (
+                  <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-6 shadow-sm">
+                    <svg
+                      className="w-10 h-10"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </div>
+                ) : submitStatus.isTimeout ? (
+                  <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-6 shadow-sm">
+                    <svg
+                      className="w-10 h-10"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-sm">
+                    <svg
+                      className="w-10 h-10"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                )}
+
+                <h3 className="text-xl font-bold text-gray-800 mb-2">
+                  {submitStatus.error
+                    ? "Oops! Terjadi Kesalahan"
+                    : submitStatus.isTimeout
+                      ? "Waktu Habis!"
+                      : "Selesai!"}
+                </h3>
+                <p className="text-gray-600 text-sm leading-relaxed mb-6">
+                  {submitStatus.message}
+                </p>
+
+                <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-500 animate-[progress_3.5s_ease-in-out_forwards]"></div>
+                </div>
+                <p className="text-xs text-gray-400 mt-4">
+                  Mengalihkan secara otomatis...
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      {/* ========================================================= */}
+
+      {step === "intro" && (
         <motion.div
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -447,166 +575,97 @@ const CPMIPage = () => {
             hasAccess={hasAccess}
             accessReason={accessReason}
             setHasAccess={setHasAccess}
-            startAttempt={async (): Promise<void> => {
-              setStep("biodata");
-            }}
+            startAttempt={startAttempt}
             role={role}
+            savedStage={step}
           />
         </motion.div>
-      );
+      )}
 
-    case "biodata":
-      return <BiodataForm onSaved={() => setStep("instruction")} />;
+      {step === "biodata" && (
+        <BiodataForm
+          onSaved={() => {
+            setStep("instruction");
+            localStorage.setItem("stage", "instruction");
+          }}
+        />
+      )}
 
-    case "instruction":
-      return (
+      {step === "instruction" && (
         <CPMIInstruction
           exampleQuestions={exampleQuestions}
           onFinishExamples={async () => {
-            await startAttempt();
+            if (attemptId) {
+              await loadQuestions(attemptId);
+            }
             setStep("questions");
+            localStorage.setItem("stage", "questions");
           }}
         />
-      );
-    case "questions":
-      if (!currentQuestion) return null;
+      )}
 
-      return (
-        <div className={styles.container}>
-          <div className={styles.header}>
-            <h1 className={`${styles.title} mt-15`}>Soal Tes WPT untuk CPMI</h1>
-            <div className={`${styles.timer} mt-15`}>
-              ⏳ {formatTime(timeLeft)}
+      {step === "questions" && currentQuestion && (
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 p-4 md:p-8 font-sans relative">
+          {/* HEADER: Judul & Timer */}
+          <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center bg-white/80 backdrop-blur-md shadow-sm rounded-2xl p-4 md:px-8 mb-6 border border-blue-100">
+            <h1 className="text-2xl font-bold text-gray-800 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+              Soal Tes WPT untuk CPMI
+            </h1>
+            <div
+              className={`flex items-center gap-2 px-4 py-2 font-bold rounded-lg border mt-4 md:mt-0 shadow-sm transition-colors ${
+                timeLeft <= 60
+                  ? "bg-red-50 text-red-600 border-red-200 animate-pulse"
+                  : "bg-blue-50 text-blue-700 border-blue-200"
+              }`}
+            >
+              <span className="text-xl">⏳</span>
+              <span className="text-lg tracking-wider">
+                {formatTime(timeLeft)}
+              </span>
             </div>
           </div>
 
-          <div className={styles.mainContent}>
-            <div className={styles.questionSection}>
-              {/* Soal */}
-              <div className={styles.questionContent}>
-                {/* Inline teks + gambar dari content */}
-                {currentQuestion.content.split("\n").map((line, idx) => {
-                  const isImage = /\.(png|jpg|jpeg|gif)$/i.test(line.trim());
-                  return isImage ? (
-                    <img
-                      key={idx}
-                      src={line.trim()}
-                      alt={`Soal ${currentIndex + 1} part ${idx}`}
-                      style={{
-                        maxWidth: "300px",
-                        display: "block",
-                        margin: "10px 0",
-                      }}
-                    />
-                  ) : (
-                    <p key={idx} style={{ margin: "5px 0" }}>
-                      {line}
-                    </p>
-                  );
-                })}
-
-                {/* Gambar utama soal (jika ada) */}
-                {currentQuestion.image && (
-                  <div style={{ marginTop: "15px" }}>
-                    <img
-                      src={currentQuestion.image}
-                      alt={`Soal ${currentIndex + 1} utama`}
-                      style={{ maxWidth: "400px", display: "block" }}
-                    />
-                  </div>
-                )}
+          {/* MAIN CONTENT: 2 Kolom */}
+          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* KOLOM KIRI: Pertanyaan & Navigasi */}
+            <div className="lg:col-span-2 flex flex-col">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-blue-600 text-white w-10 h-10 flex items-center justify-center rounded-xl font-bold shadow-md">
+                  {currentIndex + 1}
+                </div>
+                <span className="text-gray-500 font-medium">
+                  dari {questions.length} soal
+                </span>
               </div>
 
-              {/* Opsi */}
-              {currentQuestion.type === "single" ? (
-                <ul className={styles.optionsList}>
-                  {currentQuestion.options.map((opt, idx) => {
-                    const isImage =
-                      opt.startsWith("/") || /\.(png|jpg|jpeg|gif)$/i.test(opt);
-                    return (
-                      <li key={idx}>
-                        <label className={styles.optionLabel}>
-                          <input
-                            type="radio"
-                            name={`q-${currentQuestion.id}`}
-                            value={idx + 1}
-                            checked={
-                              answers[currentQuestion.code] === String(idx + 1)
-                            }
-                            onChange={() =>
-                              handleSelectAnswer(
-                                currentQuestion.id,
-                                currentQuestion.code,
-                                String(idx + 1),
-                              )
-                            }
-                          />
-                          <span className="flex items-center gap-3">
-                            {isImage ? (
-                              <img
-                                src={opt}
-                                alt={`Pilihan ${idx + 1}`}
-                                className="w-28 h-auto rounded-md object-contain border"
-                              />
-                            ) : (
-                              <span className="text-gray-700 font-medium">{`${idx + 1}. ${opt}`}</span>
-                            )}
-                          </span>
-                        </label>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <div>
-                  {/* Gambar referensi untuk essay */}
-                  {currentQuestion.options?.length > 0 && (
-                    <div style={{ marginBottom: "10px" }}>
-                      {currentQuestion.options.map((opt, idx) => (
-                        <img
-                          key={idx}
-                          src={opt.trim()}
-                          alt={`Referensi ${idx + 1}`}
-                          style={{
-                            maxWidth: "200px",
-                            display: "block",
-                            margin: "8px 0",
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  <textarea
-                    className="mt-5 w-full p-4 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all duration-200 shadow-sm bg-gray-50 resize-none text-gray-800 placeholder-gray-400"
-                    value={answers[currentQuestion.code] || ""}
-                    onChange={(e) =>
-                      handleSelectAnswer(
-                        currentQuestion.id,
-                        currentQuestion.code,
-                        e.target.value,
-                      )
-                    }
-                    placeholder="✏️ Tuliskan jawaban Anda di sini..."
-                    rows={6}
-                  />
-                </div>
-              )}
+              {/* PANGGIL KOMPONEN QUESTION CARD CPMI */}
+              <CPMIQuestionCard
+                question={currentQuestion}
+                selected={answers[currentQuestion.code]}
+                onSelect={(choice, optIndex) =>
+                  handleSelectAnswer(
+                    currentQuestion.id,
+                    currentQuestion.code,
+                    choice,
+                    optIndex,
+                  )
+                }
+              />
 
-              {/* Navigasi Back / Next / Submit */}
+              {/* NAVIGASI BUTTONS (Bisa pinjem punya MSDT) */}
               <div className="flex justify-between items-center mt-10 space-x-4">
                 <button
                   onClick={() =>
                     setCurrentIndex((prev) => Math.max(0, prev - 1))
                   }
                   disabled={currentIndex === 0}
-                  className={`px-6 py-3 rounded-lg font-semibold transition-all shadow-sm border
-      ${
-        currentIndex === 0
-          ? "bg-gray-200 text-gray-400 cursor-not-allowed border-gray-200"
-          : "bg-white text-blue-600 border-blue-500 hover:bg-blue-50 hover:scale-[1.03]"
-      }`}
+                  className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${
+                    currentIndex === 0
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-sm"
+                  }`}
                 >
-                  ← Kembali
+                  <span>←</span> Kembali
                 </button>
 
                 {currentIndex < questions.length - 1 ? (
@@ -616,50 +675,49 @@ const CPMIPage = () => {
                         Math.min(questions.length - 1, prev + 1),
                       )
                     }
-                    className="px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-indigo-600 hover:to-blue-600 hover:scale-[1.03] transition-all shadow-md"
+                    className="px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-semibold shadow-md transition-all duration-300"
                   >
-                    Selanjutnya →
+                    Selanjutnya <span>→</span>
                   </button>
                 ) : (
                   <button
-                    onClick={handleSubmit}
-                    className="px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-emerald-600 hover:to-green-600 hover:scale-[1.03] transition-all shadow-md"
+                    onClick={() => handleSubmit(false)}
+                    className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl font-bold shadow-md transition-all duration-300"
                   >
                     ✅ Submit Tes
                   </button>
                 )}
               </div>
 
-              <div className="mt-8 flex justify-center pb-8 mt-30">
+              <div className="mt-8 text-center lg:text-left">
                 <button
-                  onClick={() => setStep("instruction")}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-300 hover:bg-gray-100 transition-all duration-200 text-sm font-medium text-gray-700 shadow-sm bg-white"
+                  onClick={() => {
+                    setStep("instruction");
+                    localStorage.setItem("stage", "instruction");
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 border border-gray-200 transition-colors shadow-sm"
                 >
                   <ArrowLeft size={16} /> Kembali ke Instruksi
                 </button>
               </div>
             </div>
 
-            {/* Ringkasan Jawaban */}
-            <div className={styles.answerCard}>
-              <h3>Ringkasan Jawaban</h3>
-              <div className={styles.answerGrid}>
-                {questions.map((q, idx) => (
-                  <button
-                    key={q.id}
-                    className={`${styles.answerNumber} ${
-                      answers[q.code] ? styles.answered : styles.unanswered
-                    } ${currentIndex === idx ? styles.current : ""}`}
-                    onClick={() => setCurrentIndex(idx)}
-                  >
-                    {idx + 1}
-                  </button>
-                ))}
+            {/* KOLOM KANAN: Ringkasan Jawaban (Sticky) */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-8">
+                {/* PANGGIL KOMPONEN ANSWER SUMMARY CPMI */}
+                <CPMIAnswerSummary
+                  questions={questions}
+                  answers={answers}
+                  currentIndex={currentIndex}
+                  onSelect={(idx) => setCurrentIndex(idx)}
+                />
               </div>
             </div>
           </div>
         </div>
-      );
-  }
+      )}
+    </>
+  );
 };
 export default CPMIPage;

@@ -37,6 +37,7 @@ interface Props {
   startAttempt: () => Promise<void>;
   accessReason?: string;
   role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN";
+  savedStage?: string | null;
 }
 
 const CPMIIntro: React.FC<Props> = ({
@@ -46,6 +47,7 @@ const CPMIIntro: React.FC<Props> = ({
   startAttempt,
   role,
   accessReason,
+  savedStage,
 }) => {
   const [currentRole, setCurrentRole] = useState<
     "USER" | "PERUSAHAAN" | "SUPERADMIN" | "GUEST"
@@ -484,6 +486,7 @@ const CPMIIntro: React.FC<Props> = ({
                     startAttempt={startAttempt}
                     testInfo={testInfo}
                     role={currentRole}
+                    savedStage={savedStage}
                   />
                 </div>
               </motion.div>
