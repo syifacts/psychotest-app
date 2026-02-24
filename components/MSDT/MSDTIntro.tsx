@@ -1,126 +1,133 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import type React from "react"
-import { useState, useEffect } from "react"
-import { motion, Variants, cubicBezier } from "framer-motion"
-import CPMIPaymentButton from "./MSDTPaymentButton"
-import Navbar from "../layout/navbar"
+import Link from "next/link";
+import type React from "react";
+import { useState, useEffect } from "react";
+import { motion, Variants, cubicBezier } from "framer-motion";
+import CPMIPaymentButton from "./MSDTPaymentButton";
+import Navbar from "../layout/navbar";
 
 interface Props {
   testInfo: {
-   name : string
-    id: number
-    duration: number | null
-    price?: number | null
-    judul?: string
-    deskripsijudul?: string
-    juduldesk1?: string
-    desk1?: string
-    juduldesk2?: string
-    desk2?: string
-    judulbenefit?: string
-    pointbenefit?: string
-    img?: string
-    cp?: string
-    customPrice?: number | null;  // <- tambahkan ini
-  discountNominal?: number | null; // optional kalau nanti pakai diskon
-  discountNote?: string | null;   // optional
-  priceDiscount?: number
-percentDiscount?: number
-noteDiscount?: string
+    name: string;
+    id: number;
+    duration: number | null;
+    price?: number | null;
+    judul?: string;
+    deskripsijudul?: string;
+    juduldesk1?: string;
+    desk1?: string;
+    juduldesk2?: string;
+    desk2?: string;
+    judulbenefit?: string;
+    pointbenefit?: string;
+    img?: string;
+    cp?: string;
+    customPrice?: number | null;
+    discountNominal?: number | null;
+    discountNote?: string | null;
+    priceDiscount?: number;
+    percentDiscount?: number;
+    noteDiscount?: string;
   } | null;
-  hasAccess: boolean
-  setHasAccess: (val: boolean) => void
-  startAttempt: () => Promise<void>
-  accessReason?: string
-  role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN"
+  hasAccess: boolean;
+  setHasAccess: (val: boolean) => void;
+  startAttempt: () => Promise<void>;
+  accessReason?: string;
+  role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN";
+  userData: any;
+  savedStage?: string | null;
 }
 
-const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAttempt, role, accessReason }) => {
-  const [currentRole, setCurrentRole] = useState<"USER" | "PERUSAHAAN" | "SUPERADMIN" | "GUEST">("GUEST")
+const MSDTIntro: React.FC<Props> = ({
+  testInfo,
+  hasAccess,
+  setHasAccess,
+  startAttempt,
+  role,
+  accessReason,
+  userData,
+  savedStage,
+}) => {
+  const [currentRole, setCurrentRole] = useState<
+    "USER" | "PERUSAHAAN" | "SUPERADMIN" | "GUEST"
+  >("GUEST");
 
-  const isCompanyAccess = accessReason?.startsWith("Sudah didaftarkan oleh perusahaan")
+  const isCompanyAccess = accessReason?.startsWith(
+    "Sudah didaftarkan oleh perusahaan",
+  );
 
-  useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.user?.role) setCurrentRole(data.user.role)
-      })
-  }, [])
-
-   const containerVariants: Variants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.15, delayChildren: 0.2 },
+      transition: { staggerChildren: 0.1, delayChildren: 0.05 },
     },
-  }
+  };
 
   const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 30 },
+    hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease: cubicBezier(0.22, 1, 0.36, 1) },
+      transition: { duration: 0.4, ease: "easeOut" },
     },
-  }
+  };
 
   const floatingVariants: Variants = {
     animate: {
       y: [0, -20, 0],
       transition: { duration: 6, repeat: Infinity, ease: "easeInOut" },
     },
-  }
+  };
   return (
     <>
       <Navbar />
 
       <div className="relative min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 overflow-hidden">
-         {/* Blob dekoratif tambahan */}
-  <motion.div
-    className="absolute top-20 left-10 w-64 h-64 bg-gradient-to-br from-pink-400 to-purple-500 opacity-20 rounded-full blur-3xl"
-    animate={{
-      scale: [1, 1.2, 1],
-      rotate: [0, 180, 0],
-      x: [0, 20, 0],
-      y: [0, -20, 0],
-    }}
-    transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-  />
+        {/* Blob dekoratif tambahan */}
+        <motion.div
+          className="absolute top-20 left-10 w-64 h-64 bg-gradient-to-br from-pink-400 to-purple-500 opacity-20 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.2, 1],
+            rotate: [0, 180, 0],
+            x: [0, 20, 0],
+            y: [0, -20, 0],
+          }}
+          transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
+        />
 
-  <motion.div
-    className="absolute bottom-10 right-20 w-80 h-80 bg-gradient-to-br from-green-400 to-blue-400 opacity-15 rounded-full blur-3xl"
-    animate={{
-      scale: [1, 1.15, 1],
-      rotate: [0, -180, 0],
-      x: [0, -30, 0],
-      y: [0, 15, 0],
-    }}
-    transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
-  />
+        <motion.div
+          className="absolute bottom-10 right-20 w-80 h-80 bg-gradient-to-br from-green-400 to-blue-400 opacity-15 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.15, 1],
+            rotate: [0, -180, 0],
+            x: [0, -30, 0],
+            y: [0, 15, 0],
+          }}
+          transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
+        />
 
-  {/* Blob lain yang sudah ada */}
-  <motion.div
-    className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-indigo-300 to-purple-300 rounded-full opacity-20 blur-3xl"
-    animate={{
-      scale: [1, 1.2, 1],
-      rotate: [0, 90, 0],
-    }}
-    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-  />
-  {/* Blob kiri bawah */}
-<motion.div
-  className="absolute bottom-0 left-0 w-72 h-72 bg-gradient-to-br from-teal-400 to-blue-400 opacity-20 rounded-full blur-3xl"
-  animate={{
-    scale: [1, 1.15, 1],
-    rotate: [0, 180, 0],
-    x: [0, -20, 0],
-    y: [0, 10, 0],
-  }}
-  transition={{ duration: 28, repeat: Infinity, ease: "easeInOut" }}
-/>
+        {/* Blob lain yang sudah ada */}
+        <motion.div
+          className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-indigo-300 to-purple-300 rounded-full opacity-20 blur-3xl"
+          animate={{
+            scale: [1, 1.2, 1],
+            rotate: [0, 90, 0],
+          }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        />
+        {/* Blob kiri bawah */}
+        <motion.div
+          className="absolute bottom-0 left-0 w-72 h-72 bg-gradient-to-br from-teal-400 to-blue-400 opacity-20 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.15, 1],
+            rotate: [0, 180, 0],
+            x: [0, -20, 0],
+            y: [0, 10, 0],
+          }}
+          transition={{ duration: 28, repeat: Infinity, ease: "easeInOut" }}
+        />
 
         <motion.div
           className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-indigo-300 to-purple-300 rounded-full opacity-20 blur-3xl"
@@ -128,7 +135,11 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
             scale: [1, 1.2, 1],
             rotate: [0, 90, 0],
           }}
-          transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+          transition={{
+            duration: 20,
+            repeat: Number.POSITIVE_INFINITY,
+            ease: "linear",
+          }}
         />
         <motion.div
           className="absolute top-1/4 -right-20 w-80 h-80 bg-gradient-to-br from-cyan-300 to-blue-300 rounded-full opacity-20 blur-3xl"
@@ -136,7 +147,11 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
             scale: [1, 1.3, 1],
             x: [0, -30, 0],
           }}
-          transition={{ duration: 15, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+          transition={{
+            duration: 15,
+            repeat: Number.POSITIVE_INFINITY,
+            ease: "easeInOut",
+          }}
         />
         <motion.div
           className="absolute bottom-0 left-1/4 w-96 h-96 bg-gradient-to-br from-purple-300 to-pink-300 rounded-full opacity-15 blur-3xl"
@@ -144,7 +159,11 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
             scale: [1, 1.1, 1],
             rotate: [0, -90, 0],
           }}
-          transition={{ duration: 18, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+          transition={{
+            duration: 18,
+            repeat: Number.POSITIVE_INFINITY,
+            ease: "linear",
+          }}
         />
 
         <div className="relative z-10 px-6 md:px-16 py-16 max-w-7xl mx-auto">
@@ -156,7 +175,7 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
           >
             {testInfo?.judul && (
               <motion.h1
-    className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-blue-400 via-blue-600 to-blue-800 bg-clip-text text-transparent mb-6 leading-tight"
+                className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-blue-400 via-blue-600 to-blue-800 bg-clip-text text-transparent mb-6 leading-tight"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
@@ -182,7 +201,7 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
             className="grid lg:grid-cols-2 gap-12 items-start"
           >
             {/* LEFT INFO */}
-            
+
             <motion.div variants={itemVariants} className="space-y-8">
               {testInfo?.juduldesk1 && (
                 <motion.section
@@ -194,7 +213,12 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
                   <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg
+                          className="w-6 h-6 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -203,23 +227,24 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
                           />
                         </svg>
                       </div>
-                      <h2 className="text-2xl font-bold text-gray-800">{testInfo.juduldesk1}</h2>
+                      <h2 className="text-2xl font-bold text-gray-800">
+                        {testInfo.juduldesk1}
+                      </h2>
                     </div>
-                   {testInfo.desk1 && (
-  <motion.ul
-    className="space-y-3 text-gray-700"
-    initial="hidden"
-    animate="visible"
-    variants={{
-      hidden: {},
-      visible: {
-        transition: { staggerChildren: 0.15 },
-      },
-    }}
-    dangerouslySetInnerHTML={{ __html: testInfo.desk1 }}
-  />
-)}
-
+                    {testInfo.desk1 && (
+                      <motion.ul
+                        className="space-y-3 text-gray-700"
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                          hidden: {},
+                          visible: {
+                            transition: { staggerChildren: 0.15 },
+                          },
+                        }}
+                        dangerouslySetInnerHTML={{ __html: testInfo.desk1 }}
+                      />
+                    )}
                   </div>
                 </motion.section>
               )}
@@ -235,7 +260,12 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
                   <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg
+                          className="w-6 h-6 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -244,27 +274,28 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
                           />
                         </svg>
                       </div>
-                      <h2 className="text-2xl font-bold text-gray-800">{testInfo.juduldesk2}</h2>
+                      <h2 className="text-2xl font-bold text-gray-800">
+                        {testInfo.juduldesk2}
+                      </h2>
                     </div>
-                {testInfo.desk2 && (
-  <motion.ul
-    className="space-y-3 text-gray-700 list-none pl-0"
-    initial="hidden"
-    animate="visible"
-    variants={{
-      hidden: {},
-      visible: {
-        transition: { staggerChildren: 0.15 },
-      },
-    }}
-    dangerouslySetInnerHTML={{ __html: testInfo.desk2 }}
-  />
-)}
-
+                    {testInfo.desk2 && (
+                      <motion.ul
+                        className="space-y-3 text-gray-700 list-none pl-0"
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                          hidden: {},
+                          visible: {
+                            transition: { staggerChildren: 0.15 },
+                          },
+                        }}
+                        dangerouslySetInnerHTML={{ __html: testInfo.desk2 }}
+                      />
+                    )}
                   </div>
                 </motion.section>
               )}
-                 {testInfo?.judulbenefit && (
+              {testInfo?.judulbenefit && (
                 <motion.div
                   variants={itemVariants}
                   whileHover={{ scale: 1.02 }}
@@ -272,7 +303,12 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
                 >
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-5 h-5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -281,35 +317,34 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
                         />
                       </svg>
                     </div>
-                    <h3 className="font-bold text-lg text-gray-800">{testInfo.judulbenefit}</h3>
+                    <h3 className="font-bold text-lg text-gray-800">
+                      {testInfo.judulbenefit}
+                    </h3>
                   </div>
                   <div className="space-y-2 text-gray-700">
-                 {testInfo.pointbenefit && (
-  <motion.div
-    className="space-y-2 text-gray-700"
-    initial="hidden"
-    animate="visible"
-    variants={{
-      hidden: {},
-      visible: {
-        transition: { staggerChildren: 0.1 },
-      },
-    }}
-    dangerouslySetInnerHTML={{
-      __html: testInfo.pointbenefit
-        .replace(/<li>/g, '<p>')   // ganti <li> jadi <p>
-        .replace(/<\/li>/g, '</p>') // ganti </li> jadi </p>
-        .replace(/<ul>/g, '')       // hapus <ul>
-        .replace(/<\/ul>/g, '')     // hapus </ul>
-    }}
-  />
-)}
-
-
+                    {testInfo.pointbenefit && (
+                      <motion.div
+                        className="space-y-2 text-gray-700"
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                          hidden: {},
+                          visible: {
+                            transition: { staggerChildren: 0.1 },
+                          },
+                        }}
+                        dangerouslySetInnerHTML={{
+                          __html: testInfo.pointbenefit
+                            .replace(/<li>/g, "<p>")
+                            .replace(/<\/li>/g, "</p>")
+                            .replace(/<ul>/g, "")
+                            .replace(/<\/ul>/g, ""),
+                        }}
+                      />
+                    )}
                   </div>
                 </motion.div>
               )}
-
             </motion.div>
 
             <motion.aside variants={itemVariants} className="space-y-8">
@@ -344,19 +379,23 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
                     <span>{accessReason}</span>
                   </motion.p>
                 )}
-<div className="flex justify-center mt-6">
-
-                <CPMIPaymentButton
-                  hasAccess={hasAccess}
-                  setHasAccess={setHasAccess}
-                  startAttempt={startAttempt}
-                  testInfo={testInfo}
-                  role={currentRole}
-                />
+                <div className="flex justify-center mt-6">
+                  <CPMIPaymentButton
+                    hasAccess={hasAccess}
+                    setHasAccess={setHasAccess}
+                    startAttempt={startAttempt}
+                    testInfo={testInfo}
+                    role={role}
+                    userData={userData}
+                    savedStage={savedStage}
+                  />
                 </div>
               </motion.div>
 
-              <motion.div variants={itemVariants} className="grid grid-cols-3 gap-4">
+              <motion.div
+                variants={itemVariants}
+                className="grid grid-cols-3 gap-4"
+              >
                 <motion.div
                   whileHover={{ scale: 1.05, y: -5 }}
                   className="bg-gradient-to-br from-indigo-500 to-purple-500 shadow-lg hover:shadow-xl rounded-2xl p-5 text-center text-white relative overflow-hidden"
@@ -377,7 +416,9 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
                       />
                     </svg>
                     <p className="text-xs opacity-90 mb-1">Durasi</p>
-                    <p className="text-2xl font-bold">{testInfo?.duration || 30}</p>
+                    <p className="text-2xl font-bold">
+                      {testInfo?.duration || 30}
+                    </p>
                     <p className="text-xs opacity-90">menit</p>
                   </div>
                 </motion.div>
@@ -402,7 +443,9 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
                       />
                     </svg>
                     <p className="text-xs opacity-90 mb-1">Biaya</p>
-                    <p className="text-lg font-bold">Rp {testInfo?.price?.toLocaleString("id-ID") || "0"}</p>
+                    <p className="text-lg font-bold">
+                      Rp {testInfo?.price?.toLocaleString("id-ID") || "0"}
+                    </p>
                   </div>
                 </motion.div>
 
@@ -432,12 +475,11 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
                 </motion.div>
               </motion.div>
 
-           
               {/* CONTACT */}
-{testInfo?.cp && (
-  <motion.div
-    variants={itemVariants}
-    className="
+              {testInfo?.cp && (
+                <motion.div
+                  variants={itemVariants}
+                  className="
       text-sm 
       text-white 
       bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 
@@ -449,17 +491,16 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
       transition-all 
       duration-300
     "
-    dangerouslySetInnerHTML={{ __html: testInfo.cp }}
-  />
-)}
+                  dangerouslySetInnerHTML={{ __html: testInfo.cp }}
+                />
+              )}
 
-
-             <motion.div variants={itemVariants}>
-  <Link href="/dashboard">
-    <motion.button
-      whileHover={{ scale: 1.03, x: -3 }}
-      whileTap={{ scale: 0.97 }}
-      className="
+              <motion.div variants={itemVariants}>
+                <Link href="/dashboard">
+                  <motion.button
+                    whileHover={{ scale: 1.03, x: -3 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="
         w-full 
         bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 
         hover:from-indigo-500 hover:to-purple-700 
@@ -472,26 +513,30 @@ const MSDTIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAt
         flex items-center justify-center gap-2 
         transition-all duration-300
       "
-    >
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M10 19l-7-7m0 0l7-7m-7 7h18"
-        />
-      </svg>
-      Kembali ke Dashboard
-    </motion.button>
-  </Link>
-</motion.div>
-
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                      />
+                    </svg>
+                    Kembali ke Dashboard
+                  </motion.button>
+                </Link>
+              </motion.div>
             </motion.aside>
           </motion.div>
         </div>
       </div>
     </>
-  )
-}
+  );
+};
 
-export default MSDTIntro
+export default MSDTIntro;

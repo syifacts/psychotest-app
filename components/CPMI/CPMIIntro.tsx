@@ -1,71 +1,84 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import type React from "react"
-import { useState, useEffect } from "react"
-import { motion, Variants, cubicBezier } from "framer-motion"
-import CPMIPaymentButton from "./CPMIPaymentButton"
-import Navbar from "../layout/navbar"
+import Link from "next/link";
+import type React from "react";
+import { useState, useEffect } from "react";
+import { motion, Variants, cubicBezier } from "framer-motion";
+import CPMIPaymentButton from "./CPMIPaymentButton";
+import Navbar from "../layout/navbar";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-
-
 interface Props {
   testInfo: {
-    name : string
-    id: number
-    duration: number | null
-    price?: number | null
-    judul?: string
-    deskripsijudul?: string
-    juduldesk1?: string
-    desk1?: string
-    juduldesk2?: string
-    desk2?: string
-    judulbenefit?: string
-    pointbenefit?: string
-    img?: string
-    cp?: string
-    customPrice?: number | null;  // <- tambahkan ini
-  discountNominal?: number | null; // optional kalau nanti pakai diskon
-  discountNote?: string | null;   // optional
-  priceDiscount?: number
-percentDiscount?: number
-noteDiscount?: string
-  
-  } | null
-  hasAccess: boolean
-  setHasAccess: (val: boolean) => void
-  startAttempt: () => Promise<void>
-  accessReason?: string
-  role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN"
+    name: string;
+    id: number;
+    duration: number | null;
+    price?: number | null;
+    judul?: string;
+    deskripsijudul?: string;
+    juduldesk1?: string;
+    desk1?: string;
+    juduldesk2?: string;
+    desk2?: string;
+    judulbenefit?: string;
+    pointbenefit?: string;
+    img?: string;
+    cp?: string;
+    customPrice?: number | null;
+    discountNominal?: number | null;
+    discountNote?: string | null;
+    priceDiscount?: number;
+    percentDiscount?: number;
+    noteDiscount?: string;
+  } | null;
+  hasAccess: boolean;
+  setHasAccess: (val: boolean) => void;
+  startAttempt: () => Promise<void>;
+  accessReason?: string;
+  role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN";
 }
 
-const CPMIIntro: React.FC<Props> = ({ testInfo, hasAccess, setHasAccess, startAttempt, role, accessReason }) => {
-  const [currentRole, setCurrentRole] = useState<"USER" | "PERUSAHAAN" | "SUPERADMIN" | "GUEST">("GUEST")
-const { price, customPrice, discountNominal, discountNote, priceDiscount, percentDiscount, noteDiscount } = testInfo || {};
+const CPMIIntro: React.FC<Props> = ({
+  testInfo,
+  hasAccess,
+  setHasAccess,
+  startAttempt,
+  role,
+  accessReason,
+}) => {
+  const [currentRole, setCurrentRole] = useState<
+    "USER" | "PERUSAHAAN" | "SUPERADMIN" | "GUEST"
+  >("GUEST");
+  const {
+    price,
+    customPrice,
+    discountNominal,
+    discountNote,
+    priceDiscount,
+    percentDiscount,
+    noteDiscount,
+  } = testInfo || {};
 
-  const isCompanyAccess = 
-  (role === "USER" || role === "GUEST") && 
-  accessReason?.startsWith("Sudah didaftarkan oleh perusahaan");
-
+  const isCompanyAccess =
+    (role === "USER" || role === "GUEST") &&
+    accessReason?.startsWith("Sudah didaftarkan oleh perusahaan");
 
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
-        if (data.user?.role) setCurrentRole(data.user.role)
-      })
-  }, [])
+        if (data.user?.role) setCurrentRole(data.user.role);
+      });
+  }, []);
 
-   const containerVariants: Variants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: { staggerChildren: 0.15, delayChildren: 0.2 },
     },
-  }
+  };
 
   const itemVariants: Variants = {
     hidden: { opacity: 0, y: 30 },
@@ -74,117 +87,100 @@ const { price, customPrice, discountNominal, discountNote, priceDiscount, percen
       y: 0,
       transition: { duration: 0.6, ease: cubicBezier(0.22, 1, 0.36, 1) },
     },
-  }
+  };
 
-// const displayPrice = (() => {
-//   if (!testInfo) return 0;
+  const displayPrice = (() => {
+    if (!testInfo) return 0;
 
-//   // customPrice punya prioritas tertinggi
-//   if (testInfo.customPrice != null) return testInfo.customPrice;
+    if (customPrice != null && customPrice > 0) return customPrice;
 
-//   // jika ada discountNominal
-//   if (testInfo.discountNominal != null) {
-//     const basePrice = testInfo.price ?? 0;
-//     return Math.round(basePrice * (1 - testInfo.discountNominal / 100));
-//   }
+    if (discountNominal != null && price != null) {
+      return price;
+    }
 
-//   return testInfo.price ?? 0;
-// })();
+    if (
+      priceDiscount != null &&
+      priceDiscount > 0 &&
+      priceDiscount < (price ?? 0)
+    ) {
+      return priceDiscount;
+    }
 
-const displayPrice = (() => {
-  if (!testInfo) return 0;
+    if (percentDiscount != null && percentDiscount > 0 && price != null) {
+      return Math.round(price - (price * percentDiscount) / 100);
+    }
 
-  // 1️⃣ Prioritas: customPrice
-  if (customPrice != null && customPrice > 0) return customPrice;
+    return price ?? 0;
+  })();
 
-  // 2️⃣ Jika ada discountNominal (penanda perusahaan)
-  // ❌ jangan dikurangi lagi, pakai price asli
-  if (discountNominal != null && price != null) {
-    return price;
-  }
+  const activeDiscountNote =
+    customPrice != null || discountNominal != null
+      ? discountNote
+      : priceDiscount != null || percentDiscount != null
+        ? noteDiscount
+        : null;
 
-  // 3️⃣ Jika ada harga diskon langsung (priceDiscount)
-  if (priceDiscount != null && priceDiscount > 0 && priceDiscount < (price ?? 0)) {
-    return priceDiscount;
-  }
-
-  // 4️⃣ Jika ada diskon persen (percentDiscount)
-  if (percentDiscount != null && percentDiscount > 0 && price != null) {
-    return Math.round(price - (price * percentDiscount) / 100);
-  }
-
-  // Default: harga normal
-  return price ?? 0;
-})();
-
-
-// ✅ Tentukan note diskon yang aktif
-const activeDiscountNote =
-  (customPrice != null || discountNominal != null) ? discountNote :
-  (priceDiscount != null || percentDiscount != null) ? noteDiscount :
-  null;
-
-// ✅ Tentukan persentase diskon aktif
-const activePercentDiscount =
-  (discountNominal != null) ? discountNominal :
-  (percentDiscount != null) ? percentDiscount :
-  null;
-
+  const activePercentDiscount =
+    discountNominal != null
+      ? discountNominal
+      : percentDiscount != null
+        ? percentDiscount
+        : null;
 
   const floatingVariants: Variants = {
     animate: {
       y: [0, -20, 0],
       transition: { duration: 6, repeat: Infinity, ease: "easeInOut" },
     },
-  }
+  };
   return (
     <>
       <Navbar />
 
       <div className="relative min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 overflow-hidden">
-         {/* Blob dekoratif tambahan */}
-  <motion.div
-    className="absolute top-20 left-10 w-64 h-64 bg-gradient-to-br from-pink-400 to-purple-500 opacity-20 rounded-full blur-3xl"
-    animate={{
-      scale: [1, 1.2, 1],
-      rotate: [0, 180, 0],
-      x: [0, 20, 0],
-      y: [0, -20, 0],
-    }}
-    transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-  />
+        {/* Blob dekoratif tambahan */}
+        <motion.div
+          className="absolute top-20 left-10 w-64 h-64 bg-gradient-to-br from-pink-400 to-purple-500 opacity-20 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.2, 1],
+            rotate: [0, 180, 0],
+            x: [0, 20, 0],
+            y: [0, -20, 0],
+          }}
+          transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
+        />
 
-  <motion.div
-    className="absolute bottom-10 right-20 w-80 h-80 bg-gradient-to-br from-green-400 to-blue-400 opacity-15 rounded-full blur-3xl"
-    animate={{
-      scale: [1, 1.15, 1],
-      rotate: [0, -180, 0],
-      x: [0, -30, 0],
-      y: [0, 15, 0],
-    }}
-    transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
-  />
+        <motion.div
+          className="absolute bottom-10 right-20 w-80 h-80 bg-gradient-to-br from-green-400 to-blue-400 opacity-15 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.15, 1],
+            rotate: [0, -180, 0],
+            x: [0, -30, 0],
+            y: [0, 15, 0],
+          }}
+          transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
+        />
 
-  {/* Blob lain yang sudah ada */}
-  <motion.div
-    className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-indigo-300 to-purple-300 rounded-full opacity-20 blur-3xl"
-    animate={{
-      scale: [1, 1.2, 1],
-      rotate: [0, 90, 0],
-    }}
-    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-  />
-  {/* Blob kiri bawah */}
-<motion.div
-  className="absolute bottom-0 left-0 w-72 h-72 bg-gradient-to-br from-teal-400 to-blue-400 opacity-20 rounded-full blur-3xl"
-  animate={{
-    scale: [1, 1.15, 1],
-    rotate: [0, 180, 0],
-    x: [0, -20, 0],
-    y: [0, 10, 0],
-  }}
-  transition={{ duration: 28, repeat: Infinity, ease: "easeInOut" }}
-/>
+        {/* Blob lain yang sudah ada */}
+        <motion.div
+          className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-indigo-300 to-purple-300 rounded-full opacity-20 blur-3xl"
+          animate={{
+            scale: [1, 1.2, 1],
+            rotate: [0, 90, 0],
+          }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        />
+        {/* Blob kiri bawah */}
+        <motion.div
+          className="absolute bottom-0 left-0 w-72 h-72 bg-gradient-to-br from-teal-400 to-blue-400 opacity-20 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.15, 1],
+            rotate: [0, 180, 0],
+            x: [0, -20, 0],
+            y: [0, 10, 0],
+          }}
+          transition={{ duration: 28, repeat: Infinity, ease: "easeInOut" }}
+        />
 
         <motion.div
           className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-indigo-300 to-purple-300 rounded-full opacity-20 blur-3xl"
@@ -192,7 +188,11 @@ const activePercentDiscount =
             scale: [1, 1.2, 1],
             rotate: [0, 90, 0],
           }}
-          transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+          transition={{
+            duration: 20,
+            repeat: Number.POSITIVE_INFINITY,
+            ease: "linear",
+          }}
         />
         <motion.div
           className="absolute top-1/4 -right-20 w-80 h-80 bg-gradient-to-br from-cyan-300 to-blue-300 rounded-full opacity-20 blur-3xl"
@@ -200,7 +200,11 @@ const activePercentDiscount =
             scale: [1, 1.3, 1],
             x: [0, -30, 0],
           }}
-          transition={{ duration: 15, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+          transition={{
+            duration: 15,
+            repeat: Number.POSITIVE_INFINITY,
+            ease: "easeInOut",
+          }}
         />
         <motion.div
           className="absolute bottom-0 left-1/4 w-96 h-96 bg-gradient-to-br from-purple-300 to-pink-300 rounded-full opacity-15 blur-3xl"
@@ -208,7 +212,11 @@ const activePercentDiscount =
             scale: [1, 1.1, 1],
             rotate: [0, -90, 0],
           }}
-          transition={{ duration: 18, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+          transition={{
+            duration: 18,
+            repeat: Number.POSITIVE_INFINITY,
+            ease: "linear",
+          }}
         />
 
         <div className="relative z-10 px-6 md:px-16 py-16 max-w-7xl mx-auto">
@@ -220,7 +228,7 @@ const activePercentDiscount =
           >
             {testInfo?.judul && (
               <motion.h1
-    className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-blue-400 via-blue-600 to-blue-800 bg-clip-text text-transparent mb-6 leading-tight"
+                className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-blue-400 via-blue-600 to-blue-800 bg-clip-text text-transparent mb-6 leading-tight"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
@@ -228,23 +236,23 @@ const activePercentDiscount =
                 {testInfo.judul}
               </motion.h1>
             )}
-{testInfo?.deskripsijudul && (
-  <motion.div
-    className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    transition={{ duration: 0.8, delay: 0.4 }}
-  >
-    <ReactMarkdown
-      components={{
-        p: (props) => <p className="mb-2" {...props} />,
-        strong: (props) => <b {...props} />,
-      }}
-    >
-      {testInfo.deskripsijudul}
-    </ReactMarkdown>
-  </motion.div>
-)}
+            {testInfo?.deskripsijudul && (
+              <motion.div
+                className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+              >
+                <ReactMarkdown
+                  components={{
+                    p: (props) => <p className="mb-2" {...props} />,
+                    strong: (props) => <b {...props} />,
+                  }}
+                >
+                  {testInfo.deskripsijudul}
+                </ReactMarkdown>
+              </motion.div>
+            )}
           </motion.div>
 
           <motion.div
@@ -254,7 +262,7 @@ const activePercentDiscount =
             className="grid lg:grid-cols-2 gap-12 items-start"
           >
             {/* LEFT INFO */}
-            
+
             <motion.div variants={itemVariants} className="space-y-8">
               {testInfo?.juduldesk1 && (
                 <motion.section
@@ -266,7 +274,12 @@ const activePercentDiscount =
                   <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg
+                          className="w-6 h-6 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -275,43 +288,43 @@ const activePercentDiscount =
                           />
                         </svg>
                       </div>
-                      <h2 className="text-2xl font-bold text-gray-800">{testInfo.juduldesk1}</h2>
+                      <h2 className="text-2xl font-bold text-gray-800">
+                        {testInfo.juduldesk1}
+                      </h2>
                     </div>
-{testInfo.desk1 && (
-  <motion.ul
-    className="space-y-3 text-gray-700"
-    initial="hidden"
-    animate="visible"
-    variants={{
-      hidden: {},
-      visible: {
-        transition: { staggerChildren: 0.15 },
-      },
-    }}
-  >
-    {testInfo.desk1
-      .split("\n")
-      .filter(line => line.trim() !== "")
-      .map((line, i) => (
-        <motion.li
-          key={i}
-          variants={itemVariants}
-          className="leading-relaxed"
-        >
-          <ReactMarkdown
-            components={{
-              p: "span",   // supaya markdown tidak bikin <p> di dalam <li>
-              strong: "b", // markdown ** → <b>
-            }}
-          >
-            {line}
-          </ReactMarkdown>
-        </motion.li>
-      ))}
-  </motion.ul>
-)}
-
-
+                    {testInfo.desk1 && (
+                      <motion.ul
+                        className="space-y-3 text-gray-700"
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                          hidden: {},
+                          visible: {
+                            transition: { staggerChildren: 0.15 },
+                          },
+                        }}
+                      >
+                        {testInfo.desk1
+                          .split("\n")
+                          .filter((line) => line.trim() !== "")
+                          .map((line, i) => (
+                            <motion.li
+                              key={i}
+                              variants={itemVariants}
+                              className="leading-relaxed"
+                            >
+                              <ReactMarkdown
+                                components={{
+                                  p: "span",
+                                  strong: "b",
+                                }}
+                              >
+                                {line}
+                              </ReactMarkdown>
+                            </motion.li>
+                          ))}
+                      </motion.ul>
+                    )}
                   </div>
                 </motion.section>
               )}
@@ -327,7 +340,12 @@ const activePercentDiscount =
                   <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg
+                          className="w-6 h-6 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -336,40 +354,40 @@ const activePercentDiscount =
                           />
                         </svg>
                       </div>
-                      <h2 className="text-2xl font-bold text-gray-800">{testInfo.juduldesk2}</h2>
+                      <h2 className="text-2xl font-bold text-gray-800">
+                        {testInfo.juduldesk2}
+                      </h2>
                     </div>
-{testInfo.desk2 && (
-  <motion.ul
-    className="space-y-3 text-gray-700 list-none pl-0"
-    initial="hidden"
-    animate="visible"
-    variants={{
-      hidden: {},
-      visible: {
-        transition: { staggerChildren: 0.15 },
-      },
-    }}
-  >
-    {testInfo.desk2
-      .split("\n")
-      .filter(line => line.trim() !== "")
-      .map((line, i) => (
-        <motion.li
-          key={i}
-          variants={itemVariants}
-          className="leading-relaxed"
-        >
-          {line}
-        </motion.li>
-      ))}
-  </motion.ul>
-)}
-
-
+                    {testInfo.desk2 && (
+                      <motion.ul
+                        className="space-y-3 text-gray-700 list-none pl-0"
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                          hidden: {},
+                          visible: {
+                            transition: { staggerChildren: 0.15 },
+                          },
+                        }}
+                      >
+                        {testInfo.desk2
+                          .split("\n")
+                          .filter((line) => line.trim() !== "")
+                          .map((line, i) => (
+                            <motion.li
+                              key={i}
+                              variants={itemVariants}
+                              className="leading-relaxed"
+                            >
+                              {line}
+                            </motion.li>
+                          ))}
+                      </motion.ul>
+                    )}
                   </div>
                 </motion.section>
               )}
-                 {testInfo?.judulbenefit && (
+              {testInfo?.judulbenefit && (
                 <motion.div
                   variants={itemVariants}
                   whileHover={{ scale: 1.02 }}
@@ -377,7 +395,12 @@ const activePercentDiscount =
                 >
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-5 h-5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -386,41 +409,40 @@ const activePercentDiscount =
                         />
                       </svg>
                     </div>
-                    <h3 className="font-bold text-lg text-gray-800">{testInfo.judulbenefit}</h3>
+                    <h3 className="font-bold text-lg text-gray-800">
+                      {testInfo.judulbenefit}
+                    </h3>
                   </div>
                   <div className="space-y-2 text-gray-700">
-{testInfo.pointbenefit && (
-  <motion.div
-    className="space-y-2 text-gray-700"
-    initial="hidden"
-    animate="visible"
-    variants={{
-      hidden: {},
-      visible: {
-        transition: { staggerChildren: 0.1 },
-      },
-    }}
-  >
-    {testInfo.pointbenefit
-      .split("\n")
-      .filter(line => line.trim() !== "")
-      .map((line, i) => (
-        <motion.p
-          key={i}
-          variants={itemVariants}
-          className="leading-relaxed"
-        >
-          {line}
-        </motion.p>
-      ))}
-  </motion.div>
-)}
-
-
+                    {testInfo.pointbenefit && (
+                      <motion.div
+                        className="space-y-2 text-gray-700"
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                          hidden: {},
+                          visible: {
+                            transition: { staggerChildren: 0.1 },
+                          },
+                        }}
+                      >
+                        {testInfo.pointbenefit
+                          .split("\n")
+                          .filter((line) => line.trim() !== "")
+                          .map((line, i) => (
+                            <motion.p
+                              key={i}
+                              variants={itemVariants}
+                              className="leading-relaxed"
+                            >
+                              {line}
+                            </motion.p>
+                          ))}
+                      </motion.div>
+                    )}
                   </div>
                 </motion.div>
               )}
-
             </motion.div>
 
             <motion.aside variants={itemVariants} className="space-y-8">
@@ -455,19 +477,21 @@ const activePercentDiscount =
                     <span>{accessReason}</span>
                   </motion.p>
                 )}
-<div className="flex justify-center mt-6">
-
-                <CPMIPaymentButton
-                  hasAccess={hasAccess}
-                  setHasAccess={setHasAccess}
-                  startAttempt={startAttempt}
-                  testInfo={testInfo}
-                  role={currentRole}
-                />
+                <div className="flex justify-center mt-6">
+                  <CPMIPaymentButton
+                    hasAccess={hasAccess}
+                    setHasAccess={setHasAccess}
+                    startAttempt={startAttempt}
+                    testInfo={testInfo}
+                    role={currentRole}
+                  />
                 </div>
               </motion.div>
 
-              <motion.div variants={itemVariants} className="grid grid-cols-3 gap-4">
+              <motion.div
+                variants={itemVariants}
+                className="grid grid-cols-3 gap-4"
+              >
                 <motion.div
                   whileHover={{ scale: 1.05, y: -5 }}
                   className="bg-gradient-to-br from-indigo-500 to-purple-500 shadow-lg hover:shadow-xl rounded-2xl p-5 text-center text-white relative overflow-hidden"
@@ -488,7 +512,9 @@ const activePercentDiscount =
                       />
                     </svg>
                     <p className="text-xs opacity-90 mb-1">Durasi</p>
-                    <p className="text-2xl font-bold">{testInfo?.duration || 30}</p>
+                    <p className="text-2xl font-bold">
+                      {testInfo?.duration || 30}
+                    </p>
                     <p className="text-xs opacity-90">menit</p>
                   </div>
                 </motion.div>
@@ -512,34 +538,33 @@ const activePercentDiscount =
                         d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
-<p className="text-xs opacity-90 mb-1">Biaya</p>
+                    <p className="text-xs opacity-90 mb-1">Biaya</p>
 
-{price && displayPrice < price ? (
-  <div>
-    <p className="line-through text-gray-200 text-sm">
-      Rp {price.toLocaleString("id-ID")}
-    </p>
-    <p className="text-lg font-bold text-yellow-300">
-      Rp {displayPrice.toLocaleString("id-ID")}
-    </p>
+                    {price && displayPrice < price ? (
+                      <div>
+                        <p className="line-through text-gray-200 text-sm">
+                          Rp {price.toLocaleString("id-ID")}
+                        </p>
+                        <p className="text-lg font-bold text-yellow-300">
+                          Rp {displayPrice.toLocaleString("id-ID")}
+                        </p>
 
-    {/* Info diskon */}
-    {activePercentDiscount ? (
-      <p className="text-xs text-white opacity-90">
-        🎉 Diskon {activePercentDiscount}%
-      </p>
-    ) : activeDiscountNote ? (
-      <p className="text-xs text-white opacity-90">
-        🎉 {activeDiscountNote}
-      </p>
-    ) : null}
-  </div>
-) : (
-  <p className="text-lg font-bold">
-    Rp {displayPrice.toLocaleString("id-ID")}
-  </p>
-)}
-
+                        {/* Info diskon */}
+                        {activePercentDiscount ? (
+                          <p className="text-xs text-white opacity-90">
+                            🎉 Diskon {activePercentDiscount}%
+                          </p>
+                        ) : activeDiscountNote ? (
+                          <p className="text-xs text-white opacity-90">
+                            🎉 {activeDiscountNote}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="text-lg font-bold">
+                        Rp {displayPrice.toLocaleString("id-ID")}
+                      </p>
+                    )}
                   </div>
                 </motion.div>
 
@@ -569,12 +594,11 @@ const activePercentDiscount =
                 </motion.div>
               </motion.div>
 
-           
               {/* CONTACT */}
-{testInfo?.cp && (
-  <motion.div
-    variants={itemVariants}
-    className="
+              {testInfo?.cp && (
+                <motion.div
+                  variants={itemVariants}
+                  className="
       text-sm 
       text-white 
       bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 
@@ -587,20 +611,19 @@ const activePercentDiscount =
       duration-300
       prose prose-invert max-w-none
     "
-  >
-    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-      {testInfo.cp}
-    </ReactMarkdown>
-  </motion.div>
-)}
+                >
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {testInfo.cp}
+                  </ReactMarkdown>
+                </motion.div>
+              )}
 
-
-             <motion.div variants={itemVariants}>
-  <Link href="/dashboard">
-    <motion.button
-      whileHover={{ scale: 1.03, x: -3 }}
-      whileTap={{ scale: 0.97 }}
-      className="
+              <motion.div variants={itemVariants}>
+                <Link href="/dashboard">
+                  <motion.button
+                    whileHover={{ scale: 1.03, x: -3 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="
         w-full 
         bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 
         hover:from-indigo-500 hover:to-purple-700 
@@ -613,26 +636,30 @@ const activePercentDiscount =
         flex items-center justify-center gap-2 
         transition-all duration-300
       "
-    >
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M10 19l-7-7m0 0l7-7m-7 7h18"
-        />
-      </svg>
-      Kembali ke Dashboard
-    </motion.button>
-  </Link>
-</motion.div>
-
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                      />
+                    </svg>
+                    Kembali ke Dashboard
+                  </motion.button>
+                </Link>
+              </motion.div>
             </motion.aside>
           </motion.div>
         </div>
       </div>
     </>
-  )
-}
+  );
+};
 
-export default CPMIIntro
+export default CPMIIntro;

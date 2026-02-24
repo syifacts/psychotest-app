@@ -1,11 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import styles from "./msdt.module.css";
+
 import MSDTIntro from "@/components/MSDT/MSDTIntro";
 import BiodataForm from "@/components/MSDT/BiodataForm";
 import MSDTInstruction from "@/components/MSDT/MSDTInstruction";
+
+import QuestionCard from "@/components/MSDT/QuestionCard";
+import NavigationButtons from "@/components/MSDT/NavigationButtons";
+import AnswerSummary from "@/components/MSDT/AnswerSummary";
 
 interface Question {
   id: number;
@@ -24,9 +28,21 @@ type AnswerPayload = {
 const TesMSDTPage = () => {
   const router = useRouter();
 
-  const [user, setUser] = useState<{ id: number; role: "USER" | "PERUSAHAAN" } | null>(null);
-  const [role, setRole] = useState<"USER" | "PERUSAHAAN">("USER");
-  const [testInfo, setTestInfo] = useState<{ id: number; duration: number; name: string } | null>(null);
+  const [user, setUser] = useState<{
+    id: number;
+    role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN";
+    name: string;
+    email: string;
+    phone: string;
+  } | null>(null);
+  const [role, setRole] = useState<
+    "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN"
+  >("USER");
+  const [testInfo, setTestInfo] = useState<{
+    id: number;
+    duration: number;
+    name: string;
+  } | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [accessReason, setAccessReason] = useState("");
 
@@ -37,77 +53,143 @@ const TesMSDTPage = () => {
   const [attemptId, setAttemptId] = useState<number | null>(null);
 
   const [showIntro, setShowIntro] = useState(true);
-   const [showBiodata, setShowBiodata] = useState(false);   // ✅ tambahan
-  const [showInstruction, setShowInstruction] = useState(false); // ✅ tambahan
+  const [showBiodata, setShowBiodata] = useState(false);
+  const [showInstruction, setShowInstruction] = useState(false);
   const [showQuestions, setShowQuestions] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [savedStage, setSavedStage] = useState<string | null>(null);
 
-  // -------------------------
-  // Ambil user & test info
-  // -------------------------
+  const [isSubmittingTest, setIsSubmittingTest] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<{
+    show: boolean;
+    isTimeout: boolean;
+    message: string;
+    error?: boolean;
+  }>({ show: false, isTimeout: false, message: "" });
+
+  const clearLocalState = () => {
+    localStorage.removeItem("attemptId");
+    localStorage.removeItem("endTime");
+    localStorage.removeItem("currentIndex");
+    localStorage.removeItem("answers");
+    localStorage.removeItem("stage");
+    setAttemptId(null);
+    setSavedStage(null);
+  };
+
   useEffect(() => {
     const fetchUserAndTest = async () => {
       try {
-        const userRes = await fetch("/api/auth/me", { credentials: "include" });
-        if (!userRes.ok) return router.push("/login");
-        const userData = await userRes.json();
-        if (!userData.user) return router.push("/login");
-        setUser(userData.user);
-        setRole(userData.user.role === "PERUSAHAAN" ? "PERUSAHAAN" : "USER");
+        const [userRes, testRes] = await Promise.all([
+          fetch("/api/auth/me", { credentials: "include" }),
+          fetch("/api/tes/info?type=MSDT"),
+        ]);
 
-        const testRes = await fetch("/api/tes/info?type=MSDT");
+        if (!userRes.ok) return router.push("/login");
+
+        const userData = await userRes.json();
         const testData = await testRes.json();
+
+        if (!userData.user) return router.push("/login");
+
+        setUser({
+          id: userData.user.id,
+          role: userData.user.role,
+          name: userData.user.fullName || "",
+          email: userData.user.email || "",
+          phone: userData.user.phone || "",
+        });
+        setRole(userData.user.role);
         setTestInfo(testData);
 
-        const accessRes = await fetch(`/api/tes/check-access?userId=${userData.user.id}&type=MSDT`);
+        const accessRes = await fetch(
+          `/api/tes/check-access?userId=${userData.user.id}&type=MSDT`,
+        );
         const accessData = await accessRes.json();
         setHasAccess(accessData.access);
         setAccessReason(accessData.reason || "");
       } catch (err) {
         console.error(err);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchUserAndTest();
   }, [router]);
 
-  // -------------------------
-  // Load soal
-  // -------------------------
+  useEffect(() => {
+    const stage = localStorage.getItem("stage");
+    const savedAttemptId = localStorage.getItem("attemptId");
+    const savedIndex = localStorage.getItem("currentIndex");
+    const savedAnswers = localStorage.getItem("answers");
+    const savedEnd = localStorage.getItem("endTime");
+
+    if (savedAttemptId && stage) {
+      if (savedEnd) {
+        const diff = Math.floor(
+          (new Date(savedEnd).getTime() - Date.now()) / 1000,
+        );
+        if (diff <= 0) {
+          clearLocalState();
+          return;
+        }
+      }
+
+      setAttemptId(Number(savedAttemptId));
+      setSavedStage(stage);
+
+      if (savedAnswers) {
+        setAnswers(JSON.parse(savedAnswers));
+      }
+      if (savedIndex) {
+        setCurrentIndex(Number(savedIndex));
+      }
+    }
+  }, []);
+
   const loadQuestions = async () => {
     try {
       const res = await fetch(`/api/tes?type=MSDT`, { credentials: "include" });
       const data = await res.json();
       const qList: Question[] = Array.isArray(data) ? data : data.questions;
       setQuestions(qList || []);
-      //setTimeLeft(testInfo?.duration ? testInfo.duration * 60 : 30 * 60);
-        // ✅ hitung ulang sisa waktu dari endTime
-    const savedEnd = localStorage.getItem("endTime");
-    if (savedEnd) {
-      const diff = Math.max(0, Math.floor((new Date(savedEnd).getTime() - Date.now()) / 1000));
-      setTimeLeft(diff);
-    } else {
-      setTimeLeft(testInfo?.duration ? testInfo.duration * 60 : 30 * 60);
-    }
+
+      const savedEnd = localStorage.getItem("endTime");
+      if (savedEnd) {
+        const diff = Math.max(
+          0,
+          Math.floor((new Date(savedEnd).getTime() - Date.now()) / 1000),
+        );
+        setTimeLeft(diff);
+      } else {
+        setTimeLeft(testInfo?.duration ? testInfo.duration * 60 : 30 * 60);
+      }
     } catch (err) {
       console.error(err);
     }
   };
 
-  // -------------------------
-  // Start attempt
-  // -------------------------
   const startAttempt = async () => {
     if (!user || !testInfo) return;
 
-    localStorage.removeItem("attemptId");
-    localStorage.removeItem("endTime");
-    localStorage.removeItem("currentIndex");
-    localStorage.setItem("stage", "biodata"); 
+    if (savedStage) {
+      setShowIntro(false);
+      if (savedStage === "biodata") {
+        setShowBiodata(true);
+      } else if (savedStage === "instruction") {
+        setShowInstruction(true);
+      } else if (savedStage === "questions") {
+        await loadQuestions();
+        setShowQuestions(true);
+      }
+      return;
+    }
 
+    clearLocalState();
 
-    setAttemptId(null);
-    setAnswers({});
-    setCurrentIndex(0);
     setTimeLeft(testInfo.duration ? testInfo.duration * 60 : 30 * 60);
+    setCurrentIndex(0);
+    setAnswers({});
 
     try {
       const res = await fetch("/api/attempts", {
@@ -127,70 +209,46 @@ const TesMSDTPage = () => {
       localStorage.setItem("endTime", endTime.toISOString());
       localStorage.setItem("currentIndex", "0");
 
+      localStorage.setItem("stage", "biodata");
+      setSavedStage("biodata");
+
       await loadQuestions();
       setShowIntro(false);
       setShowBiodata(true);
-
-      //setShowQuestions(true);
     } catch (err) {
       console.error(err);
     }
   };
-useEffect(() => {
-  const savedStage = localStorage.getItem("stage");
-  const savedAttemptId = localStorage.getItem("attemptId");
-  const savedIndex = localStorage.getItem("currentIndex");
-  const savedAnswers = localStorage.getItem("answers");
 
-  if (savedAttemptId && savedStage) {
-    setAttemptId(Number(savedAttemptId));
-   if (savedAnswers) {
-      setAnswers(JSON.parse(savedAnswers)); // ✅ restore jawaban
-    }
-    if (savedStage === "biodata") {
-      setShowIntro(false);
-      setShowBiodata(true);
-    } else if (savedStage === "instruction") {
-      setShowIntro(false);
-      setShowInstruction(true);
-    } else if (savedStage === "questions") {
-      setShowIntro(false);
-      setShowQuestions(true);
-      if (savedIndex) setCurrentIndex(Number(savedIndex));
-      loadQuestions();
-    }
-  }
-}, []);
-
-  // -------------------------
-  // Timer
-  // -------------------------
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
     if (!showQuestions) return;
     const savedEnd = localStorage.getItem("endTime");
     if (!savedEnd) return;
 
     const endTime = new Date(savedEnd);
-    const timer = setInterval(() => {
-      const diff = Math.max(0, Math.floor((endTime.getTime() - Date.now()) / 1000));
+    timerRef.current = setInterval(() => {
+      const diff = Math.max(
+        0,
+        Math.floor((endTime.getTime() - Date.now()) / 1000),
+      );
       setTimeLeft(diff);
 
       if (diff <= 0) {
-        handleSubmit();
-        clearInterval(timer);
+        if (timerRef.current) clearInterval(timerRef.current);
+        handleSubmit(true);
       }
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [showQuestions]);
 
-  // -------------------------
-  // Pilih jawaban
-  // -------------------------
   const handleSelectAnswer = async (qid: number, choice: string) => {
     const newAnswers = { ...answers, [qid]: choice };
-  setAnswers(newAnswers);
-  localStorage.setItem("answers", JSON.stringify(newAnswers)); // ✅ simpan jawaban
+    setAnswers(newAnswers);
+    localStorage.setItem("answers", JSON.stringify(newAnswers));
 
     if (!user || !attemptId) return;
     try {
@@ -209,62 +267,104 @@ useEffect(() => {
       console.error(err);
     }
   };
-const handleNext = () => {
-  setCurrentIndex(i => {
-    const newIndex = i + 1;
-    localStorage.setItem("currentIndex", newIndex.toString());
-    return newIndex;
-  });
-};
 
-const handleBack = () => {
-  setCurrentIndex(i => {
-    const newIndex = i - 1;
-    localStorage.setItem("currentIndex", newIndex.toString());
-    return newIndex;
-  });
-};
+  const handleNext = () => {
+    setCurrentIndex((i) => {
+      const newIndex = i + 1;
+      localStorage.setItem("currentIndex", newIndex.toString());
+      return newIndex;
+    });
+  };
 
-  // -------------------------
-  // Submit test
-  // -------------------------
-  const handleSubmit = async () => {
-    if (!user || !attemptId) return;
+  const handleBack = () => {
+    setCurrentIndex((i) => {
+      const newIndex = i - 1;
+      localStorage.setItem("currentIndex", newIndex.toString());
+      return newIndex;
+    });
+  };
+
+  const handleSubmit = async (isTimeOut = false) => {
+    if (!user || !attemptId) {
+      clearLocalState();
+      return;
+    }
+
+    setIsSubmittingTest(true);
 
     try {
-      const payload: AnswerPayload[] = Object.entries(answers).map(([qid, choice]) => {
-        const q = questions.find((q) => q.id === Number(qid));
-        return { questionId: Number(qid), questionCode: q?.code, choice };
-      });
+      const payload: AnswerPayload[] = Object.entries(answers).map(
+        ([qid, choice]) => {
+          const q = questions.find((q) => q.id === Number(qid));
+          return { questionId: Number(qid), questionCode: q?.code, choice };
+        },
+      );
 
       const res = await fetch("/api/tes/submit-msdt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, type: "MSDT", attemptId, answers: payload }),
+        body: JSON.stringify({
+          userId: user.id,
+          type: "MSDT",
+          attemptId,
+          answers: payload,
+        }),
         credentials: "include",
       });
       const data = await res.json();
+
+      clearLocalState();
+      setHasAccess(false);
+
       if (!res.ok) throw new Error(data.error || "Gagal submit MSDT");
 
-      localStorage.removeItem("attemptId");
-      localStorage.removeItem("endTime");
-      localStorage.removeItem("currentIndex");
-      localStorage.removeItem("answers");
+      setIsSubmittingTest(false);
 
-      setHasAccess(false);
-      alert("🎉 Tes MSDT selesai! Hasil bisa dilihat di Dashboard.");
-      router.push("/dashboard");
+      setSubmitStatus({
+        show: true,
+        isTimeout: isTimeOut,
+        message: isTimeOut
+          ? "Waktu pengerjaan telah habis. Jawaban kamu otomatis tersimpan dan sedang menunggu verifikasi psikolog."
+          : "Tes MSDT berhasil diselesaikan! Hasil bisa kamu lihat di menu Dashboard.",
+      });
+
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 3500);
     } catch (err: any) {
-      alert(err.message);
+      clearLocalState();
       setHasAccess(false);
+      setIsSubmittingTest(false);
+
+      setSubmitStatus({
+        show: true,
+        isTimeout: false,
+        error: true,
+        message: err.message || "Terjadi kesalahan saat mensubmit tes.",
+      });
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 3000);
     }
   };
 
-  // -------------------------
-  // Render
-  // -------------------------
   const currentQuestion = questions[currentIndex];
-  const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+  const formatTime = (s: number) =>
+    `${Math.floor(s / 60)
+      .toString()
+      .padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-cyan-50">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
+        <p className="text-gray-600 font-medium animate-pulse">
+          Menyiapkan Tes MSDT...
+        </p>
+      </div>
+    );
+  }
 
   if (showIntro) {
     return (
@@ -275,106 +375,211 @@ const handleBack = () => {
         startAttempt={startAttempt}
         accessReason={accessReason}
         role={role}
+        userData={user}
+        savedStage={savedStage}
       />
     );
   }
-   // ✅ setelah start → tampilkan biodata
+
   if (showBiodata) {
     return (
-      <BiodataForm onSaved={() => {
-        setShowBiodata(false);
-        setShowInstruction(true); // lanjut ke instruksi
-        localStorage.setItem("stage", "instruction");
-
-      }} />
+      <BiodataForm
+        onSaved={() => {
+          setShowBiodata(false);
+          setShowInstruction(true);
+          localStorage.setItem("stage", "instruction");
+          setSavedStage("instruction");
+        }}
+      />
     );
   }
 
-   // ✅ setelah biodata → instruksi
-if (showInstruction) {
-  return (
-    <MSDTInstruction
-      onStartTest={async () => {
-        await loadQuestions();
-        setShowInstruction(false);
-        setShowQuestions(true);
-        localStorage.setItem("stage", "questions");
-
-      }}
-    />
-  );
-}
+  if (showInstruction) {
+    return (
+      <MSDTInstruction
+        onStartTest={async () => {
+          await loadQuestions();
+          setShowInstruction(false);
+          setShowQuestions(true);
+          localStorage.setItem("stage", "questions");
+          setSavedStage("questions");
+        }}
+      />
+    );
+  }
 
   if (showQuestions && currentQuestion) {
     return (
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>{testInfo?.name || "Tes MSDT"}</h1>
-          <div className={styles.timer}>⏳ {formatTime(timeLeft)}</div>
-    
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 p-4 md:p-8 font-sans relative">
+        {/* ========================================================= */}
+        {/* OVERLAY LOADING & POPUP MUNCUL DI SINI */}
+        {/* ========================================================= */}
+        {(isSubmittingTest || submitStatus.show) && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 transition-all duration-300">
+            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full flex flex-col items-center text-center animate-in zoom-in-95 duration-300 border border-gray-100">
+              {isSubmittingTest ? (
+                <>
+                  <div className="relative mb-6 mt-4">
+                    <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full opacity-50"></div>
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">
+                    Menyimpan Jawaban...
+                  </h3>
+                  <p className="text-gray-500 text-sm mb-4">
+                    Mohon tunggu sebentar ya.
+                  </p>
+                </>
+              ) : (
+                <>
+                  {submitStatus.error ? (
+                    <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-6 shadow-sm">
+                      <svg
+                        className="w-10 h-10"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2.5}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </div>
+                  ) : submitStatus.isTimeout ? (
+                    <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-6 shadow-sm">
+                      <svg
+                        className="w-10 h-10"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2.5}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-sm">
+                      <svg
+                        className="w-10 h-10"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2.5}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    </div>
+                  )}
 
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">
+                    {submitStatus.error
+                      ? "Oops! Terjadi Kesalahan"
+                      : submitStatus.isTimeout
+                        ? "Waktu Habis!"
+                        : "Selesai!"}
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-6">
+                    {submitStatus.message}
+                  </p>
+
+                  <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 animate-[progress_3.5s_ease-in-out_forwards]"></div>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-4">
+                    Mengalihkan secara otomatis...
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+        {/* ========================================================= */}
+
+        {/* HEADER: Judul & Timer */}
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center bg-white/80 backdrop-blur-md shadow-sm rounded-2xl p-4 md:px-8 mb-6 border border-blue-100">
+          <h1 className="text-2xl font-bold text-gray-800 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+            {testInfo?.name || "Tes MSDT"}
+          </h1>
+          <div
+            className={`flex items-center gap-2 px-4 py-2 font-bold rounded-lg border mt-4 md:mt-0 shadow-sm transition-colors ${
+              timeLeft <= 60
+                ? "bg-red-50 text-red-600 border-red-200 animate-pulse"
+                : "bg-blue-50 text-blue-700 border-blue-200"
+            }`}
+          >
+            <span className="text-xl">⏳</span>
+            <span className="text-lg tracking-wider">
+              {formatTime(timeLeft)}
+            </span>
+          </div>
         </div>
 
-        <div className={styles.mainContent}>
-          <div className={styles.questionSection}>
-            <p><b>{currentIndex + 1}. </b>{currentQuestion.content}</p>
-            <ul className={styles.optionsList}>
-              {currentQuestion.options.map((opt, idx) => (
-                <li key={idx}>
-                  <label className={styles.optionLabel}>
-                    <input
-                      type="radio"
-                      name={`q-${currentQuestion.id}`}
-                      value={opt}
-                      checked={answers[currentQuestion.id] === opt}
-                      onChange={() => handleSelectAnswer(currentQuestion.id, opt)}
-                    />
-                    <span>{opt}</span>
-                  </label>
-                </li>
-              ))}
-            </ul>
+        {/* MAIN CONTENT: 2 Kolom (Kiri Soal, Kanan Ringkasan) */}
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* KOLOM KIRI: Pertanyaan & Navigasi */}
+          <div className="lg:col-span-2 flex flex-col">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-blue-600 text-white w-10 h-10 flex items-center justify-center rounded-xl font-bold shadow-md">
+                {currentIndex + 1}
+              </div>
+              <span className="text-gray-500 font-medium">
+                dari {questions.length} soal
+              </span>
+            </div>
 
-            <div className={styles.navButtons}>
-  <button
-    className={styles.backBtn}
-    onClick={handleBack}
-    disabled={currentIndex === 0}
-  >
-    ← Back
-  </button>
-  {currentIndex < questions.length - 1 ? (
-    <button className={styles.btn} onClick={handleNext}>Next →</button>
-  ) : (
-    <button className={styles.btn} onClick={handleSubmit}>Submit Tes</button>
-  )}
-</div>
-<div className="mt-4 text-center">
-  <button
-    onClick={() => {
-      setShowInstruction(true);
-      setShowQuestions(false);
-      localStorage.setItem("stage", "instruction");
-    }}
-    className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-  >
-    📖 Lihat Instruksi
-  </button>
-</div>
+            <QuestionCard
+              question={currentQuestion}
+              selected={answers[currentQuestion.id]}
+              onSelect={(choice) =>
+                handleSelectAnswer(currentQuestion.id, choice)
+              }
+            />
+
+            <NavigationButtons
+              currentIndex={currentIndex}
+              totalQuestions={questions.length}
+              goNext={handleNext}
+              goBack={handleBack}
+              onSubmit={() => handleSubmit(false)}
+            />
+
+            <div className="mt-8 text-center lg:text-left">
+              <button
+                onClick={() => {
+                  setShowInstruction(true);
+                  setShowQuestions(false);
+                  localStorage.setItem("stage", "instruction");
+                  setSavedStage("instruction");
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 border border-gray-200 transition-colors shadow-sm"
+              >
+                📖 Lihat Instruksi Kembali
+              </button>
+            </div>
           </div>
 
-          <div className={styles.answerCard}>
-            <h3>Ringkasan Jawaban</h3>
-            <div className={styles.answerGrid}>
-              {questions.map((q, idx) => (
-                <button
-                  key={q.id}
-                  className={`${styles.answerNumber} ${answers[q.id] ? styles.answered : styles.unanswered} ${currentIndex === idx ? styles.current : ""}`}
-                  onClick={() => setCurrentIndex(idx)}
-                >
-                  {idx + 1}
-                </button>
-              ))}
+          {/* KOLOM KANAN: Ringkasan Jawaban (Sticky) */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-8">
+              <AnswerSummary
+                questions={questions}
+                answers={answers}
+                currentIndex={currentIndex}
+                onSelect={(idx) => setCurrentIndex(idx)}
+              />
             </div>
           </div>
         </div>

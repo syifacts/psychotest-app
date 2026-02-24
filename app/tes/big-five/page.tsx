@@ -19,16 +19,21 @@ type AnswerPayload = {
 
 const TesBFIPage = () => {
   const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [showIntro, setShowIntro] = useState(true); // tahap 1
-  const [showForm, setShowForm] = useState(false); // tahap 2
-  const [showQuestions, setShowQuestions] = useState(false); // tahap 3
+  const [showIntro, setShowIntro] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [showQuestions, setShowQuestions] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(60 * 60); // 60 menit
+  const [timeLeft, setTimeLeft] = useState(60 * 60);
   const [fullName, setFullName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [testDate, setTestDate] = useState<string>("");
 
-  const [testInfo, setTestInfo] = useState<{ id: number; name: string; duration: number; price: number | null } | null>(null);
+  const [testInfo, setTestInfo] = useState<{
+    id: number;
+    name: string;
+    duration: number;
+    price: number | null;
+  } | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [alreadyTaken, setAlreadyTaken] = useState(false);
 
@@ -43,7 +48,9 @@ const TesBFIPage = () => {
 
         const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
         if (savedUser.id) {
-          const accessRes = await fetch(`/api/tes/check-access?userId=${savedUser.id}&type=BFI`);
+          const accessRes = await fetch(
+            `/api/tes/check-access?userId=${savedUser.id}&type=BFI`,
+          );
           const accessData = await accessRes.json();
           setHasAccess(accessData.access);
         }
@@ -54,7 +61,6 @@ const TesBFIPage = () => {
     fetchTestInfo();
   }, []);
 
-  // Timer
   useEffect(() => {
     if (!showQuestions) return;
     const timer = setInterval(() => {
@@ -98,10 +104,12 @@ const TesBFIPage = () => {
       const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
       if (!savedUser.id) return;
 
-      const payload: AnswerPayload[] = Object.entries(answers).map(([qid, choice]) => ({
-        questionId: Number(qid),
-        choice,
-      }));
+      const payload: AnswerPayload[] = Object.entries(answers).map(
+        ([qid, choice]) => ({
+          questionId: Number(qid),
+          choice,
+        }),
+      );
 
       const res = await fetch("/api/tes/submit-subtest", {
         method: "POST",
@@ -131,18 +139,20 @@ const TesBFIPage = () => {
   };
 
   const formatTime = (s: number) =>
-    `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+    `${Math.floor(s / 60)
+      .toString()
+      .padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
   const currentQuestion = BigFiveQuestions[currentIndex];
 
-  // ================== RENDER ==================
   if (showIntro) {
     return (
       <div className={styles.introContainer}>
         <h1 className={styles.title}>Tes BFI (Big Five Inventory)</h1>
         <p className={styles.description}>
-          Tes ini bertujuan untuk mengukur kepribadian berdasarkan 5 dimensi utama: Openness,
-          Conscientiousness, Extraversion, Agreeableness, dan Neuroticism.
+          Tes ini bertujuan untuk mengukur kepribadian berdasarkan 5 dimensi
+          utama: Openness, Conscientiousness, Extraversion, Agreeableness, dan
+          Neuroticism.
         </p>
         <div className={styles.infoBox}>
           <p>
@@ -156,20 +166,27 @@ const TesBFIPage = () => {
           </p>
 
           {alreadyTaken && (
-            <p className="text-red-500 font-semibold mt-2">⚠️ Anda sudah pernah mengikutinya</p>
+            <p className="text-red-500 font-semibold mt-2">
+              ⚠️ Anda sudah pernah mengikutinya
+            </p>
           )}
 
           {!hasAccess ? (
             <button
               className={styles.btn}
               onClick={async () => {
-                const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+                const savedUser = JSON.parse(
+                  localStorage.getItem("user") || "{}",
+                );
                 if (!savedUser.id || !testInfo?.id) return;
 
                 const payRes = await fetch("/api/payment/start", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ userId: savedUser.id, testTypeId: testInfo.id }),
+                  body: JSON.stringify({
+                    userId: savedUser.id,
+                    testTypeId: testInfo.id,
+                  }),
                 });
 
                 const payData = await payRes.json();
@@ -178,7 +195,9 @@ const TesBFIPage = () => {
                   return;
                 }
 
-                alert("✅ Pembayaran berhasil! Anda sekarang bisa mengikuti tes.");
+                alert(
+                  "✅ Pembayaran berhasil! Anda sekarang bisa mengikuti tes.",
+                );
 
                 await fetch("/api/attempts", {
                   method: "POST",
@@ -201,11 +220,13 @@ const TesBFIPage = () => {
             <button
               className={styles.btn}
               onClick={async () => {
-                const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+                const savedUser = JSON.parse(
+                  localStorage.getItem("user") || "{}",
+                );
                 if (!savedUser.id || !testInfo?.id) return;
 
                 const attemptRes = await fetch(
-                  `/api/attempts?userId=${savedUser.id}&testTypeId=${testInfo.id}`
+                  `/api/attempts?userId=${savedUser.id}&testTypeId=${testInfo.id}`,
                 );
                 const attempts = await attemptRes.json();
 
@@ -213,7 +234,10 @@ const TesBFIPage = () => {
                   await fetch("/api/attempts", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ userId: savedUser.id, testTypeId: testInfo.id }),
+                    body: JSON.stringify({
+                      userId: savedUser.id,
+                      testTypeId: testInfo.id,
+                    }),
                   });
                 }
 
@@ -262,14 +286,24 @@ const TesBFIPage = () => {
         {birthDate && (
           <div className={styles.formGroup}>
             <label>Usia</label>
-            <input type="text" value={`${calculateAge(birthDate)} tahun`} className={styles.input} readOnly />
+            <input
+              type="text"
+              value={`${calculateAge(birthDate)} tahun`}
+              className={styles.input}
+              readOnly
+            />
           </div>
         )}
 
         {testDate && (
           <div className={styles.formGroup}>
             <label>Tanggal Tes</label>
-            <input type="text" value={testDate} className={styles.input} readOnly />
+            <input
+              type="text"
+              value={testDate}
+              className={styles.input}
+              readOnly
+            />
           </div>
         )}
 
@@ -302,8 +336,15 @@ const TesBFIPage = () => {
                       type="radio"
                       name={`question-${currentQuestion.id}`}
                       value={opt.value}
-                      checked={answers[currentQuestion.id] === String(opt.value)}
-                      onChange={() => handleSelectAnswer(currentQuestion.id, String(opt.value))}
+                      checked={
+                        answers[currentQuestion.id] === String(opt.value)
+                      }
+                      onChange={() =>
+                        handleSelectAnswer(
+                          currentQuestion.id,
+                          String(opt.value),
+                        )
+                      }
                     />
                     {opt.label}
                   </label>
@@ -320,7 +361,10 @@ const TesBFIPage = () => {
                 ← Back
               </button>
               {currentIndex < BigFiveQuestions.length - 1 ? (
-                <button className={styles.btn} onClick={() => setCurrentIndex((i) => i + 1)}>
+                <button
+                  className={styles.btn}
+                  onClick={() => setCurrentIndex((i) => i + 1)}
+                >
                   Next →
                 </button>
               ) : (

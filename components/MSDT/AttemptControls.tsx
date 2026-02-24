@@ -8,10 +8,18 @@ interface AttemptControlsProps {
   onSubmit: () => void | Promise<void>;
 }
 
-const AttemptControls: React.FC<AttemptControlsProps> = ({ currentIndex, total, onNext, onBack, onSubmit }) => {
+const AttemptControls: React.FC<AttemptControlsProps> = ({
+  currentIndex,
+  total,
+  onNext,
+  onBack,
+  onSubmit,
+}) => {
   return (
     <div style={{ marginTop: 20 }}>
-      <button onClick={onBack} disabled={currentIndex === 0}>← Back</button>
+      <button onClick={onBack} disabled={currentIndex === 0}>
+        ← Back
+      </button>
       {currentIndex < total - 1 ? (
         <button onClick={onNext}>Next →</button>
       ) : (

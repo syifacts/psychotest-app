@@ -1,4 +1,3 @@
-// app/api/testtypes/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -9,9 +8,9 @@ export async function GET() {
       name: true,
       desc: true,
       price: true,
-      priceDiscount: true,      // ✅ tambahkan ini
-      percentDiscount: true,    // ✅ tambahkan ini
-      noteDiscount: true,       // ✅ tambahkan ini
+      priceDiscount: true,
+      percentDiscount: true,
+      noteDiscount: true,
       img: true,
       duration: true,
       judul: true,
@@ -24,7 +23,7 @@ export async function GET() {
       judulbenefit: true,
       pointbenefit: true,
     },
-    
+
     orderBy: { id: "asc" },
   });
 
