@@ -10,7 +10,12 @@ interface InlineEditProps {
   className?: string;
 }
 
-export default function InlineEdit({ value, onSave, type = "text", className }: InlineEditProps) {
+export default function InlineEdit({
+  value,
+  onSave,
+  type = "text",
+  className,
+}: InlineEditProps) {
   const [editing, setEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value);
 
@@ -36,7 +41,11 @@ export default function InlineEdit({ value, onSave, type = "text", className }: 
       <input
         type={type}
         value={tempValue}
-        onChange={(e) => setTempValue(type === "number" ? Number(e.target.value) : e.target.value)}
+        onChange={(e) =>
+          setTempValue(
+            type === "number" ? Number(e.target.value) : e.target.value,
+          )
+        }
         onBlur={handleSave}
         onKeyDown={(e) => e.key === "Enter" && handleSave()}
         autoFocus

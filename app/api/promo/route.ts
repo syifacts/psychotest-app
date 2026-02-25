@@ -5,7 +5,16 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, code, type, value, minPurchase, maxDiscount, validFrom, validUntil } = body;
+    const {
+      name,
+      code,
+      type,
+      value,
+      minPurchase,
+      maxDiscount,
+      validFrom,
+      validUntil,
+    } = body;
 
     const promo = await prisma.promo.create({
       data: {
@@ -23,7 +32,10 @@ export async function POST(req: Request) {
     return NextResponse.json(promo);
   } catch (error) {
     console.error("❌ Error creating promo:", error);
-    return NextResponse.json({ error: "Failed to create promo" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create promo" },
+      { status: 500 },
+    );
   }
 }
 
@@ -37,7 +49,10 @@ export async function GET() {
     return NextResponse.json(promos);
   } catch (error) {
     console.error("❌ Error fetching promos:", error);
-    return NextResponse.json({ error: "Failed to fetch promos" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch promos" },
+      { status: 500 },
+    );
   }
 }
 
@@ -48,7 +63,10 @@ export async function PATCH(req: Request) {
     const { id, ...updates } = body;
 
     if (!id) {
-      return NextResponse.json({ error: "Promo ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Promo ID is required" },
+        { status: 400 },
+      );
     }
 
     const promo = await prisma.promo.update({
@@ -56,14 +74,19 @@ export async function PATCH(req: Request) {
       data: {
         ...updates,
         validFrom: updates.validFrom ? new Date(updates.validFrom) : undefined,
-        validUntil: updates.validUntil ? new Date(updates.validUntil) : undefined,
+        validUntil: updates.validUntil
+          ? new Date(updates.validUntil)
+          : undefined,
       },
     });
 
     return NextResponse.json(promo);
   } catch (error) {
     console.error("❌ Error updating promo:", error);
-    return NextResponse.json({ error: "Failed to update promo" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update promo" },
+      { status: 500 },
+    );
   }
 }
 
@@ -73,7 +96,10 @@ export async function DELETE(req: Request) {
     const { id } = await req.json();
 
     if (!id) {
-      return NextResponse.json({ error: "Promo ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Promo ID is required" },
+        { status: 400 },
+      );
     }
 
     await prisma.promo.delete({
@@ -83,6 +109,9 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ message: "Promo deleted successfully" });
   } catch (error) {
     console.error("❌ Error deleting promo:", error);
-    return NextResponse.json({ error: "Failed to delete promo" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to delete promo" },
+      { status: 500 },
+    );
   }
 }

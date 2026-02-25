@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import crypto from "crypto";
-
-const TRIPAY_API_KEY = process.env.TRIPAY_API_KEY ?? "";
-const TRIPAY_PRIVATE_KEY = process.env.TRIPAY_PRIVATE_KEY ?? "";
+import { verifyTripaySignature } from "@/lib/security/hmacVerifier";
+import { checkIdempotency } from "@/lib/security/redisIdempotency";
 
 export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text();
     const body = JSON.parse(rawBody);
+    const { reference, status, total_amount, merchant_ref } = body;
 
-    const { reference, status, total_amount, merchant_ref, sign } = body;
-
+    // Pengecekan data kosong
     if (!reference || !merchant_ref || !status) {
       return NextResponse.json(
         { success: false, message: "Payload incomplete" },
@@ -19,46 +17,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let valid = false;
+    // ==========================================
+    // 🛡️ LAPIS 1: VERIFIKASI HMAC (Anti Webhook Spoofing)
+    // ==========================================
     const headerSignature = req.headers.get("x-callback-signature");
+    const isAuthentic = verifyTripaySignature(rawBody, body, headerSignature);
 
-    if (headerSignature) {
-      const calc = crypto
-        .createHmac("sha256", TRIPAY_PRIVATE_KEY)
-        .update(rawBody)
-        .digest("hex");
-
-      valid = headerSignature.toLowerCase() === calc;
-
-      console.log("🔎 Payment Callback check:", {
-        rawBody,
-        calc,
-        headerSignature,
-        privateKey: TRIPAY_PRIVATE_KEY.slice(0, 6) + "...",
-      });
-    } else if (sign) {
-      const str = `${reference}${merchant_ref}${total_amount}`;
-      const calc = crypto
-        .createHmac("sha256", TRIPAY_PRIVATE_KEY)
-        .update(str)
-        .digest("hex");
-
-      valid = calc === sign;
-      console.log("🔎 Transaction Callback check:", {
-        str,
-        calc,
-        sign,
-        privateKey: TRIPAY_PRIVATE_KEY.slice(0, 6) + "...",
-      });
-    }
-
-    if (!valid) {
+    if (!isAuthentic) {
       return NextResponse.json(
         { success: false, message: "Invalid signature" },
         { status: 400 },
       );
     }
 
+    // ==========================================
+    // 🛡️ LAPIS 2: REDIS IDEMPOTENCY (Anti Replay Attack & Race Condition)
+    // ==========================================
+    const isSafeToProcess = await checkIdempotency(merchant_ref);
+
+    if (!isSafeToProcess) {
+      return NextResponse.json(
+        { success: false, message: "Conflict / Duplicate Request Detected" },
+        { status: 409 },
+      );
+    }
+
+    // ==========================================
+    // 💾 LAPIS 3: PROSES UPDATE DATABASE MYSQL
+    // ==========================================
     const paymentId = Number(merchant_ref.split("-")[1]);
     const payment = await prisma.payment.findUnique({
       where: { id: paymentId },

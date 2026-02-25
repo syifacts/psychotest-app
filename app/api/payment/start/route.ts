@@ -319,7 +319,7 @@ export async function POST(req: NextRequest) {
       data: {
         reference: data.data.reference,
         paymentUrl: data.data.checkout_url,
-        payload: data,
+        payload: data.data,
         status: "PENDING",
       },
     });

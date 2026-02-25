@@ -1,13 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Search, Wallet, Calendar, TrendingUp, BarChart3 } from "lucide-react";
+import {
+  Download,
+  Search,
+  Wallet,
+  Calendar,
+  TrendingUp,
+  BarChart3,
+} from "lucide-react";
 import * as XLSX from "xlsx-js-style";
 import FinancePromoForm from "@/components/admin/FinancePromo";
 import { useToast } from "@/components/ui/use-toast";
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "@/components/ui/toaster";
 import { useToastConfirm } from "@/components/ui/use-toast-confirm";
-
 
 import {
   LineChart,
@@ -24,14 +30,14 @@ import {
 interface PaymentRow {
   id: number;
   fullName: string;
-  originalPrice: number; // harga asli dari TestType
-  customPrice?: number; // dari CompanyPricing
-  discountNominal?: number; // dari CompanyPricing
-  priceDiscount?: number; // dari TestType
-  percentDiscount?: number; // dari TestType
-  priceAfterDiscount: number; // harga setelah diskon (dari Payment.amount / quantity)
+  originalPrice: number;
+  customPrice?: number;
+  discountNominal?: number;
+  priceDiscount?: number;
+  percentDiscount?: number;
+  priceAfterDiscount: number;
   quantity: number;
-  total: number; // dari Payment.amount
+  total: number;
   method?: string;
   paidAt?: string;
   paymentUrl?: string;
@@ -52,184 +58,160 @@ export default function FinanceReportPage() {
   const { toast } = useToast();
   const { confirm } = useToastConfirm();
 
+  const updateStatus = async (id: number, status: string) => {
+    const res = await fetch(`/api/payment/${id}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
 
-  // const updateStatus = async (id: number, status: string) => {
-  // const res = await fetch(`/api/payment/${id}/status`, {
-  //   method: "PUT",
-  //   headers: { "Content-Type": "application/json" },
-  //   body: JSON.stringify({ status }),
-  // });
+    if (!res.ok) {
+      toast({
+        title: "Gagal update status",
+        description: `Status pembayaran #${id} gagal diupdate.`,
+        variant: "error",
+        duration: 4000,
+      });
+      return;
+    }
 
-  // if (!res.ok) {
-  //   alert("Gagal update status");
-  //   return;
-  // }
+    setPayments((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status } : p)),
+    );
 
-  
-  // update state tanpa reload
-//   setPayments((prev) =>
-//     prev.map((p) => (p.id === id ? { ...p, status } : p))
-//   );
-// };
-const updateStatus = async (id: number, status: string) => {
-  const res = await fetch(`/api/payment/${id}/status`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status }),
-  });
+    const desc =
+      status === "REFUND"
+        ? `Pembayaran #${id} berhasil diubah menjadi REFUND.`
+        : status === "SUCCESS"
+          ? `Refund untuk pembayaran #${id} dibatalkan (kembali ke SUCCESS).`
+          : `Status pembayaran #${id} diupdate menjadi ${status}.`;
 
-  if (!res.ok) {
     toast({
-      title: "Gagal update status",
-      description: `Status pembayaran #${id} gagal diupdate.`,
-      variant: "error",
+      title: "Status berhasil diupdate",
+      description: desc,
+      variant: "success",
       duration: 4000,
     });
-    return;
-  }
-
-  setPayments((prev) =>
-    prev.map((p) => (p.id === id ? { ...p, status } : p)),
-  );
-
-  // pesan berbeda sesuai status baru
-  const desc =
-    status === "REFUND"
-      ? `Pembayaran #${id} berhasil diubah menjadi REFUND.`
-      : status === "SUCCESS"
-      ? `Refund untuk pembayaran #${id} dibatalkan (kembali ke SUCCESS).`
-      : `Status pembayaran #${id} diupdate menjadi ${status}.`;
-
-  toast({
-    title: "Status berhasil diupdate",
-    description: desc,
-    variant: "success",
-    duration: 4000,
-  });
-};
-
+  };
 
   useEffect(() => {
     fetch("/api/payment")
       .then((res) => res.json())
       .then((data) => {
-const mapped = data
-  // hanya ambil pembayaran valid (punya URL pembayaran)
-  .filter((p: any) => p.amount > 0 && p.paymentUrl && p.paymentUrl !== "-")
-  .map((p: any) => {
+        const mapped = data
 
-  const isCompanyPurchase = !!p.companyId;
-  const paidDate = p.paidAt ? new Date(p.paidAt) : null;
+          .filter(
+            (p: any) => p.amount > 0 && p.paymentUrl && p.paymentUrl !== "-",
+          )
+          .map((p: any) => {
+            const isCompanyPurchase = !!p.companyId;
+            const paidDate = p.paidAt ? new Date(p.paidAt) : null;
 
-  const originalPrice = p.TestType?.price || 0;
-  const totalPaid = p.amount;
-  const quantity = p.quantity || 1;
-  const priceAfterDiscount = Math.round(totalPaid / quantity);
+            const originalPrice = p.TestType?.price || 0;
+            const totalPaid = p.amount;
+            const quantity = p.quantity || 1;
+            const priceAfterDiscount = Math.round(totalPaid / quantity);
 
-  // Nilai dasar
-  let customPrice: number | undefined = undefined;
-  let discountNominal = 0;
-  let percentDiscount = 0;
+            let customPrice: number | undefined = undefined;
+            let discountNominal = 0;
+            let percentDiscount = 0;
 
-  if (isCompanyPurchase) {
-    const cp = p.CompanyPricing;
-    customPrice = cp?.customPrice ?? undefined;
+            if (isCompanyPurchase) {
+              const cp = p.CompanyPricing;
+              customPrice = cp?.customPrice ?? undefined;
 
-    if (customPrice) {
-      discountNominal = originalPrice - priceAfterDiscount;
-      percentDiscount = Math.round((discountNominal / originalPrice) * 100);
-    } else {
-      discountNominal = originalPrice - priceAfterDiscount;
-      percentDiscount = Math.round((discountNominal / originalPrice) * 100);
-    }
-  } else {
-    discountNominal = originalPrice - priceAfterDiscount;
-    percentDiscount = Math.round((discountNominal / originalPrice) * 100);
-  }
+              if (customPrice) {
+                discountNominal = originalPrice - priceAfterDiscount;
+                percentDiscount = Math.round(
+                  (discountNominal / originalPrice) * 100,
+                );
+              } else {
+                discountNominal = originalPrice - priceAfterDiscount;
+                percentDiscount = Math.round(
+                  (discountNominal / originalPrice) * 100,
+                );
+              }
+            } else {
+              discountNominal = originalPrice - priceAfterDiscount;
+              percentDiscount = Math.round(
+                (discountNominal / originalPrice) * 100,
+              );
+            }
 
-  // ⚙️ Jika tidak ada diskon (harga sama)
-  const hasDiscount = originalPrice !== priceAfterDiscount;
+            const hasDiscount = originalPrice !== priceAfterDiscount;
 
-  return {
-    id: p.id,
-    fullName: isCompanyPurchase
-      ? p.company?.fullName ?? "-"
-      : p.User?.fullName ?? "-",
-    originalPrice,
-    customPrice,
-    discountNominal: hasDiscount ? discountNominal : 0,
-    priceDiscount: hasDiscount ? priceAfterDiscount : 0,
-    percentDiscount: hasDiscount ? percentDiscount : 0,
-    priceAfterDiscount: hasDiscount ? priceAfterDiscount : 0,
-    quantity,
-    total: totalPaid,
-    method: p.method,
-    paidAt: paidDate
-      ? `${String(paidDate.getDate()).padStart(2, "0")}/${String(
-          paidDate.getMonth() + 1
-        ).padStart(2, "0")}/${paidDate.getFullYear()}`
-      : "-",
-    paymentUrl: p.paymentUrl ?? "-",
-    status: p.status || "pending",
-    testName: p.TestType?.name ?? "-",
-psychologist: p.attempts?.[0]?.results?.[0]?.ValidatedBy?.fullName ?? "-",
-
-  };
-});
-
-
+            return {
+              id: p.id,
+              fullName: isCompanyPurchase
+                ? (p.company?.fullName ?? "-")
+                : (p.User?.fullName ?? "-"),
+              originalPrice,
+              customPrice,
+              discountNominal: hasDiscount ? discountNominal : 0,
+              priceDiscount: hasDiscount ? priceAfterDiscount : 0,
+              percentDiscount: hasDiscount ? percentDiscount : 0,
+              priceAfterDiscount: hasDiscount ? priceAfterDiscount : 0,
+              quantity,
+              total: totalPaid,
+              method: p.method,
+              paidAt: paidDate
+                ? `${String(paidDate.getDate()).padStart(2, "0")}/${String(
+                    paidDate.getMonth() + 1,
+                  ).padStart(2, "0")}/${paidDate.getFullYear()}`
+                : "-",
+              paymentUrl: p.paymentUrl ?? "-",
+              status: p.status || "pending",
+              testName: p.TestType?.name ?? "-",
+              psychologist:
+                p.attempts?.[0]?.results?.[0]?.ValidatedBy?.fullName ?? "-",
+            };
+          });
 
         setPayments(mapped);
         setFilteredPayments(mapped);
       });
   }, []);
 
-  // Filter & search
-useEffect(() => {
-  let temp = [...payments];
+  useEffect(() => {
+    let temp = [...payments];
 
-  if (search) {
-    const s = search.toLowerCase();
-    temp = temp.filter((p) =>
-      (p.fullName ?? "-").toLowerCase().includes(s)
-    );
-  }
+    if (search) {
+      const s = search.toLowerCase();
+      temp = temp.filter((p) => (p.fullName ?? "-").toLowerCase().includes(s));
+    }
 
-  if (startDate) {
-    temp = temp.filter((p) => {
-      if (!p.paidAt) return false;
-      const [d, m, y] = p.paidAt.split("/");
-      const paidDate = new Date(`${y}-${m}-${d}`);
-      return paidDate >= new Date(startDate);
-    });
-  }
+    if (startDate) {
+      temp = temp.filter((p) => {
+        if (!p.paidAt) return false;
+        const [d, m, y] = p.paidAt.split("/");
+        const paidDate = new Date(`${y}-${m}-${d}`);
+        return paidDate >= new Date(startDate);
+      });
+    }
 
-  if (endDate) {
-    temp = temp.filter((p) => {
-      if (!p.paidAt) return false;
-      const [d, m, y] = p.paidAt.split("/");
-      const paidDate = new Date(`${y}-${m}-${d}`);
-      return paidDate <= new Date(endDate);
-    });
-  }
+    if (endDate) {
+      temp = temp.filter((p) => {
+        if (!p.paidAt) return false;
+        const [d, m, y] = p.paidAt.split("/");
+        const paidDate = new Date(`${y}-${m}-${d}`);
+        return paidDate <= new Date(endDate);
+      });
+    }
 
-  if (statusFilter) {
-    temp = temp.filter((p) => p.status === statusFilter);
-  }
+    if (statusFilter) {
+      temp = temp.filter((p) => p.status === statusFilter);
+    }
 
-  setFilteredPayments(temp);
-  setCurrentPage(1);
-}, [search, startDate, endDate, payments, statusFilter]);
+    setFilteredPayments(temp);
+    setCurrentPage(1);
+  }, [search, startDate, endDate, payments, statusFilter]);
 
-
-  // Fungsi bantu tanggal
   const getDateFromString = (dateStr?: string) => {
     if (!dateStr || dateStr === "-") return null;
     const [d, m, y] = dateStr.split("/");
     return new Date(`${y}-${m}-${d}`);
   };
 
-  // Hitung statistik
   const today = new Date();
   const startOfWeek = new Date(today);
   startOfWeek.setDate(today.getDate() - today.getDay());
@@ -239,7 +221,7 @@ useEffect(() => {
     const date = getDateFromString(p.paidAt);
     if (!date) return;
     const key = `${String(date.getDate()).padStart(2, "0")}/${String(
-      date.getMonth() + 1
+      date.getMonth() + 1,
     ).padStart(2, "0")}`;
     dailyMap[key] = (dailyMap[key] || 0) + p.total;
   });
@@ -281,140 +263,123 @@ useEffect(() => {
 
   const totalRevenue = filteredPayments.reduce(
     (sum, p) => sum + (p.total ?? 0),
-    0
+    0,
   );
 
-const exportExcel = () => {
-  const formattedData = filteredPayments.map((item) => ({
-    ID: item.id,
-    User: item.fullName,
-    "Nama Test": item.testName,
-    "Harga Asli": item.originalPrice,
-    "Custom Price": item.customPrice ?? 0,
-    "Diskon Nominal": item.discountNominal ?? 0,
-    "Persen Diskon": item.percentDiscount ?? 0,
-    "Harga Setelah Diskon": item.priceAfterDiscount ?? 0,
-    Quantity: item.quantity,
-    Total: item.total,
-    Method: item.method || "-",
-    "Paid At": item.paidAt || "-",
-    "Payment URL": item.paymentUrl || "-",
-    Status: item.status,
-  }));
+  const exportExcel = () => {
+    const formattedData = filteredPayments.map((item) => ({
+      ID: item.id,
+      User: item.fullName,
+      "Nama Test": item.testName,
+      "Harga Asli": item.originalPrice,
+      "Custom Price": item.customPrice ?? 0,
+      "Diskon Nominal": item.discountNominal ?? 0,
+      "Persen Diskon": item.percentDiscount ?? 0,
+      "Harga Setelah Diskon": item.priceAfterDiscount ?? 0,
+      Quantity: item.quantity,
+      Total: item.total,
+      Method: item.method || "-",
+      "Paid At": item.paidAt || "-",
+      "Payment URL": item.paymentUrl || "-",
+      Status: item.status,
+    }));
 
-  const ws = XLSX.utils.json_to_sheet(formattedData);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Payments");
+    const ws = XLSX.utils.json_to_sheet(formattedData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Payments");
 
-  // Jumlah baris data (tidak termasuk header)
-  const lastRow = formattedData.length + 1;
-const totalFormula = `=SUM(J2:I${lastRow})`; // ✅ hitung dari kolom I
+    const lastRow = formattedData.length + 1;
+    const totalFormula = `=SUM(J2:I${lastRow})`;
 
-XLSX.utils.sheet_add_aoa(
-  ws,
-  [
-    [
-      "TOTAL KESELURUHAN:", // Label di kolom A
-      "", "", "", "", "", "", "", // A–H akan di-merge
-      { f: totalFormula }, // Kolom I tempat formula SUM
-    ],
-  ],
-  { origin: `A${lastRow + 1}` }
-);
+    XLSX.utils.sheet_add_aoa(
+      ws,
+      [["TOTAL KESELURUHAN:", "", "", "", "", "", "", "", { f: totalFormula }]],
+      { origin: `A${lastRow + 1}` },
+    );
 
-  // Merge kolom A–I untuk label
- if (!ws["!merges"]) ws["!merges"] = [];
-ws["!merges"].push({
-  s: { r: lastRow, c: 0 }, // A
-  e: { r: lastRow, c: 7 }, // H
-});
+    if (!ws["!merges"]) ws["!merges"] = [];
+    ws["!merges"].push({
+      s: { r: lastRow, c: 0 },
+      e: { r: lastRow, c: 7 },
+    });
 
-// Gabungkan kolom I–M untuk hasil total
-ws["!merges"].push({
-  s: { r: lastRow, c: 8 }, // I
-  e: { r: lastRow, c: 13 }, // M
-});
+    ws["!merges"].push({
+      s: { r: lastRow, c: 8 },
+      e: { r: lastRow, c: 13 },
+    });
 
-  // Atur lebar kolom
-  ws["!cols"] = Array(14).fill({ wch: 18 });
+    ws["!cols"] = Array(14).fill({ wch: 18 });
 
-  // Format header
-  for (let c = 0; c < 14; c++) {
-    const cell = ws[String.fromCharCode(65 + c) + 1];
-    if (cell) {
-      cell.s = {
-        font: { bold: true, color: { rgb: "FFFFFF" } },
-        fill: { fgColor: { rgb: "4F81BD" } },
-        alignment: { horizontal: "center", vertical: "center" },
-      };
-    }
-  }
-
-  // Baris isi bergantian warna
-  for (let r = 2; r <= lastRow; r++) {
-    const fillColor = r % 2 === 0 ? "FFFFFF" : "F7FBFF";
     for (let c = 0; c < 14; c++) {
-      const cell = ws[String.fromCharCode(65 + c) + r];
+      const cell = ws[String.fromCharCode(65 + c) + 1];
       if (cell) {
         cell.s = {
-          fill: { fgColor: { rgb: fillColor } },
-          alignment: { horizontal: "left", vertical: "center" },
-          border: {
-            top: { style: "thin", color: { rgb: "E0E0E0" } },
-            left: { style: "thin", color: { rgb: "E0E0E0" } },
-            bottom: { style: "thin", color: { rgb: "E0E0E0" } },
-            right: { style: "thin", color: { rgb: "E0E0E0" } },
-          },
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "4F81BD" } },
+          alignment: { horizontal: "center", vertical: "center" },
         };
       }
     }
-  }
 
-  // Style baris total (tanpa border)
-  const totalLabelCell = ws[`A${lastRow + 1}`];
-const totalValueCell = ws[`I${lastRow + 1}`];
-
-if (totalLabelCell) {
-  totalLabelCell.s = {
-    font: { bold: true, color: { rgb: "000000" } },
-    fill: { fgColor: { rgb: "E7E6E6" } },
-    alignment: { horizontal: "center", vertical: "center" },
-  };
-}
-
-if (totalValueCell) {
-  totalValueCell.s = {
-    font: { bold: true, color: { rgb: "000000" } },
-    fill: { fgColor: { rgb: "E7E6E6" } },
-    alignment: { horizontal: "left", vertical: "center" },
-    numFmt: '"Rp"#,##0',
-  };
-}
-
-  // Format kolom Total agar pakai format Rp
-  for (let i = 2; i <= lastRow; i++) {
-    const cell = ws[`J${i}`];
-    if (cell && typeof cell.v === "number") {
-      cell.z = '"Rp"#,##0';
+    for (let r = 2; r <= lastRow; r++) {
+      const fillColor = r % 2 === 0 ? "FFFFFF" : "F7FBFF";
+      for (let c = 0; c < 14; c++) {
+        const cell = ws[String.fromCharCode(65 + c) + r];
+        if (cell) {
+          cell.s = {
+            fill: { fgColor: { rgb: fillColor } },
+            alignment: { horizontal: "left", vertical: "center" },
+            border: {
+              top: { style: "thin", color: { rgb: "E0E0E0" } },
+              left: { style: "thin", color: { rgb: "E0E0E0" } },
+              bottom: { style: "thin", color: { rgb: "E0E0E0" } },
+              right: { style: "thin", color: { rgb: "E0E0E0" } },
+            },
+          };
+        }
+      }
     }
-  }
 
-  let fileName = "laporan_keuangan";
-  if (startDate && endDate) fileName += `_${startDate}_sd_${endDate}`;
-  else if (startDate) fileName += `_mulai_${startDate}`;
-  else if (endDate) fileName += `_sampai_${endDate}`;
-  fileName += ".xlsx";
+    const totalLabelCell = ws[`A${lastRow + 1}`];
+    const totalValueCell = ws[`I${lastRow + 1}`];
 
-  XLSX.writeFile(wb, fileName);
-};
+    if (totalLabelCell) {
+      totalLabelCell.s = {
+        font: { bold: true, color: { rgb: "000000" } },
+        fill: { fgColor: { rgb: "E7E6E6" } },
+        alignment: { horizontal: "center", vertical: "center" },
+      };
+    }
 
+    if (totalValueCell) {
+      totalValueCell.s = {
+        font: { bold: true, color: { rgb: "000000" } },
+        fill: { fgColor: { rgb: "E7E6E6" } },
+        alignment: { horizontal: "left", vertical: "center" },
+        numFmt: '"Rp"#,##0',
+      };
+    }
 
+    for (let i = 2; i <= lastRow; i++) {
+      const cell = ws[`J${i}`];
+      if (cell && typeof cell.v === "number") {
+        cell.z = '"Rp"#,##0';
+      }
+    }
 
-  // Pagination
+    let fileName = "laporan_keuangan";
+    if (startDate && endDate) fileName += `_${startDate}_sd_${endDate}`;
+    else if (startDate) fileName += `_mulai_${startDate}`;
+    else if (endDate) fileName += `_sampai_${endDate}`;
+    fileName += ".xlsx";
+
+    XLSX.writeFile(wb, fileName);
+  };
+
   const totalPages = Math.ceil(filteredPayments.length / rowsPerPage);
   const displayedPayments = filteredPayments.slice(
     (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
+    currentPage * rowsPerPage,
   );
 
   return (
@@ -461,7 +426,6 @@ if (totalValueCell) {
           </div>
         ))}
       </div>
-
       {/* Grafik Tren & Perbandingan */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div className="bg-white border rounded-xl shadow-md p-4">
@@ -473,7 +437,9 @@ if (totalValueCell) {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
-              <Tooltip formatter={(value: number) => `Rp ${value.toLocaleString()}`} />
+              <Tooltip
+                formatter={(value: number) => `Rp ${value.toLocaleString()}`}
+              />
               <Line
                 type="monotone"
                 dataKey="total"
@@ -500,13 +466,14 @@ if (totalValueCell) {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip formatter={(value: number) => `Rp ${value.toLocaleString()}`} />
+              <Tooltip
+                formatter={(value: number) => `Rp ${value.toLocaleString()}`}
+              />
               <Bar dataKey="total" fill="#2563eb" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
-
       {/* Filter/Search */}
       <div className="flex flex-col md:flex-row md:items-center gap-4">
         <div className="relative flex-1">
@@ -535,18 +502,18 @@ if (totalValueCell) {
           />
         </div>
 
-{/* Status Filter (Dropdown) */}
-  <select
-    className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400"
-    value={statusFilter}
-    onChange={(e) => setStatusFilter(e.target.value)}
-  >
-    <option value="">Semua Status</option>
-    <option value="SUCCESS">SUCCESS</option>
-    <option value="FAILED">FAILED</option>
-    <option value="PENDING">PENDING</option>
-    <option value="REFUND">REFUND</option>
-  </select>
+        {/* Status Filter (Dropdown) */}
+        <select
+          className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="">Semua Status</option>
+          <option value="SUCCESS">SUCCESS</option>
+          <option value="FAILED">FAILED</option>
+          <option value="PENDING">PENDING</option>
+          <option value="REFUND">REFUND</option>
+        </select>
         <select
           className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400"
           value={rowsPerPage}
@@ -557,7 +524,6 @@ if (totalValueCell) {
           <option value={30}>30</option>
         </select>
       </div>
-
       {/* Tabel */}
       <div className="overflow-x-auto shadow-lg rounded-lg">
         <table className="min-w-full bg-white border border-gray-200">
@@ -569,7 +535,7 @@ if (totalValueCell) {
               <th className="border px-4 py-2">Harga Asli</th>
               <th className="border px-4 py-2">Custom Price</th>
               <th className="border px-4 py-2">Diskon Nominal</th>
-             {/* <th className="border px-4 py-2">Harga Diskon</th> */}
+              {/* <th className="border px-4 py-2">Harga Diskon</th> */}
               <th className="border px-4 py-2">Persen Diskon</th>
               <th className="border px-4 py-2">Harga Setelah Diskon</th>
               <th className="border px-4 py-2">Qty</th>
@@ -577,9 +543,9 @@ if (totalValueCell) {
               <th className="border px-4 py-2">Method</th>
               <th className="border px-4 py-2">Paid At</th>
               <th className="border px-4 py-2">Payment URL</th>
-<th className="border px-4 py-2">Status</th>
-{/* <th className="border px-4 py-2">Psikolog</th> */}
- <th className="p-2 border">Aksi</th>
+              <th className="border px-4 py-2">Status</th>
+              {/* <th className="border px-4 py-2">Psikolog</th> */}
+              <th className="p-2 border">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -588,14 +554,18 @@ if (totalValueCell) {
                 <td className="border px-4 py-2">{p.id}</td>
                 <td className="border px-4 py-2">{p.fullName}</td>
                 <td className="border px-4 py-2">{p.testName}</td>
-                <td className="border px-4 py-2">Rp {p.originalPrice.toLocaleString()}</td>
+                <td className="border px-4 py-2">
+                  Rp {p.originalPrice.toLocaleString()}
+                </td>
                 <td className="border px-4 py-2">
                   {p.customPrice ? `Rp ${p.customPrice.toLocaleString()}` : "-"}
                 </td>
                 <td className="border px-4 py-2">
-                  {p.discountNominal ? `Rp ${p.discountNominal.toLocaleString()}` : "-"}
+                  {p.discountNominal
+                    ? `Rp ${p.discountNominal.toLocaleString()}`
+                    : "-"}
                 </td>
-            {/*    <td className="border px-4 py-2 font-semibold text-green-600">
+                {/*    <td className="border px-4 py-2 font-semibold text-green-600">
   {p.priceAfterDiscount && p.priceAfterDiscount !== 0
     ? `Rp ${p.priceAfterDiscount.toLocaleString()}`
     : "-"}
@@ -626,79 +596,76 @@ if (totalValueCell) {
                   )}
                 </td>
                 <td className="border px-4 py-2">
-  <span
-    className={`px-2 py-1 rounded text-xs font-semibold ${
-      p.status === "SUCCESS"
-        ? "bg-green-100 text-green-700"
-        : p.status === "FAILED"
-        ? "bg-red-100 text-red-700"
-        : p.status === "REFUND"
-        ? "bg-purple-100 text-purple-700"
-        : "bg-yellow-100 text-yellow-700"
-    }`}
-  >
-    {p.status}
-  </span>
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-semibold ${
+                      p.status === "SUCCESS"
+                        ? "bg-green-100 text-green-700"
+                        : p.status === "FAILED"
+                          ? "bg-red-100 text-red-700"
+                          : p.status === "REFUND"
+                            ? "bg-purple-100 text-purple-700"
+                            : "bg-yellow-100 text-yellow-700"
+                    }`}
+                  >
+                    {p.status}
+                  </span>
 
-
-  {/* tombol ubah */}
-  {/* <button
+                  {/* tombol ubah */}
+                  {/* <button
     className="ml-2 text-blue-600 hover:underline text-xs"
     onClick={() => updateStatus(p.id, "REFUND")}
   >
     Refund
   </button> */}
-</td>
-  {/* <td className="border px-4 py-2">{p.psychologist}</td> */}
-<td className="p-2 border text-center">
-{p.status === "SUCCESS" && (
-  <button
-    className="px-3 py-1 text-xs rounded bg-yellow-200 
+                </td>
+                {/* <td className="border px-4 py-2">{p.psychologist}</td> */}
+                <td className="p-2 border text-center">
+                  {p.status === "SUCCESS" && (
+                    <button
+                      className="px-3 py-1 text-xs rounded bg-yellow-200 
                text-yellow-800 hover:bg-yellow-300 border border-yellow-400"
-    onClick={() => {
-      confirm(
-        `Yakin ingin REFUND pembayaran #${p.id}?`,
-        () => {
-          updateStatus(p.id, "REFUND");
-        }
-      );
-    }}
-  >
-    Refund
-  </button>
-)}
+                      onClick={() => {
+                        confirm(
+                          `Yakin ingin REFUND pembayaran #${p.id}?`,
+                          () => {
+                            updateStatus(p.id, "REFUND");
+                          },
+                        );
+                      }}
+                    >
+                      Refund
+                    </button>
+                  )}
 
-
- {p.status === "REFUND" && (
-  <button
-    className="px-3 py-1 text-xs rounded bg-red-200 
+                  {p.status === "REFUND" && (
+                    <button
+                      className="px-3 py-1 text-xs rounded bg-red-200 
                text-red-800 hover:bg-red-300 border border-red-400 ml-1"
-    onClick={() => {
-      confirm(
-        `Batalkan REFUND untuk pembayaran #${p.id}?`,
-        () => {
-          updateStatus(p.id, "SUCCESS");
-        }
-      );
-    }}
-  >
-    Batalkan Refund
-  </button>
-)}
+                      onClick={() => {
+                        confirm(
+                          `Batalkan REFUND untuk pembayaran #${p.id}?`,
+                          () => {
+                            updateStatus(p.id, "SUCCESS");
+                          },
+                        );
+                      }}
+                    >
+                      Batalkan Refund
+                    </button>
+                  )}
 
-
-  {p.status !== "SUCCESS" && p.status !== "REFUND" && (
-    <span className="text-gray-400 text-xs">-</span>
-  )}
-</td>
-
-
-
+                  {p.status !== "SUCCESS" && p.status !== "REFUND" && (
+                    <span className="text-gray-400 text-xs">-</span>
+                  )}
+                </td>
               </tr>
             ))}
             {displayedPayments.length === 0 && (
               <tr>
-                <td colSpan={14} className="text-center p-6 text-gray-400 italic">
+                <td
+                  colSpan={14}
+                  className="text-center p-6 text-gray-400 italic"
+                >
                   Belum ada pembayaran
                 </td>
               </tr>
@@ -706,7 +673,6 @@ if (totalValueCell) {
           </tbody>
         </table>
       </div>
-
       {/* Pagination + Tombol Export */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-3 mb-6">
         <button
@@ -740,10 +706,16 @@ if (totalValueCell) {
           </div>
         )}
       </div>
-
-  <Toaster />
-      {/* Promo Form 
-      <FinancePromoForm /> */}
+      <hr className="my-10 border-gray-300" />
+      <div className="mb-4">
+        <h2 className="text-2xl font-bold text-gray-800">
+          Manajemen Promo (Kupon Voucher)
+        </h2>
+        <p className="text-gray-500">
+          Buat dan kelola kode voucher diskon khusus untuk pengguna.
+        </p>
+      </div>
+      <FinancePromoForm />
     </div>
   );
 }

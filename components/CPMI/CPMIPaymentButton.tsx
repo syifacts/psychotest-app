@@ -2,12 +2,10 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import styles from "../../app/tes/cpmi/cpmi.module.css";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { motion } from "framer-motion";
 import { useToast } from "@/components/ui/use-toast";
-import { Toaster } from "@/components/ui/toaster";
 
 import {
   Dialog,
@@ -57,7 +55,6 @@ const paymentMethods = [
 
 const getFinalPrice = (testInfo: any) => {
   if (!testInfo) return 0;
-
   const {
     price,
     customPrice,
@@ -65,21 +62,16 @@ const getFinalPrice = (testInfo: any) => {
     priceDiscount,
     percentDiscount,
   } = testInfo;
-
   if (customPrice != null && customPrice > 0) return customPrice;
-
   if (discountNominal != null && price != null) return price;
-
   if (
     priceDiscount != null &&
     priceDiscount > 0 &&
     priceDiscount < (price ?? 0)
   )
     return priceDiscount;
-
   if (percentDiscount != null && percentDiscount > 0 && price != null)
     return Math.round(price - (price * percentDiscount) / 100);
-
   return price ?? 0;
 };
 
@@ -94,6 +86,7 @@ function CPMIPaymentInner({
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const { toast } = useToast();
+  const router = useRouter();
 
   const [quantity, setQuantity] = useState(1);
   const [user, setUser] = useState<User | null>(null);
@@ -106,7 +99,6 @@ function CPMIPaymentInner({
   const [tokenUser, setTokenUser] = useState<User | null>(null);
 
   const [open, setOpen] = useState(false);
-
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -115,9 +107,17 @@ function CPMIPaymentInner({
   const [method, setMethod] = useState("BRIVA");
   const buttonText = savedStage === "questions" ? "Lanjutkan Tes" : "Mulai Tes";
 
+  // === STATE UNTUK PROMO ===
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [activePromo, setActivePromo] = useState<any>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState("");
+
   const displayPrice = getFinalPrice(testInfo);
-  const unitPrice = displayPrice;
-  const totalPrice = displayPrice * quantity;
+  const totalPriceBeforePromo = displayPrice * quantity;
+  const finalPriceToPay = activePromo
+    ? activePromo.finalPrice
+    : totalPriceBeforePromo;
 
   useEffect(() => {
     if (user) {
@@ -160,9 +160,7 @@ function CPMIPaymentInner({
           return;
         }
 
-        const resUser = await fetch("/api/auth/me", {
-          credentials: "include",
-        });
+        const resUser = await fetch("/api/auth/me", { credentials: "include" });
         const dataUser = await resUser.json();
 
         if (resUser.ok && dataUser.user) {
@@ -180,7 +178,6 @@ function CPMIPaymentInner({
         setCheckingToken(false);
       }
     };
-
     fetchUser();
   }, [token, setHasAccess]);
 
@@ -221,7 +218,6 @@ function CPMIPaymentInner({
         console.error("Gagal cek payment terakhir:", err);
       }
     };
-
     checkPayment();
   }, [user, testInfo, setHasAccess, paymentStatus, hasAccess]);
 
@@ -239,9 +235,7 @@ function CPMIPaymentInner({
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Gagal update user");
-      }
+      if (!res.ok) throw new Error(data.error || "Gagal update user");
 
       toast({
         title: "Berhasil",
@@ -249,13 +243,40 @@ function CPMIPaymentInner({
         duration: 4000,
       });
     } catch (err) {
-      console.error(err);
       toast({
         title: "Gagal menyimpan",
         description: "Terjadi kesalahan saat menyimpan identitas.",
-        variant: "error",
+        variant: "error", // ✅ FIX: Ganti ke "error"
         duration: 5000,
       });
+    }
+  };
+
+  // === FUNGSI VALIDASI PROMO ===
+  const handleApplyPromo = async () => {
+    setPromoError("");
+    setPromoLoading(true);
+    try {
+      const res = await fetch("/api/promo/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: promoCodeInput,
+          currentTotal: totalPriceBeforePromo,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.valid) {
+        setPromoError(data.error);
+        setActivePromo(null);
+      } else {
+        setActivePromo(data);
+      }
+    } catch (err) {
+      setPromoError("Gagal mengecek promo.");
+    } finally {
+      setPromoLoading(false);
     }
   };
 
@@ -266,10 +287,9 @@ function CPMIPaymentInner({
       toast({
         title: "Login diperlukan",
         description: "Silakan login terlebih dahulu untuk membeli test!",
-        variant: "error",
+        variant: "error", // ✅ FIX: Ganti ke "error"
         duration: 8000,
       });
-
       window.location.href = "/login";
       return;
     }
@@ -285,6 +305,7 @@ function CPMIPaymentInner({
           testTypeId: testInfo.id,
           quantity: user.role === "PERUSAHAAN" ? quantity : 1,
           method,
+          promoId: activePromo?.promoId,
         }),
       });
 
@@ -292,10 +313,9 @@ function CPMIPaymentInner({
         toast({
           title: "Login diperlukan",
           description: "Silakan login terlebih dahulu untuk membeli test!",
-          variant: "error",
+          variant: "error", // ✅ FIX: Ganti ke "error"
           duration: 8000,
         });
-
         window.location.href = "/login";
         return;
       }
@@ -305,6 +325,7 @@ function CPMIPaymentInner({
       if (!res.ok || !data.success) {
         return alert(data.error || "❌ Pembayaran gagal!");
       }
+
       if (data.startTest || data.payment?.status === "FREE") {
         setHasAccess(true);
         setPaymentStatus(data.payment.status);
@@ -313,22 +334,12 @@ function CPMIPaymentInner({
         return;
       }
 
-      if (data.payment?.paymentUrl) {
-        window.open(data.payment.paymentUrl, "_blank");
+      if (data.payment?.reference) {
+        router.push(`/pembayaran/${data.payment.reference}`);
         setOpen(false);
         return;
       }
-      if (data.payment?.status === "SUCCESS") {
-        setHasAccess(true);
-        setPaymentStatus("SUCCESS");
-        setOpen(false);
-        setFormData({
-          fullName: user.name || "",
-          email: user.email || "",
-          phone: user.phone || "",
-        });
-        return;
-      }
+
       setPaymentStatus(data.payment.status);
     } catch (err) {
       console.error(err);
@@ -339,57 +350,31 @@ function CPMIPaymentInner({
   };
 
   if (checkingToken) return <p>Memeriksa status tes...</p>;
-
-  if (role === "SUPERADMIN") {
+  if (role === "SUPERADMIN")
     return (
       <p style={{ fontWeight: 500, color: "#555" }}>
         Anda login sebagai Superadmin. Hanya bisa melihat status tes.
       </p>
     );
-  }
-
-  if (tokenCompleted) {
+  if (tokenCompleted)
     return (
       <p style={{ color: "red", fontWeight: 500 }}>
         ✅ Tes sudah selesai, tidak bisa mengerjakan lagi.
       </p>
     );
-  }
 
-  if (tokenUser && !tokenCompleted) {
+  if (
+    (tokenUser && !tokenCompleted) ||
+    (user?.role === "GUEST" && hasAccess) ||
+    (hasAccess && user?.role !== "PERUSAHAAN")
+  ) {
     return (
       <div className="text-center mt-4">
-        <motion.p
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-sm bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 px-4 py-3 rounded-xl mb-6 border border-blue-200 flex items-center gap-2 justify-center"
-        >
-          <span className="text-xl">🏢</span>
-          <span>Sudah didaftarkan oleh perusahaan ({tokenUser.name})</span>
-        </motion.p>
-        <button className={`${styles.btn} mt-1`} onClick={startAttempt}>
-          {buttonText}
-        </button>
-      </div>
-    );
-  }
-
-  if (user?.role === "GUEST" && hasAccess) {
-    return (
-      <div>
-        <p>
-          ✅ Sudah didaftarkan oleh perusahaan: <b>{user.name}</b>
-        </p>
-        <button className={styles.btn} onClick={startAttempt}>
-          {buttonText}
-        </button>
-      </div>
-    );
-  }
-
-  if (hasAccess && user?.role !== "PERUSAHAAN") {
-    return (
-      <div>
+        {tokenUser && !tokenCompleted && (
+          <p className="text-sm bg-blue-50 text-blue-700 px-4 py-3 rounded-xl mb-4">
+            🏢 Sudah didaftarkan oleh perusahaan ({tokenUser.name})
+          </p>
+        )}
         <button className={styles.btn} onClick={startAttempt}>
           {buttonText}
         </button>
@@ -408,7 +393,7 @@ function CPMIPaymentInner({
           </Button>
         </DialogTrigger>
 
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Data Identitas & Pembayaran</DialogTitle>
           </DialogHeader>
@@ -417,95 +402,95 @@ function CPMIPaymentInner({
             Dengan ini kamu akan membeli test{" "}
             <span className="font-semibold text-gray-800">
               {testInfo?.name ?? "yang dipilih"}
-            </span>{" "}
-            (Rp {displayPrice.toLocaleString("id-ID")})
+            </span>
           </p>
 
-          <div className="p-3 mb-4 rounded bg-yellow-50 border border-yellow-300 text-yellow-700 text-sm">
-            ⚠️ Perhatian: Identitas yang Anda ubah akan langsung disimpan dan
-            menggantikan data sebelumnya.
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Identitas */}
+            {/* BAGIAN KIRI: Identitas */}
             <div className="space-y-3">
-              <h4 className="font-medium mb-2">Data Identitas</h4>
+              <h4 className="font-medium mb-2 border-b pb-2 text-blue-700">
+                Data Identitas
+              </h4>
               <div>
-                <label className="block text-sm font-medium">
+                <label className="block text-sm font-medium mb-1">
                   Nama Lengkap
                 </label>
                 <input
                   type="text"
-                  className="w-full border rounded p-2"
+                  className="w-full border rounded-lg p-2 bg-gray-50 focus:ring-2 focus:ring-blue-400 outline-none transition"
                   value={formData.fullName}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      fullName: e.target.value,
-                    })
+                    setFormData({ ...formData, fullName: e.target.value })
                   }
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium">Email</label>
+                <label className="block text-sm font-medium mb-1">Email</label>
                 <input
                   type="email"
-                  className="w-full border rounded p-2"
+                  className="w-full border rounded-lg p-2 bg-gray-50 focus:ring-2 focus:ring-blue-400 outline-none transition"
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium">No. Telepon</label>
+                <label className="block text-sm font-medium mb-1">
+                  No. Telepon
+                </label>
                 <input
                   type="text"
-                  className="w-full border rounded p-2"
+                  className="w-full border rounded-lg p-2 bg-gray-50 focus:ring-2 focus:ring-blue-400 outline-none transition"
                   value={formData.phone}
                   onChange={(e) =>
                     setFormData({ ...formData, phone: e.target.value })
                   }
                 />
               </div>
-
-              <Button className={styles.btn} onClick={handleSaveIdentity}>
+              <Button
+                variant="outline"
+                className="w-full mt-2"
+                onClick={handleSaveIdentity}
+              >
                 Simpan Identitas
               </Button>
             </div>
 
-            {/* Metode pembayaran */}
+            {/* BAGIAN KANAN: Metode & Promo */}
             <div className="space-y-4">
-              <h4 className="font-medium mb-2">Metode Pembayaran</h4>
+              <h4 className="font-medium mb-2 border-b pb-2 text-blue-700">
+                Metode Pembayaran
+              </h4>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {paymentMethods.map((pm) => (
                   <div
                     key={pm.code}
-                    className={`cursor-pointer border rounded-lg p-3 flex flex-col items-center justify-center text-center transition hover:border-blue-500 ${
+                    className={`cursor-pointer border rounded-lg p-2 flex flex-col items-center justify-center text-center transition hover:border-blue-500 ${
                       method === pm.code
-                        ? "border-blue-600 ring-2 ring-blue-200"
-                        : "border-gray-300"
+                        ? "border-blue-600 bg-blue-50 ring-1 ring-blue-200"
+                        : "border-gray-200"
                     }`}
                     onClick={() => setMethod(pm.code)}
                   >
                     <Image
                       src={pm.logo}
                       alt={pm.label}
-                      width={40}
-                      height={40}
-                      className="mb-2"
+                      width={36}
+                      height={36}
+                      className="mb-1 object-contain"
                     />
-                    <span className="text-sm font-medium">{pm.label}</span>
+                    <span className="text-[10px] font-medium hidden sm:block">
+                      {pm.label}
+                    </span>
                   </div>
                 ))}
               </div>
 
               {user?.role === "PERUSAHAAN" && (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1 text-gray-700">
+                <div className="mt-4">
+                  <label className="block text-sm font-medium mb-1">
                     Jumlah Kuantitas
                   </label>
                   <input
@@ -513,37 +498,99 @@ function CPMIPaymentInner({
                     min={1}
                     value={quantity}
                     onChange={(e) => setQuantity(Number(e.target.value))}
-                    className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+                    className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400 outline-none"
                   />
                 </div>
               )}
 
-              <div className="p-4 mb-4 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 text-blue-900 text-sm shadow-sm">
-                <h4 className="font-medium mb-2">Ringkasan Pembayaran</h4>
-                <div className="flex justify-between mb-1">
+              {/* ✅ FORM PROMO CODE */}
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Punya Kode Promo?
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    className="flex-1 border rounded-lg p-2 uppercase text-sm font-mono focus:ring-2 focus:ring-blue-400 outline-none transition"
+                    placeholder="Masukkan kode"
+                    value={promoCodeInput}
+                    onChange={(e) =>
+                      setPromoCodeInput(e.target.value.toUpperCase())
+                    }
+                    disabled={!!activePromo}
+                  />
+                  {!activePromo ? (
+                    <Button
+                      onClick={handleApplyPromo}
+                      disabled={!promoCodeInput || promoLoading}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {promoLoading ? "Cek..." : "Pakai"}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="destructive" // Button bawaan Shadcn emang masih pake destructive
+                      onClick={() => {
+                        setActivePromo(null);
+                        setPromoCodeInput("");
+                      }}
+                    >
+                      Batal
+                    </Button>
+                  )}
+                </div>
+                {promoError && (
+                  <p className="text-red-500 text-xs mt-2">{promoError}</p>
+                )}
+              </div>
+
+              {/* ✅ RINGKASAN PEMBAYARAN */}
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-2 text-sm shadow-sm">
+                <div className="flex justify-between text-gray-600">
                   <span>Harga Satuan:</span>
                   <span>Rp {displayPrice.toLocaleString("id-ID")}</span>
                 </div>
 
                 {user?.role === "PERUSAHAAN" && (
-                  <div className="flex justify-between mb-1">
+                  <div className="flex justify-between text-gray-600">
                     <span>Kuantitas:</span>
-                    <span>{quantity}</span>
+                    <span>x {quantity}</span>
                   </div>
                 )}
 
-                <div className="flex justify-between mt-2 pt-2 border-t border-blue-200 font-semibold text-blue-800">
-                  <span>Total:</span>
-                  <span>Rp {totalPrice.toLocaleString("id-ID")}</span>
+                {activePromo && (
+                  <div className="flex justify-between text-emerald-600 font-medium">
+                    <span>Diskon Promo:</span>
+                    <span>
+                      - Rp {activePromo.discountAmount.toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center mt-2 pt-3 border-t border-blue-200">
+                  <span className="text-gray-700 font-medium">
+                    Total Bayar:
+                  </span>
+                  <div className="flex flex-col items-end">
+                    {/* Coret Harga Asli Kalau Ada Diskon */}
+                    {activePromo && (
+                      <span className="text-xs text-gray-400 line-through decoration-red-400 decoration-2">
+                        Rp {totalPriceBeforePromo.toLocaleString("id-ID")}
+                      </span>
+                    )}
+                    <span className="text-xl font-bold text-blue-800">
+                      Rp {finalPriceToPay.toLocaleString("id-ID")}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               <Button
-                className={styles.btn + " w-full"}
+                className="w-full py-6 text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg transition-transform hover:-translate-y-0.5 mt-2"
                 onClick={handlePayment}
                 disabled={!user || loading}
               >
-                Lanjutkan Pembayaran
+                {loading ? "Memproses..." : "Lanjutkan Pembayaran"}
               </Button>
             </div>
           </div>

@@ -55,19 +55,20 @@ export default function FinancePromoPage() {
       maxDiscount: maxDiscount ? Number(maxDiscount) : null,
       validFrom: validFrom || null,
       validUntil: validUntil || null,
-  isActive: true, // ✅ ubah ini
+      isActive: true, // ✅ ubah ini
     };
 
     try {
-const res = await fetch("/api/promo", {
-  method: editingPromo ? "PATCH" : "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ id: editingPromo?.id, ...body }),
-});
-
+      const res = await fetch("/api/promo", {
+        method: editingPromo ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editingPromo?.id, ...body }),
+      });
 
       if (!res.ok) throw new Error("Gagal menyimpan promo");
-      alert(editingPromo ? "Promo berhasil diperbarui!" : "Promo berhasil dibuat!");
+      alert(
+        editingPromo ? "Promo berhasil diperbarui!" : "Promo berhasil dibuat!",
+      );
       setOpenDialog(false);
       fetchPromos();
       resetForm();
@@ -108,7 +109,7 @@ const res = await fetch("/api/promo", {
       const res = await fetch(`/api/promo/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ isActive: false }), // ✅ ubah ini juga
+        body: JSON.stringify({ isActive: false }), // ✅ ubah ini juga
       });
       if (!res.ok) throw new Error("Gagal nonaktifkan promo");
       fetchPromos();
@@ -119,24 +120,24 @@ const res = await fetch("/api/promo", {
   };
 
   // 🗑️ hapus promo
- const handleDelete = async (id: number) => {
-  if (!confirm("Yakin ingin menghapus promo ini?")) return;
+  const handleDelete = async (id: number) => {
+    if (!confirm("Yakin ingin menghapus promo ini?")) return;
 
-  try {
-    const res = await fetch("/api/promo", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
+    try {
+      const res = await fetch("/api/promo", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
 
-    if (!res.ok) throw new Error("Gagal menghapus promo");
-    alert("Promo berhasil dihapus");
-    fetchPromos();
-  } catch (err) {
-    console.error(err);
-    alert("Terjadi kesalahan saat menghapus promo");
-  }
-};
+      if (!res.ok) throw new Error("Gagal menghapus promo");
+      alert("Promo berhasil dihapus");
+      fetchPromos();
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan saat menghapus promo");
+    }
+  };
 
   return (
     <div className="mt-10">
@@ -163,8 +164,12 @@ const res = await fetch("/api/promo", {
               <th className="px-4 py-3 border-b border-indigo-200">Kode</th>
               <th className="px-4 py-3 border-b border-indigo-200">Tipe</th>
               <th className="px-4 py-3 border-b border-indigo-200">Nilai</th>
-              <th className="px-4 py-3 border-b border-indigo-200">Tanggal Mulai</th>
-              <th className="px-4 py-3 border-b border-indigo-200">Tanggal Berakhir</th>
+              <th className="px-4 py-3 border-b border-indigo-200">
+                Tanggal Mulai
+              </th>
+              <th className="px-4 py-3 border-b border-indigo-200">
+                Tanggal Berakhir
+              </th>
               <th className="px-4 py-3 border-b border-indigo-200">Status</th>
               <th className="px-4 py-3 border-b border-indigo-200">Aksi</th>
             </tr>
@@ -176,12 +181,16 @@ const res = await fetch("/api/promo", {
                   key={promo.id}
                   className="text-center hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200"
                 >
-                  <td className="px-4 py-3 border-b border-indigo-100 font-medium text-indigo-700">{promo.code}</td>
+                  <td className="px-4 py-3 border-b border-indigo-100 font-medium text-indigo-700">
+                    {promo.code}
+                  </td>
                   <td className="px-4 py-3 border-b border-indigo-100">
                     {promo.type === "PERCENT" ? "Persentase" : "Nominal"}
                   </td>
                   <td className="px-4 py-3 border-b border-indigo-100 text-blue-700 font-medium">
-                    {promo.type === "PERCENT" ? `${promo.value}%` : `Rp ${promo.value.toLocaleString()}`}
+                    {promo.type === "PERCENT"
+                      ? `${promo.value}%`
+                      : `Rp ${promo.value.toLocaleString()}`}
                   </td>
                   <td className="px-4 py-3 border-b border-indigo-100 text-gray-600">
                     {promo.validFrom
@@ -194,25 +203,30 @@ const res = await fetch("/api/promo", {
                       : "∞"}
                   </td>
                   <td className="px-4 py-3 border-b border-indigo-100">
-                  {(() => {
-  const now = new Date();
-  const start = promo.validFrom ? new Date(promo.validFrom) : null;
-  const end = promo.validUntil ? new Date(promo.validUntil) : null;
+                    {(() => {
+                      const now = new Date();
+                      const start = promo.validFrom
+                        ? new Date(promo.validFrom)
+                        : null;
+                      const end = promo.validUntil
+                        ? new Date(promo.validUntil)
+                        : null;
 
-  const isActive =
-    (!start || start <= now) && (!end || end >= now);
+                      const isActive =
+                        (!start || start <= now) &&
+                        (!end || end >= now) &&
+                        promo.isActive !== false;
 
-  return isActive ? (
-    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-      Aktif
-    </span>
-  ) : (
-    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
-      Nonaktif
-    </span>
-  );
-})()}
-
+                      return isActive ? (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                          Aktif
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
+                          Nonaktif
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3 border-b border-indigo-100 text-center">
                     <div className="flex justify-center gap-2">
@@ -222,7 +236,7 @@ const res = await fetch("/api/promo", {
                       >
                         <Pencil size={14} /> Edit
                       </button>
-                      {promo.active && (
+                      {promo.isActive !== false && (
                         <button
                           onClick={() => handleDeactivate(promo.id)}
                           className="flex items-center gap-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white text-xs px-3 py-1.5 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md"
@@ -242,7 +256,10 @@ const res = await fetch("/api/promo", {
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="text-center py-6 text-gray-400 italic">
+                <td
+                  colSpan={7}
+                  className="text-center py-6 text-gray-400 italic"
+                >
                   Belum ada promo aktif
                 </td>
               </tr>
@@ -276,8 +293,24 @@ const res = await fetch("/api/promo", {
 
             {/* Form */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 bg-white/70 p-6 rounded-xl shadow-inner border border-indigo-100">
+              {/* ✅ KOLOM INPUT KODE PROMO DITAMBAHKAN DI SINI */}
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Tipe Promo</label>
+                <label className="text-sm font-medium text-gray-600 mb-1">
+                  Kode Promo
+                </label>
+                <input
+                  type="text"
+                  placeholder="Kosongkan utk Auto-Generate"
+                  className="border border-indigo-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-400 outline-none uppercase font-mono text-sm"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-600 mb-1">
+                  Tipe Promo
+                </label>
                 <select
                   className="border border-indigo-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-400 outline-none"
                   value={promoType}
@@ -289,7 +322,9 @@ const res = await fetch("/api/promo", {
               </div>
 
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Nilai Promo</label>
+                <label className="text-sm font-medium text-gray-600 mb-1">
+                  Nilai Promo
+                </label>
                 <input
                   type="number"
                   placeholder="Contoh: 50000 / 10"
@@ -300,7 +335,9 @@ const res = await fetch("/api/promo", {
               </div>
 
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Minimal Pembelian</label>
+                <label className="text-sm font-medium text-gray-600 mb-1">
+                  Minimal Pembelian
+                </label>
                 <input
                   type="number"
                   placeholder="Opsional"
@@ -311,7 +348,9 @@ const res = await fetch("/api/promo", {
               </div>
 
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Maksimal Diskon</label>
+                <label className="text-sm font-medium text-gray-600 mb-1">
+                  Maksimal Diskon
+                </label>
                 <input
                   type="number"
                   placeholder="Opsional"
@@ -322,7 +361,9 @@ const res = await fetch("/api/promo", {
               </div>
 
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Tanggal Mulai</label>
+                <label className="text-sm font-medium text-gray-600 mb-1">
+                  Tanggal Mulai
+                </label>
                 <input
                   type="date"
                   className="border border-indigo-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-400 outline-none"
@@ -332,7 +373,9 @@ const res = await fetch("/api/promo", {
               </div>
 
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Tanggal Berakhir</label>
+                <label className="text-sm font-medium text-gray-600 mb-1">
+                  Tanggal Berakhir
+                </label>
                 <input
                   type="date"
                   className="border border-indigo-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-400 outline-none"
@@ -354,7 +397,8 @@ const res = await fetch("/api/promo", {
                 onClick={handleSavePromo}
                 className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
               >
-                <Gift size={18} /> {editingPromo ? "Simpan Perubahan" : "Simpan Promo"}
+                <Gift size={18} />{" "}
+                {editingPromo ? "Simpan Perubahan" : "Simpan Promo"}
               </button>
             </div>
           </motion.div>

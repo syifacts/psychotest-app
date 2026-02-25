@@ -1,15 +1,13 @@
-// app/api/expire-attempts/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function POST() {
   try {
-    // cari attempt yang sudah lebih dari 1 hari sejak reservedAt
     const expiredAttempts = await prisma.testAttempt.findMany({
       where: {
         status: "RESERVED",
         reservedAt: {
-          lt: new Date(Date.now() - 24 * 60 * 60 * 1000), // lebih dari 1 hari
+          lt: new Date(Date.now() - 24 * 60 * 60 * 1000),
         },
       },
     });
@@ -20,7 +18,6 @@ export async function POST() {
         data: { status: "EXPIRED" },
       });
 
-      // kembalikan kuota ke perusahaan
       if (attempt.packagePurchaseId) {
         await prisma.packagePurchase.update({
           where: { id: attempt.packagePurchaseId },
@@ -42,7 +39,7 @@ export async function POST() {
     console.error("Error expiring attempts:", err);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

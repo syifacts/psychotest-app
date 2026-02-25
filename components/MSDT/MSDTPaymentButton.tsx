@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import styles from "../../app/tes/msdt/msdt.module.css";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
@@ -79,7 +79,21 @@ const MSDTPaymentInner: React.FC<Props> = ({
   });
   const [method, setMethod] = useState("BRIVA");
 
+  // === STATE UNTUK PROMO ===
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [activePromo, setActivePromo] = useState<any>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState("");
+
   const buttonText = savedStage === "questions" ? "Lanjutkan Tes" : "Mulai Tes";
+  const router = useRouter();
+
+  // Hitung Harga
+  const basePrice = testInfo?.price || 0;
+  const totalPriceBeforePromo = basePrice * quantity;
+  const finalPriceToPay = activePromo
+    ? activePromo.finalPrice
+    : totalPriceBeforePromo;
 
   useEffect(() => {
     if (user) {
@@ -173,6 +187,34 @@ const MSDTPaymentInner: React.FC<Props> = ({
     }
   };
 
+  // === FUNGSI VALIDASI PROMO ===
+  const handleApplyPromo = async () => {
+    setPromoError("");
+    setPromoLoading(true);
+    try {
+      const res = await fetch("/api/promo/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: promoCodeInput,
+          currentTotal: totalPriceBeforePromo,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.valid) {
+        setPromoError(data.error);
+        setActivePromo(null);
+      } else {
+        setActivePromo(data);
+      }
+    } catch (err) {
+      setPromoError("Gagal mengecek promo.");
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
   const handlePayment = async () => {
     if (role === "SUPERADMIN") return;
 
@@ -193,6 +235,8 @@ const MSDTPaymentInner: React.FC<Props> = ({
           userId: user.id,
           testTypeId: testInfo.id,
           quantity: user.role === "PERUSAHAAN" ? quantity : 1,
+          method,
+          promoId: activePromo?.promoId, // ✅ Kirim promoId ke backend
         }),
       });
 
@@ -216,8 +260,8 @@ const MSDTPaymentInner: React.FC<Props> = ({
         return;
       }
 
-      if (data.payment?.paymentUrl) {
-        window.open(data.payment.paymentUrl, "_blank");
+      if (data.payment?.reference) {
+        router.push(`/pembayaran/${data.payment.reference}`);
         setOpen(false);
         return;
       }
@@ -307,7 +351,7 @@ const MSDTPaymentInner: React.FC<Props> = ({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Data Identitas & Pembayaran</DialogTitle>
         </DialogHeader>
@@ -316,92 +360,95 @@ const MSDTPaymentInner: React.FC<Props> = ({
           Dengan ini kamu akan membeli test{" "}
           <span className="font-semibold text-gray-800">
             {testInfo?.name ? ` ${testInfo.name}` : "yang dipilih"}
-          </span>{" "}
-          {testInfo?.price
-            ? `(Rp ${testInfo.price.toLocaleString("id-ID")})`
-            : ""}
+          </span>
         </p>
-
-        <div className="p-3 mb-4 rounded bg-yellow-50 border border-yellow-300 text-yellow-700 text-sm">
-          ⚠️ Perhatian: Identitas yang Anda ubah akan langsung disimpan dan
-          menggantikan data sebelumnya.
-        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Identitas */}
           <div className="space-y-3">
-            <h4 className="font-medium mb-2">Data Identitas</h4>
+            <h4 className="font-medium mb-2 border-b pb-2 text-blue-700">
+              Data Identitas
+            </h4>
             <div>
-              <label className="block text-sm font-medium">Nama Lengkap</label>
+              <label className="block text-sm font-medium mb-1">
+                Nama Lengkap
+              </label>
               <input
                 type="text"
-                className="w-full border rounded p-2"
+                className="w-full border rounded-lg p-2 bg-gray-50 focus:ring-2 focus:ring-blue-400 outline-none transition"
                 value={formData.fullName}
                 onChange={(e) =>
                   setFormData({ ...formData, fullName: e.target.value })
                 }
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium">Email</label>
+              <label className="block text-sm font-medium mb-1">Email</label>
               <input
                 type="email"
-                className="w-full border rounded p-2"
+                className="w-full border rounded-lg p-2 bg-gray-50 focus:ring-2 focus:ring-blue-400 outline-none transition"
                 value={formData.email}
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium">No. Telepon</label>
+              <label className="block text-sm font-medium mb-1">
+                No. Telepon
+              </label>
               <input
                 type="text"
-                className="w-full border rounded p-2"
+                className="w-full border rounded-lg p-2 bg-gray-50 focus:ring-2 focus:ring-blue-400 outline-none transition"
                 value={formData.phone}
                 onChange={(e) =>
                   setFormData({ ...formData, phone: e.target.value })
                 }
               />
             </div>
-
-            <Button className={styles.btn} onClick={handleSaveIdentity}>
+            <Button
+              variant="outline"
+              className="w-full mt-2"
+              onClick={handleSaveIdentity}
+            >
               Simpan Identitas
             </Button>
           </div>
 
           {/* Metode pembayaran */}
           <div className="space-y-4">
-            <h4 className="font-medium mb-2">Metode Pembayaran</h4>
+            <h4 className="font-medium mb-2 border-b pb-2 text-blue-700">
+              Metode Pembayaran
+            </h4>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {paymentMethods.map((pm) => (
                 <div
                   key={pm.code}
-                  className={`cursor-pointer border rounded-lg p-3 flex flex-col items-center justify-center text-center transition hover:border-blue-500 ${
+                  className={`cursor-pointer border rounded-lg p-2 flex flex-col items-center justify-center text-center transition hover:border-blue-500 ${
                     method === pm.code
-                      ? "border-blue-600 ring-2 ring-blue-200"
-                      : "border-gray-300"
+                      ? "border-blue-600 bg-blue-50 ring-1 ring-blue-200"
+                      : "border-gray-200"
                   }`}
                   onClick={() => setMethod(pm.code)}
                 >
                   <Image
                     src={pm.logo}
                     alt={pm.label}
-                    width={40}
-                    height={40}
-                    className="mb-2"
+                    width={36}
+                    height={36}
+                    className="mb-1 object-contain"
                   />
-                  <span className="text-sm font-medium">{pm.label}</span>
+                  <span className="text-[10px] font-medium hidden sm:block">
+                    {pm.label}
+                  </span>
                 </div>
               ))}
             </div>
 
             {user?.role === "PERUSAHAAN" && (
               <div>
-                <label className="block text-sm font-medium">
+                <label className="block text-sm font-medium mb-1">
                   Jumlah Kuantitas
                 </label>
                 <input
@@ -409,17 +456,97 @@ const MSDTPaymentInner: React.FC<Props> = ({
                   min={1}
                   value={quantity}
                   onChange={(e) => setQuantity(Number(e.target.value))}
-                  className="w-32 border rounded p-2"
+                  className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400 outline-none"
                 />
               </div>
             )}
 
+            {/* ✅ FORM PROMO CODE */}
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+              <label className="block text-sm font-medium mb-2 text-gray-700">
+                Punya Kode Promo?
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className="flex-1 border rounded-lg p-2 uppercase text-sm font-mono focus:ring-2 focus:ring-blue-400 outline-none transition"
+                  placeholder="Masukkan kode"
+                  value={promoCodeInput}
+                  onChange={(e) =>
+                    setPromoCodeInput(e.target.value.toUpperCase())
+                  }
+                  disabled={!!activePromo}
+                />
+                {!activePromo ? (
+                  <Button
+                    onClick={handleApplyPromo}
+                    disabled={!promoCodeInput || promoLoading}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {promoLoading ? "Cek..." : "Pakai"}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setActivePromo(null);
+                      setPromoCodeInput("");
+                    }}
+                  >
+                    Batal
+                  </Button>
+                )}
+              </div>
+              {promoError && (
+                <p className="text-red-500 text-xs mt-2">{promoError}</p>
+              )}
+            </div>
+
+            {/* ✅ RINGKASAN PEMBAYARAN */}
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-2 text-sm shadow-sm">
+              <div className="flex justify-between text-gray-600">
+                <span>Harga Satuan:</span>
+                <span>Rp {basePrice.toLocaleString("id-ID")}</span>
+              </div>
+
+              {user?.role === "PERUSAHAAN" && (
+                <div className="flex justify-between text-gray-600">
+                  <span>Kuantitas:</span>
+                  <span>x {quantity}</span>
+                </div>
+              )}
+
+              {activePromo && (
+                <div className="flex justify-between text-emerald-600 font-medium">
+                  <span>Diskon Promo:</span>
+                  <span>
+                    - Rp {activePromo.discountAmount.toLocaleString("id-ID")}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center mt-2 pt-3 border-t border-blue-200">
+                <span className="text-gray-700 font-medium">Total Bayar:</span>
+                <div className="flex flex-col items-end">
+                  {/* Coret Harga Asli Kalau Ada Diskon */}
+                  {activePromo && (
+                    <span className="text-xs text-gray-400 line-through decoration-red-400 decoration-2">
+                      Rp {totalPriceBeforePromo.toLocaleString("id-ID")}
+                    </span>
+                  )}
+                  <span className="text-xl font-bold text-blue-800">
+                    Rp {finalPriceToPay.toLocaleString("id-ID")}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <Button
-              className={styles.btn + " w-full"}
+              className="w-full py-6 text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg transition-transform hover:-translate-y-0.5 mt-2"
               onClick={handlePayment}
               disabled={!user || loading}
             >
-              Lanjutkan Pembayaran
+              {loading ? "Memproses..." : "Lanjutkan Pembayaran"}
             </Button>
           </div>
         </div>
