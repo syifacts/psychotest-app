@@ -23,6 +23,10 @@ interface Props {
     id: number;
     duration: number | null;
     price?: number | null;
+    customPrice?: number | null;
+    discountNominal?: number | null;
+    priceDiscount?: number | null;
+    percentDiscount?: number | null;
   } | null;
   role: "USER" | "PERUSAHAAN" | "GUEST" | "SUPERADMIN";
   userData: User | null;
@@ -47,6 +51,30 @@ const paymentMethods = [
   { code: "BCA", label: "BCA", logo: "/logos/bca.png" },
   { code: "BNI", label: "BNI", logo: "/logos/bni.png" },
 ];
+
+const getFinalPrice = (testInfo: any) => {
+  if (!testInfo) return 0;
+  const {
+    price,
+    customPrice,
+    discountNominal,
+    priceDiscount,
+    percentDiscount,
+  } = testInfo;
+
+  if (customPrice != null && customPrice > 0) return customPrice;
+  if (discountNominal != null && price != null) return price;
+  if (
+    priceDiscount != null &&
+    priceDiscount > 0 &&
+    priceDiscount < (price ?? 0)
+  )
+    return priceDiscount;
+  if (percentDiscount != null && percentDiscount > 0 && price != null)
+    return Math.round(price - (price * percentDiscount) / 100);
+
+  return price ?? 0;
+};
 
 const MSDTPaymentInner: React.FC<Props> = ({
   hasAccess,
@@ -79,7 +107,6 @@ const MSDTPaymentInner: React.FC<Props> = ({
   });
   const [method, setMethod] = useState("BRIVA");
 
-  // === STATE UNTUK PROMO ===
   const [promoCodeInput, setPromoCodeInput] = useState("");
   const [activePromo, setActivePromo] = useState<any>(null);
   const [promoLoading, setPromoLoading] = useState(false);
@@ -88,8 +115,7 @@ const MSDTPaymentInner: React.FC<Props> = ({
   const buttonText = savedStage === "questions" ? "Lanjutkan Tes" : "Mulai Tes";
   const router = useRouter();
 
-  // Hitung Harga
-  const basePrice = testInfo?.price || 0;
+  const basePrice = getFinalPrice(testInfo);
   const totalPriceBeforePromo = basePrice * quantity;
   const finalPriceToPay = activePromo
     ? activePromo.finalPrice
@@ -187,7 +213,6 @@ const MSDTPaymentInner: React.FC<Props> = ({
     }
   };
 
-  // === FUNGSI VALIDASI PROMO ===
   const handleApplyPromo = async () => {
     setPromoError("");
     setPromoLoading(true);
@@ -236,7 +261,7 @@ const MSDTPaymentInner: React.FC<Props> = ({
           testTypeId: testInfo.id,
           quantity: user.role === "PERUSAHAAN" ? quantity : 1,
           method,
-          promoId: activePromo?.promoId, // ✅ Kirim promoId ke backend
+          promoId: activePromo?.promoId,
         }),
       });
 
@@ -506,7 +531,16 @@ const MSDTPaymentInner: React.FC<Props> = ({
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-2 text-sm shadow-sm">
               <div className="flex justify-between text-gray-600">
                 <span>Harga Satuan:</span>
-                <span>Rp {basePrice.toLocaleString("id-ID")}</span>
+                <div className="text-right">
+                  {testInfo?.price && testInfo.price > basePrice && (
+                    <span className="line-through text-gray-400 mr-2 text-xs">
+                      Rp {testInfo.price.toLocaleString("id-ID")}
+                    </span>
+                  )}
+                  <span className="font-semibold">
+                    Rp {basePrice.toLocaleString("id-ID")}
+                  </span>
+                </div>
               </div>
 
               {user?.role === "PERUSAHAAN" && (
@@ -528,7 +562,6 @@ const MSDTPaymentInner: React.FC<Props> = ({
               <div className="flex justify-between items-center mt-2 pt-3 border-t border-blue-200">
                 <span className="text-gray-700 font-medium">Total Bayar:</span>
                 <div className="flex flex-col items-end">
-                  {/* Coret Harga Asli Kalau Ada Diskon */}
                   {activePromo && (
                     <span className="text-xs text-gray-400 line-through decoration-red-400 decoration-2">
                       Rp {totalPriceBeforePromo.toLocaleString("id-ID")}

@@ -107,14 +107,13 @@ function CPMIPaymentInner({
   const [method, setMethod] = useState("BRIVA");
   const buttonText = savedStage === "questions" ? "Lanjutkan Tes" : "Mulai Tes";
 
-  // === STATE UNTUK PROMO ===
   const [promoCodeInput, setPromoCodeInput] = useState("");
   const [activePromo, setActivePromo] = useState<any>(null);
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState("");
 
-  const displayPrice = getFinalPrice(testInfo);
-  const totalPriceBeforePromo = displayPrice * quantity;
+  const basePrice = getFinalPrice(testInfo);
+  const totalPriceBeforePromo = basePrice * quantity;
   const finalPriceToPay = activePromo
     ? activePromo.finalPrice
     : totalPriceBeforePromo;
@@ -246,13 +245,12 @@ function CPMIPaymentInner({
       toast({
         title: "Gagal menyimpan",
         description: "Terjadi kesalahan saat menyimpan identitas.",
-        variant: "error", // ✅ FIX: Ganti ke "error"
+        variant: "error",
         duration: 5000,
       });
     }
   };
 
-  // === FUNGSI VALIDASI PROMO ===
   const handleApplyPromo = async () => {
     setPromoError("");
     setPromoLoading(true);
@@ -287,7 +285,7 @@ function CPMIPaymentInner({
       toast({
         title: "Login diperlukan",
         description: "Silakan login terlebih dahulu untuk membeli test!",
-        variant: "error", // ✅ FIX: Ganti ke "error"
+        variant: "error",
         duration: 8000,
       });
       window.location.href = "/login";
@@ -313,7 +311,7 @@ function CPMIPaymentInner({
         toast({
           title: "Login diperlukan",
           description: "Silakan login terlebih dahulu untuk membeli test!",
-          variant: "error", // ✅ FIX: Ganti ke "error"
+          variant: "error",
           duration: 8000,
         });
         window.location.href = "/login";
@@ -529,7 +527,7 @@ function CPMIPaymentInner({
                     </Button>
                   ) : (
                     <Button
-                      variant="destructive" // Button bawaan Shadcn emang masih pake destructive
+                      variant="destructive"
                       onClick={() => {
                         setActivePromo(null);
                         setPromoCodeInput("");
@@ -548,7 +546,16 @@ function CPMIPaymentInner({
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-2 text-sm shadow-sm">
                 <div className="flex justify-between text-gray-600">
                   <span>Harga Satuan:</span>
-                  <span>Rp {displayPrice.toLocaleString("id-ID")}</span>
+                  <div className="text-right">
+                    {testInfo?.price && testInfo.price > basePrice && (
+                      <span className="line-through text-gray-400 mr-2 text-xs">
+                        Rp {testInfo.price.toLocaleString("id-ID")}
+                      </span>
+                    )}
+                    <span className="font-semibold">
+                      Rp {basePrice.toLocaleString("id-ID")}
+                    </span>
+                  </div>
                 </div>
 
                 {user?.role === "PERUSAHAAN" && (

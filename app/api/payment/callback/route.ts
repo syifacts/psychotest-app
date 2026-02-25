@@ -21,6 +21,10 @@ export async function POST(req: NextRequest) {
     // 🛡️ LAPIS 1: VERIFIKASI HMAC (Anti Webhook Spoofing)
     // ==========================================
     const headerSignature = req.headers.get("x-callback-signature");
+    console.log("=== TANGKAPAN PELURU JMETER ===");
+    console.log("SIGNATURE ASLI:", headerSignature);
+    console.log("BODY ASLI:", rawBody);
+    console.log("===============================");
     const isAuthentic = verifyTripaySignature(rawBody, body, headerSignature);
 
     if (!isAuthentic) {
