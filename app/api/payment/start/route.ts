@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
       userId: targetUserId,
       method = "BRIVA",
       guestToken,
+      promoId, // ✅ TANGKAP promoId DARI FRONTEND
     } = await req.json();
     console.log("DEBUG method from client:", method);
 
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
           userId,
           testTypeId,
           tokenId: tokenData.id,
-          status: "RESERVED", // ✅ benar
+          status: "RESERVED",
           companyId: tokenData.User.companyId || null,
         },
       });
@@ -158,7 +159,35 @@ export async function POST(req: NextRequest) {
 
     if (!finalPrice || finalPrice <= 0) finalPrice = basePrice;
 
-    const totalAmount = finalPrice * quantity;
+    let totalAmount = finalPrice * quantity; // Masih harga setelah diskon admin (misal 120rb)
+
+    // ====================================================================
+    // ✅ TAMBAHAN: LOGIKA DISKON VOUCHER PROMO (Potong 120rb jadi 100rb)
+    // ====================================================================
+    if (promoId) {
+      const promoRecord = await prisma.promo.findUnique({
+        where: { id: Number(promoId) },
+      });
+
+      if (promoRecord && promoRecord.isActive) {
+        let discountAmount = 0;
+        if (promoRecord.type === "PERCENT") {
+          discountAmount = (totalAmount * promoRecord.value) / 100;
+          if (
+            promoRecord.maxDiscount &&
+            discountAmount > promoRecord.maxDiscount
+          ) {
+            discountAmount = promoRecord.maxDiscount;
+          }
+        } else {
+          discountAmount = promoRecord.value; // Potong nominal
+        }
+
+        totalAmount -= discountAmount;
+        if (totalAmount < 0) totalAmount = 0; // Pastikan gak minus
+      }
+    }
+    // ====================================================================
 
     const finalUserId =
       decoded.role === "PERUSAHAAN" && targetUserId ? targetUserId : decoded.id;
@@ -209,10 +238,11 @@ export async function POST(req: NextRequest) {
         select: { id: true },
       });
     }
+
     const payment = await prisma.payment.create({
       data: {
         testTypeId: test.id,
-        amount: totalAmount,
+        amount: totalAmount, // ✅ Masukin angka yang udah fix ke DB (100rb)
         status: totalAmount === 0 ? "FREE" : "PENDING",
         userId: finalUserId,
         companyId: decoded.role === "PERUSAHAAN" ? decoded.id : null,
@@ -264,21 +294,21 @@ export async function POST(req: NextRequest) {
     const merchantRef = `PSY-${payment.id}-${Date.now()}`;
     const signature = crypto
       .createHmac("sha256", TRIPAY_PRIVATE_KEY)
-      .update(`${TRIPAY_MERCHANT_CODE}${merchantRef}${totalAmount}`)
+      .update(`${TRIPAY_MERCHANT_CODE}${merchantRef}${totalAmount}`) // ✅ Signature pake 100rb
       .digest("hex");
 
     const payload: any = {
       method: payMethod,
       merchant_ref: merchantRef,
-      amount: totalAmount,
+      amount: totalAmount, // ✅ Tagihan aslinya 100rb
       customer_name: user?.fullName || `User ${finalUserId}`,
       customer_email: user?.email || "no-reply@example.com",
       customer_phone: user?.phone || "081234567890",
       order_items: [
         {
           sku: `TEST-${test.id}`,
-          name: test.name,
-          price: finalPrice,
+          name: `${test.name} ${promoId ? "(Promo)" : ""}`, // ✅ Indikator barang promo
+          price: Math.round(totalAmount / quantity), // ✅ Wajib price * qty = totalAmount
           quantity,
         },
       ],

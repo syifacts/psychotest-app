@@ -41,7 +41,9 @@ export default function PaymentInvoice({
     paymentData?.payment_method_code || paymentData?.method || "default";
   const methodName =
     paymentData?.payment_method || paymentData?.method || "Pembayaran";
-  const totalAmount = paymentData?.total_amount || paymentData?.amount || 0;
+
+  const totalAmount = paymentData?.amount || paymentData?.total_amount || 0;
+
   const itemName = paymentData?.order_items?.[0]?.name || "Tiket Tes Psikologi";
 
   const isQris =
@@ -85,6 +87,7 @@ export default function PaymentInvoice({
                         Kuantitas: {paymentData?.quantity || 1}x
                       </p>
                     </div>
+                    {/* ✅ Tampil dengan Nominal Akurat */}
                     <p className="font-semibold text-gray-800">
                       Rp {totalAmount.toLocaleString("id-ID")}
                     </p>
