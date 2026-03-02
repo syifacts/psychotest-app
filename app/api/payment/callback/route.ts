@@ -24,38 +24,37 @@ export async function POST(req: NextRequest) {
       `\n[Webhook HTTP POST] Menerima payload untuk: ${merchant_ref}`,
     );
     console.log(`[Signature Header] ${headerSignature}`);
+    console.log(`[RAW BODY ASLI DARI TRIPAY]:\n${rawBody}`);
 
-    // 2. Environment Switch (Pengujian Kerentanan Sistem)
-    const isSecurityOn = process.env.SECURITY_MODE === "ON";
-
-    if (isSecurityOn) {
-      // Lapisan Keamanan 1: Autentikasi Kriptografi HMAC
-      const isAuthentic = verifyTripaySignature(rawBody, body, headerSignature);
-      if (!isAuthentic) {
-        return NextResponse.json(
-          { success: false, message: "Invalid signature" },
-          { status: 400 },
-        );
-      }
-
-      // Lapisan Keamanan 2: Idempotency Lock (Mitigasi Race Condition)
-      const isSafeToProcess = await checkIdempotency(merchant_ref);
-      if (!isSafeToProcess) {
-        return NextResponse.json(
-          { success: false, message: "Conflict / Duplicate Request Detected" },
-          { status: 409 },
-        );
-      }
-      console.log(
-        "[Security] Transaksi lolos verifikasi berlapis (HMAC & Redis).",
+    // 2. Lapisan Keamanan 1: Autentikasi Kriptografi HMAC (Anti-Spoofing)
+    const isAuthentic = verifyTripaySignature(rawBody, body, headerSignature);
+    if (!isAuthentic) {
+      console.error(
+        "❌ [SECURITY BREACH] Invalid HMAC Signature terdeteksi! Akses ditolak.",
       );
-    } else {
-      console.warn(
-        "[System Alert] Sistem berjalan tanpa perlindungan keamanan (SECURITY_MODE=OFF).",
+      return NextResponse.json(
+        { success: false, message: "Invalid signature" },
+        { status: 400 },
       );
     }
 
-    // 3. Eksekusi Kueri Pembaruan Database (Prisma ORM)
+    // 3. Lapisan Keamanan 2: Idempotency Lock (Mitigasi Race Condition & Replay Attack)
+    const isSafeToProcess = await checkIdempotency(merchant_ref);
+    if (!isSafeToProcess) {
+      console.warn(
+        `⚠️ [SECURITY WARNING] Duplicate Request dicegah untuk transaksi: ${merchant_ref}`,
+      );
+      return NextResponse.json(
+        { success: false, message: "Conflict / Duplicate Request Detected" },
+        { status: 409 },
+      );
+    }
+
+    console.log(
+      "✅ [Security] Transaksi lolos verifikasi berlapis (HMAC & Redis).",
+    );
+
+    // 4. Proses Update Database
     const paymentId = Number(merchant_ref.split("-")[1]);
     const payment = await prisma.payment.findUnique({
       where: { id: paymentId },
@@ -68,9 +67,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let newStatus: "SUCCESS" | "FAILED" | "PENDING" = "PENDING";
-    if (["PAID", "SETTLED", "SUCCESS"].includes(status)) newStatus = "SUCCESS";
-    else if (["EXPIRED", "FAILED", "REFUND"].includes(status))
+    const tripayStatus = status.toUpperCase();
+    let newStatus = "PENDING";
+    if (["PAID", "SETTLED", "SUCCESS"].includes(tripayStatus))
+      newStatus = "SUCCESS";
+    else if (["EXPIRED", "FAILED", "REFUND", "UNPAID"].includes(tripayStatus))
       newStatus = "FAILED";
 
     const updatedPayment = await prisma.payment.update({
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 4. Eksekusi Logika Bisnis (Pencetakan Akses Tes)
+    // 5. Akses Token Tes
     if (newStatus === "SUCCESS") {
       await prisma.testAttempt.create({
         data: {

@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       userId: targetUserId,
       method = "BRIVA",
       guestToken,
-      promoId, // ✅ TANGKAP promoId DARI FRONTEND
+      promoId,
     } = await req.json();
     console.log("DEBUG method from client:", method);
 
@@ -159,11 +159,8 @@ export async function POST(req: NextRequest) {
 
     if (!finalPrice || finalPrice <= 0) finalPrice = basePrice;
 
-    let totalAmount = finalPrice * quantity; // Masih harga setelah diskon admin (misal 120rb)
+    let totalAmount = finalPrice * quantity;
 
-    // ====================================================================
-    // ✅ TAMBAHAN: LOGIKA DISKON VOUCHER PROMO (Potong 120rb jadi 100rb)
-    // ====================================================================
     if (promoId) {
       const promoRecord = await prisma.promo.findUnique({
         where: { id: Number(promoId) },
@@ -180,14 +177,13 @@ export async function POST(req: NextRequest) {
             discountAmount = promoRecord.maxDiscount;
           }
         } else {
-          discountAmount = promoRecord.value; // Potong nominal
+          discountAmount = promoRecord.value;
         }
 
         totalAmount -= discountAmount;
-        if (totalAmount < 0) totalAmount = 0; // Pastikan gak minus
+        if (totalAmount < 0) totalAmount = 0;
       }
     }
-    // ====================================================================
 
     const finalUserId =
       decoded.role === "PERUSAHAAN" && targetUserId ? targetUserId : decoded.id;
@@ -242,7 +238,7 @@ export async function POST(req: NextRequest) {
     const payment = await prisma.payment.create({
       data: {
         testTypeId: test.id,
-        amount: totalAmount, // ✅ Masukin angka yang udah fix ke DB (100rb)
+        amount: totalAmount,
         status: totalAmount === 0 ? "FREE" : "PENDING",
         userId: finalUserId,
         companyId: decoded.role === "PERUSAHAAN" ? decoded.id : null,
@@ -353,6 +349,30 @@ export async function POST(req: NextRequest) {
         status: "PENDING",
       },
     });
+
+    const mockWebhookPayload = {
+      reference: data.data.reference,
+      merchant_ref: data.data.merchant_ref,
+      payment_method: data.data.payment_name,
+      payment_method_code: data.data.payment_method,
+      total_amount: data.data.amount,
+      fee_merchant: data.data.fee_merchant,
+      fee_customer: data.data.fee_customer,
+      total_fee: data.data.total_fee,
+      amount_received: data.data.amount_received,
+      is_closed_payment: data.data.is_closed_payment ?? 1,
+      status: "UNPAID",
+      paid_at: null,
+      note: "Simulated webhook payload for penetration testing",
+    };
+
+    console.log("\n[DEBUG] --- GENERATED MOCK WEBHOOK PAYLOAD ---");
+    console.log(
+      "Description: Payload generated for Webhook Spoofing simulation.",
+    );
+    console.log("Action: Copy the JSON below for API testing.");
+    console.log(JSON.stringify(mockWebhookPayload, null, 2));
+    console.log("----------------------------------------------\n");
 
     return NextResponse.json({
       success: true,
