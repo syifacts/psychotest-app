@@ -87,8 +87,10 @@ const Navbar = () => {
       <div className="left">
         <div className="logo">
           <Image src="/logoklinik.png" alt="Logo Klinik" width={80} height={40} />
-          <h1>Klinik Yuliarpan Medika</h1>
-        </div>
+<h1>
+  <span>psikodeltaindonesialab</span>
+  <span>Klinik Yuliarpan Medika</span>
+</h1>        </div>
         {!hideSearch && role !== "PSIKOLOG" && (
           <div className="search">
  <div className="search">
@@ -136,6 +138,9 @@ const Navbar = () => {
       </div>
 
       <style jsx>{`
+      h1 span {
+  display: block;
+}
         .header {
           display: flex;
           justify-content: space-between;
