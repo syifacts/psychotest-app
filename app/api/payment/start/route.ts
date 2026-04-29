@@ -380,7 +380,7 @@ export async function POST(req: NextRequest) {
     console.log("\n[HEADER X-Callback-Signature]");
     console.log(mockSignature);
     console.log("\n[BODY JSON RAW]");
-    console.log(JSON.stringify(mockWebhookPayload, null, 2));
+    console.log(JSON.stringify(mockWebhookPayload));
     console.log("----------------------------------------------\n");
 
     return NextResponse.json({
