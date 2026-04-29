@@ -98,7 +98,10 @@ const Navbar = () => {
             width={80}
             height={40}
           />
-          <h1>Klinik Yuliarpan Medika</h1>
+          <h1>
+  <span>psikodeltaindonesialab</span>
+  <span>Klinik Yuliarpan Medika</span>
+</h1>  
         </div>
         {!hideSearch && role !== "PSIKOLOG" && (
           <div className="search">
