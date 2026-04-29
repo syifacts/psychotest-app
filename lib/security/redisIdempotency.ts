@@ -1,19 +1,48 @@
 import { redis } from "@/lib/redis";
+import crypto from "crypto";
 
-export async function checkIdempotency(merchantRef: string): Promise<boolean> {
-  const lockKey = `payment_lock:${merchantRef}`;
+export async function checkIdempotency(
+  merchantRef: string,
+  rawBody: string,
+): Promise<boolean> {
+  const idempotencyKey = `idempotency:tripay:${merchantRef}`;
 
-  // Coba gembok ID Transaksi ini selama 5 menit (300 detik)
-  // 'NX' artinya Not eXists = Hanya digembok kalau belum ada yang ngegembok!
-  const isLocked = await redis.set(lockKey, "PROCESSING", "EX", 300, "NX");
+  // 1. [ADVANCED] Buat "Sidik Jari" dari seluruh payload mentah menggunakan SHA-256
+  // Jadi bukan cuma ngunci ID-nya aja, tapi ngunci "isi" datanya juga.
+  const payloadFingerprint = crypto
+    .createHash("sha256")
+    .update(rawBody)
+    .digest("hex");
 
-  // Kalau isLocked isinya null/false, berarti udah digembok duluan sama request lain (Replay Attack!)
+  // 2. [ATOMIC OPERATION] Coba pasang gembok selama 24 Jam (86400 detik)
+  // Value yang disimpan bukan "TRUE", melainkan Sidik Jari payload-nya.
+  const isLocked = await redis.set(
+    idempotencyKey,
+    payloadFingerprint,
+    "EX",
+    86400,
+    "NX",
+  );
+
+  // Jika isLocked false, berarti gembok sudah terpasang sebelumnya oleh request lain
   if (!isLocked) {
-    console.warn(
-      `⚠️ [REPLAY ATTACK BLOCKED] Transaksi ${merchantRef} sedang diproses!`,
-    );
-    return false;
+    // 3. [DEFENSE-IN-DEPTH FORENSIC] Selidiki kenapa request ini ditolak!
+    const existingFingerprint = await redis.get(idempotencyKey);
+
+    if (existingFingerprint === payloadFingerprint) {
+      // Sidik jari sama persis: Ini murni Replay Attack dari JMeter atau Tripay nge-retry.
+      console.warn(
+        `⚠️ [REPLAY ATTACK BLOCKED] Payload duplikat identik ditolak untuk ref: ${merchantRef}`,
+      );
+    } else {
+      // Sidik jari BEDA: Hacker menggunakan Merchant Ref lama tapi isinya diubah!
+      console.error(
+        `🚨 [HYBRID ATTACK DETECTED] Replay Attack dengan payload yang dimodifikasi pada ref: ${merchantRef}!`,
+      );
+    }
+
+    return false; // Apapun jenis serangannya, tetap tolak!
   }
 
-  return true; // Lolos, aman diproses
+  return true; // Lolos, request pertama yang sah
 }

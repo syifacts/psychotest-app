@@ -1,11 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { redis } from "@/lib/redis"; // TAMBAHAN: Import redis untuk Rate Limiting Layer 0
 import { verifyTripaySignature } from "@/lib/security/hmacVerifier";
 import { checkIdempotency } from "@/lib/security/redisIdempotency";
 
 export async function POST(req: NextRequest) {
+  // Dapatkan IP address untuk keperluan Rate Limiting
+  const ip = req.headers.get("x-forwarded-for") || "unknown_ip";
+
   try {
+    // -------------------------------------------------------------------------
+    // LAYER 0: Rate Limiting (Mencegah DDoS & Spam Request dari JMeter)
+    // -------------------------------------------------------------------------
+    const rateLimitKey = `rate_limit:callback:${ip}`;
+    const requestCount = await redis.incr(rateLimitKey);
+
+    // Set expired 60 detik (1 menit) pada request pertama
+    if (requestCount === 1) {
+      await redis.expire(rateLimitKey, 60);
+    }
+
+    // Batasi 50 request per menit per IP (Limit yang pas buat demo JMeter)
+    if (requestCount > 50) {
+      console.warn(`🚨 [DDoS BLOCKED] Terlalu banyak request dari IP: ${ip}`);
+      return NextResponse.json(
+        { success: false, message: "Too many requests" },
+        { status: 429 },
+      );
+    }
+
+    // -------------------------------------------------------------------------
     // 1. Ekstraksi dan Validasi Payload Dasar
+    // -------------------------------------------------------------------------
     const rawBody = await req.text();
     const body = JSON.parse(rawBody);
     const { reference, status, total_amount, merchant_ref } = body;
@@ -24,9 +50,11 @@ export async function POST(req: NextRequest) {
       `\n[Webhook HTTP POST] Menerima payload untuk: ${merchant_ref}`,
     );
     console.log(`[Signature Header] ${headerSignature}`);
-    console.log(`[RAW BODY ASLI DARI TRIPAY]:\n${rawBody}`);
+    // console.log(`[RAW BODY ASLI DARI TRIPAY]:\n${rawBody}`); // Boleh di-comment biar terminal ga penuh pas di-spam JMeter
 
-    // 2. Lapisan Keamanan 1: Autentikasi Kriptografi HMAC (Anti-Spoofing)
+    // -------------------------------------------------------------------------
+    // LAYER 1: Autentikasi Kriptografi HMAC (Anti Webhook Spoofing)
+    // -------------------------------------------------------------------------
     const isAuthentic = verifyTripaySignature(rawBody, body, headerSignature);
     if (!isAuthentic) {
       console.error(
@@ -38,8 +66,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Lapisan Keamanan 2: Idempotency Lock (Mitigasi Race Condition & Replay Attack)
-    const isSafeToProcess = await checkIdempotency(merchant_ref);
+    // -------------------------------------------------------------------------
+    // LAYER 2: Idempotency Lock (Mitigasi Race Condition & Replay Attack)
+    // -------------------------------------------------------------------------
+    const isSafeToProcess = await checkIdempotency(merchant_ref, rawBody);
     if (!isSafeToProcess) {
       console.warn(
         `⚠️ [SECURITY WARNING] Duplicate Request dicegah untuk transaksi: ${merchant_ref}`,
@@ -54,7 +84,9 @@ export async function POST(req: NextRequest) {
       "✅ [Security] Transaksi lolos verifikasi berlapis (HMAC & Redis).",
     );
 
-    // 4. Proses Update Database
+    // -------------------------------------------------------------------------
+    // 3. Proses Update Database (Sistem Utama)
+    // -------------------------------------------------------------------------
     const paymentId = Number(merchant_ref.split("-")[1]);
     const payment = await prisma.payment.findUnique({
       where: { id: paymentId },
@@ -84,7 +116,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 5. Akses Token Tes
+    // -------------------------------------------------------------------------
+    // 4. Akses Token Tes
+    // -------------------------------------------------------------------------
     if (newStatus === "SUCCESS") {
       await prisma.testAttempt.create({
         data: {

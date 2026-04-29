@@ -150,6 +150,9 @@ const Navbar = () => {
       </div>
 
       <style jsx>{`
+        h1 span {
+          display: block;
+        }
         .header {
           display: flex;
           justify-content: space-between;
