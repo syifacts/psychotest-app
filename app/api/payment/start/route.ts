@@ -366,11 +366,20 @@ export async function POST(req: NextRequest) {
       note: "Simulated webhook payload for penetration testing",
     };
 
+    const rawMockBody = JSON.stringify(mockWebhookPayload);
+    const mockSignature = crypto
+      .createHmac("sha256", TRIPAY_PRIVATE_KEY)
+      .update(rawMockBody)
+      .digest("hex");
+
     console.log("\n[DEBUG] --- GENERATED MOCK WEBHOOK PAYLOAD ---");
     console.log(
-      "Description: Payload generated for Webhook Spoofing simulation.",
+      "Description: Payload & Signature fresh siap untuk demo Webhook Spoofing.",
     );
-    console.log("Action: Copy the JSON below for API testing.");
+    console.log("Action: Copy Header dan Body di bawah ke Burp Suite.");
+    console.log("\n[HEADER X-Callback-Signature]");
+    console.log(mockSignature);
+    console.log("\n[BODY JSON RAW]");
     console.log(JSON.stringify(mockWebhookPayload, null, 2));
     console.log("----------------------------------------------\n");
 
