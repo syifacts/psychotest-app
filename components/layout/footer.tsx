@@ -39,9 +39,9 @@ export default function Footer() {
   {/* 🏥 Logo & Deskripsi */}
   <div className="flex flex-col justify-start transition-transform duration-300 hover:scale-[1.02]">
 <div className="flex items-center gap-5">
-  <div className="relative w-[80px] h-[80px] sm:w-[120px] sm:h-[120px] flex-shrink-0 drop-shadow-lg">
+  <div className="relative w-[120px] h-[120px] sm:w-[160px] sm:h-[160px] flex-shrink-0 drop-shadow-lg">
     <Image
-      src="/logoklinik.png"
+      src="/logoklinik21.png"
       alt="Logo Klinik Yuliarpan Medika"
       fill
       className="object-contain"

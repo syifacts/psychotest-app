@@ -87,7 +87,7 @@ const Navbar = () => {
     <header className="header">
       <div className="left">
         <div className="logo">
-          <Image src="/logoklinik.png" alt="Logo Klinik" width={80} height={40} />
+          <Image src="/logoklinik21.png" alt="Logo Klinik" width={160} height={90} />
     <h1>
   <span>psikodeltaindonesialab</span>
   <span>Klinik Yuliarpan Medika</span>
@@ -153,7 +153,7 @@ const Navbar = () => {
           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
           flex-wrap: wrap;
           gap: 10px;
-          height: 90px;
+          height: 130px;
             z-index: 1000; /* pastikan di atas semua elemen lain */
 
         }
