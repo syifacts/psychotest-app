@@ -69,7 +69,7 @@ const Navbar = () => {
       { href: "/admin/dashboard", label: "Dashboard" },
       { href: "/dashboard", label: "Layanan Tes" },
       { href: "/admin/master-data", label: "Master Data" },
-      { href: "/admin/activity-log", label: "Activity Log" },
+      // { href: "/admin/activity-log", label: "Activity Log" },
       { href: "/account", label: "Akun" },
     ],
     PERUSAHAAN: [
