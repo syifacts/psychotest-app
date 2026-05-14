@@ -477,14 +477,9 @@ if (!authToken)
     if (!attempt) {
       return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
     }
- // --- Proteksi akses ---
-    // const isOwner = attempt.userId === userId;
+
     const isCompany = attempt.companyId === userId;
     const isPsikolog = userRole === "PSIKOLOG";
-
-    // if (!isOwner && !isCompany && !isPsikolog) {
-    //   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    // }
     
     // --- SubtestResults
     const subtestResults = attempt.subtestResults.map((s:any) => ({

@@ -1,0 +1,44 @@
+rules:
+  # 🔴 OLA - IDOR (khusus attempts)
+  - id: possible-idor-attempts
+    paths:
+      include:
+        - app/api/attempts/**
+    patterns:
+      - pattern: |
+          $X = await prisma.$MODEL.findUnique({
+            where: { id: $ID }
+          })
+    message: "Potential IDOR: Access by ID without ownership check (attempts endpoint)"
+    severity: WARNING
+    languages: [typescript]
+
+  # 🔴 ROLE CHECK (khusus validate)
+  - id: possible-missing-role-validate
+    paths:
+      include:
+        - app/api/reports/validate/**
+    patterns:
+      - pattern: |
+          export async function $FUNC(...) {
+            ...
+          }
+    message: "Validate endpoint may lack role-based authorization (manual review required)"
+    severity: INFO
+    languages: [typescript]
+
+  # 🔴 DIGITAL SIGNATURE (ED25519) - validate
+  - id: possible-missing-signature-validate
+    paths:
+      include:
+        - app/api/reports/validate/**
+    patterns:
+      - pattern: |
+          export async function $FUNC(...) {
+            ...
+          }
+      - pattern-not: |
+          nacl.sign(...)
+    message: "No ED25519 digital signature detected in validate endpoint (manual verification required)"
+    severity: INFO
+    languages: [typescript]
