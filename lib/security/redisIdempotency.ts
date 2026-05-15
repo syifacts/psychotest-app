@@ -16,7 +16,7 @@ export async function checkIdempotency(
     idempotencyKey,
     payloadFingerprint,
     "EX",
-    86400,
+    10,
     "NX",
   );
 
