@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     );
 
     // -------------------------------------------------------------------------
-    // 3. Proses Update Database (Sistem Utama)
+    // 3. Proses Update Database (Sistem Utama).
     // -------------------------------------------------------------------------
     const paymentId = Number(merchant_ref.split("-")[1]);
     const payment = await prisma.payment.findUnique({
