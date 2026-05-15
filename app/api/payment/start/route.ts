@@ -379,8 +379,9 @@ export async function POST(req: NextRequest) {
       total_fee: data.data.total_fee,
       amount_received: data.data.amount_received,
       is_closed_payment: data.data.is_closed_payment ?? 1,
-      status: "UNPAID",
-      paid_at: null,
+      status: "PAID",
+      paid_at: Math.floor(Date.now() / 1000),
+
       note: "Simulated webhook payload for penetration testing",
     };
 
