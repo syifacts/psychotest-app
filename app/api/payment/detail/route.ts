@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// Endpoint publik untuk mengambil detail dan status tagihan berdasarkan Reference ID Tripay
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const reference = searchParams.get("reference");
 
+    // Validasi input parameter
     if (!reference) {
       return NextResponse.json(
         { success: false, error: "Nomor referensi tidak ditemukan di URL" },
@@ -13,6 +15,7 @@ export async function GET(req: Request) {
       );
     }
 
+    // Cari tagihan di database berdasarkan reference
     const payment = await prisma.payment.findFirst({
       where: { reference: reference },
     });
@@ -30,7 +33,6 @@ export async function GET(req: Request) {
       data: payment.payload,
     });
   } catch (error: any) {
-    console.error("Gagal mengambil detail pembayaran:", error);
     return NextResponse.json(
       { success: false, error: "Terjadi kesalahan server internal" },
       { status: 500 },
