@@ -379,16 +379,12 @@ export async function POST(req: NextRequest) {
       total_fee: data.data.total_fee,
       amount_received: data.data.amount_received,
       is_closed_payment: data.data.is_closed_payment ?? 1,
-      status: "PAID",
-      paid_at: Math.floor(Date.now() / 1000),
-
+      status: "UNPAID", // <-- UBAH KE UNPAID
       note: "Simulated webhook payload for penetration testing",
     };
 
-    // PENTING: Stringify tanpa spasi agar perhitungan HMAC akurat dengan input Burp Suite/JMeter
     const rawMockBody = JSON.stringify(mockWebhookPayload);
 
-    // Generate signature tandingan
     const mockSignature = crypto
       .createHmac("sha256", TRIPAY_PRIVATE_KEY)
       .update(rawMockBody)
@@ -396,9 +392,11 @@ export async function POST(req: NextRequest) {
 
     console.log("\n[DEBUG] --- GENERATED MOCK WEBHOOK PAYLOAD ---");
     console.log(
-      "Description: Payload & Signature fresh siap untuk demo Webhook Spoofing.",
+      "Description: Payload & Signature fresh siap untuk demo Webhook Spoofing (Skenario 2).",
     );
-    console.log("Action: Copy Header dan Body di bawah ke Burp Suite/JMeter.");
+    console.log(
+      "Action: Copy Header dan Body di bawah ke Postman/Burp Suite. Status saat ini: UNPAID.",
+    );
     console.log("\n[HEADER X-Callback-Signature]");
     console.log(mockSignature);
     console.log("\n[BODY JSON RAW]");

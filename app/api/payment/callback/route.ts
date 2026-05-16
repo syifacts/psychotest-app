@@ -43,6 +43,9 @@ export async function POST(req: NextRequest) {
       `\n[Webhook HTTP POST] Menerima payload untuk: ${merchant_ref}`,
     );
     console.log(`[Signature Header] ${headerSignature}`);
+    console.log(headerSignature);
+    console.log(`[BODY JSON RAW]`);
+    console.log(rawBody);
 
     const isAuthentic = verifyTripaySignature(rawBody, body, headerSignature);
     if (!isAuthentic) {
