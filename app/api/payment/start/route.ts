@@ -21,6 +21,9 @@ export async function POST(req: NextRequest) {
     } = await req.json();
     console.log("DEBUG method from client:", method);
 
+    // =========================================================================
+    // 1. NORMALISASI METODE BAYAR & VALIDASI TOKEN (GUEST/USER)
+    // =========================================================================
     const methodMap: Record<string, string> = {
       briva: "BRIVA",
       qris: "QRIS",
@@ -127,8 +130,10 @@ export async function POST(req: NextRequest) {
         { status: 404 },
       );
 
+    // =========================================================================
+    // 2. KALKULASI HARGA & DISKON (Sesuai Role Perusahaan / User Biasa)
+    // =========================================================================
     const basePrice = test.price ?? 0;
-
     let finalPrice = basePrice;
 
     if (decoded.role === "PERUSAHAAN") {
@@ -188,6 +193,9 @@ export async function POST(req: NextRequest) {
     const finalUserId =
       decoded.role === "PERUSAHAAN" && targetUserId ? targetUserId : decoded.id;
 
+    // =========================================================================
+    // 3. CEK TRANSAKSI LAMA (Langsung beri akses jika sudah pernah bayar lunas)
+    // =========================================================================
     const existingPayment = await prisma.payment.findFirst({
       where: {
         testTypeId: Number(testTypeId),
@@ -235,6 +243,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // =========================================================================
+    // 4. PEMBUATAN TAGIHAN BARU (Database & Tripay API)
+    // =========================================================================
     const payment = await prisma.payment.create({
       data: {
         testTypeId: test.id,
@@ -248,6 +259,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Khusus tagihan Rp 0 (Gratis), langsung sukseskan dan cetak akses.
     if (totalAmount === 0) {
       const finalUser = await prisma.user.findUnique({
         where: { id: finalUserId },
@@ -287,24 +299,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Generate Signature HMAC untuk otentikasi saat memanggil API Tripay
     const merchantRef = `PSY-${payment.id}-${Date.now()}`;
     const signature = crypto
       .createHmac("sha256", TRIPAY_PRIVATE_KEY)
-      .update(`${TRIPAY_MERCHANT_CODE}${merchantRef}${totalAmount}`) // ✅ Signature pake 100rb
+      .update(`${TRIPAY_MERCHANT_CODE}${merchantRef}${totalAmount}`)
       .digest("hex");
 
     const payload: any = {
       method: payMethod,
       merchant_ref: merchantRef,
-      amount: totalAmount, // ✅ Tagihan aslinya 100rb
+      amount: totalAmount,
       customer_name: user?.fullName || `User ${finalUserId}`,
       customer_email: user?.email || "no-reply@example.com",
       customer_phone: user?.phone || "081234567890",
       order_items: [
         {
           sku: `TEST-${test.id}`,
-          name: `${test.name} ${promoId ? "(Promo)" : ""}`, // ✅ Indikator barang promo
-          price: Math.round(totalAmount / quantity), // ✅ Wajib price * qty = totalAmount
+          name: `${test.name} ${promoId ? "(Promo)" : ""}`,
+          price: Math.round(totalAmount / quantity),
           quantity,
         },
       ],
@@ -316,6 +329,7 @@ export async function POST(req: NextRequest) {
 
     if (TRIPAY_CALLBACK_URL) payload.callback_url = TRIPAY_CALLBACK_URL;
 
+    // Tembak API Tripay Sandbox
     const response = await fetch(
       "https://tripay.co.id/api-sandbox/transaction/create",
       {
@@ -340,6 +354,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Update database dengan response dari Tripay (URL Checkout & Nomor Referensi)
     const updated = await prisma.payment.update({
       where: { id: payment.id },
       data: {
@@ -350,6 +365,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // =========================================================================
+    // 5. GENERATOR PAYLOAD DUMMY (Khusus Kebutuhan Demo Penetrasi Skripsi)
+    // =========================================================================
     const mockWebhookPayload = {
       reference: data.data.reference,
       merchant_ref: data.data.merchant_ref,
@@ -362,26 +380,24 @@ export async function POST(req: NextRequest) {
       amount_received: data.data.amount_received,
       is_closed_payment: data.data.is_closed_payment ?? 1,
       status: "UNPAID",
-      paid_at: null,
       note: "Simulated webhook payload for penetration testing",
     };
 
     const rawMockBody = JSON.stringify(mockWebhookPayload);
+
     const mockSignature = crypto
       .createHmac("sha256", TRIPAY_PRIVATE_KEY)
       .update(rawMockBody)
       .digest("hex");
 
     console.log("\n[DEBUG] --- GENERATED MOCK WEBHOOK PAYLOAD ---");
-    console.log(
-      "Description: Payload & Signature fresh siap untuk demo Webhook Spoofing.",
-    );
-    console.log("Action: Copy Header dan Body di bawah ke Burp Suite.");
+    console.log("Description: Payload & Signature.");
+    console.log("Action: Copy Header dan Body di bawah ke Postman/Burp Suite.");
+
     console.log("\n[HEADER X-Callback-Signature]");
     console.log(mockSignature);
     console.log("\n[BODY JSON RAW]");
-    console.log(JSON.stringify(mockWebhookPayload));
-    console.log("----------------------------------------------\n");
+    console.log(rawMockBody);
 
     return NextResponse.json({
       success: true,

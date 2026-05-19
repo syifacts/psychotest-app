@@ -1,26 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { redis } from "@/lib/redis"; // TAMBAHAN: Import redis untuk Rate Limiting Layer 0
+import { redis } from "@/lib/redis";
 import { verifyTripaySignature } from "@/lib/security/hmacVerifier";
 import { checkIdempotency } from "@/lib/security/redisIdempotency";
 
 export async function POST(req: NextRequest) {
-  // Dapatkan IP address untuk keperluan Rate Limiting
   const ip = req.headers.get("x-forwarded-for") || "unknown_ip";
 
   try {
-    // -------------------------------------------------------------------------
-    // LAYER 0: Rate Limiting (Mencegah DDoS & Spam Request dari JMeter)
-    // -------------------------------------------------------------------------
     const rateLimitKey = `rate_limit:callback:${ip}`;
     const requestCount = await redis.incr(rateLimitKey);
 
-    // Set expired 60 detik (1 menit) pada request pertama
     if (requestCount === 1) {
       await redis.expire(rateLimitKey, 60);
     }
 
-    // Batasi 50 request per menit per IP (Limit yang pas buat demo JMeter)
     if (requestCount > 50) {
       console.warn(`🚨 [DDoS BLOCKED] Terlalu banyak request dari IP: ${ip}`);
       return NextResponse.json(
@@ -45,16 +39,14 @@ export async function POST(req: NextRequest) {
 
     const headerSignature = req.headers.get("x-callback-signature");
 
-    // Logging payload untuk keperluan audit sistem
     console.log(
       `\n[Webhook HTTP POST] Menerima payload untuk: ${merchant_ref}`,
     );
     console.log(`[Signature Header] ${headerSignature}`);
-    // console.log(`[RAW BODY ASLI DARI TRIPAY]:\n${rawBody}`); // Boleh di-comment biar terminal ga penuh pas di-spam JMeter
+    console.log(headerSignature);
+    console.log(`[BODY JSON RAW]`);
+    console.log(rawBody);
 
-    // -------------------------------------------------------------------------
-    // LAYER 1: Autentikasi Kriptografi HMAC (Anti Webhook Spoofing)
-    // -------------------------------------------------------------------------
     const isAuthentic = verifyTripaySignature(rawBody, body, headerSignature);
     if (!isAuthentic) {
       console.error(
@@ -85,7 +77,7 @@ export async function POST(req: NextRequest) {
     );
 
     // -------------------------------------------------------------------------
-    // 3. Proses Update Database (Sistem Utama)
+    // 3. Proses Update Database (Sistem Utama).
     // -------------------------------------------------------------------------
     const paymentId = Number(merchant_ref.split("-")[1]);
     const payment = await prisma.payment.findUnique({
@@ -96,6 +88,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, message: "Payment not found" },
         { status: 404 },
+      );
+    }
+
+    if (payment.status === "SUCCESS") {
+      console.warn(
+        `🛡️ [DB BLOCKED] Payment ID ${paymentId} sudah LUNAS di Database! Replay Attack (TTL Expiry) digagalkan.`,
+      );
+      return NextResponse.json(
+        { success: true, message: "Payment already processed" },
+        { status: 200 },
       );
     }
 
