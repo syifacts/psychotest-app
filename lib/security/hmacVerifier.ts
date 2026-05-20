@@ -50,6 +50,5 @@ export function verifyTripaySignature(
     return secureCompare(bodyJson.sign.toLowerCase(), calc.toLowerCase());
   }
 
-  // Tolak otomatis jika tidak ada signature sama sekali (Mitigasi Omission Attack)
   return false;
 }
