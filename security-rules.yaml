@@ -1,0 +1,118 @@
+rules:
+
+  # ======================================================
+  # OBJECT-LEVEL AUTHORIZATION (OLA)
+  # ======================================================
+
+  # 1. OLA - Ownership Check Missing
+  - id: possible-idor-attempts
+    paths:
+      include:
+        - app/api/attempts/**
+    patterns:
+      - pattern: |
+          $X = await prisma.$MODEL.findUnique({
+            where: { id: $ID }
+          })
+    message: >
+      Potential IDOR/BOLA: data accessed by ID without ownership validation
+      in attempts endpoint.
+    severity: WARNING
+    languages: [typescript]
+
+  # 2. OLA - Missing Role Check
+  - id: possible-missing-role-check
+    paths:
+      include:
+        - app/api/reports/validate/**
+    patterns:
+      - pattern: |
+          export async function $FUNC(...) {
+            ...
+          }
+      - pattern-not-inside: |
+          if ($SESSION.user.role === ...)
+    message: >
+      Potential missing role-based authorization in validate endpoint.
+    severity: WARNING
+    languages: [typescript]
+
+  # 3. OLA - Information Disclosure
+  - id: possible-information-disclosure-attempts
+    paths:
+      include:
+        - app/api/attempts/**
+    patterns:
+      - pattern-either:
+          - pattern: |
+              await prisma.$MODEL.findUnique({
+                where: { id: $ID }
+              })
+          - pattern: |
+              await prisma.$MODEL.findFirst({
+                where: { id: $ID }
+              })
+      - pattern-not: |
+          userId: $USERID
+    message: >
+      Potential information disclosure: query does not validate
+      ownership/user relation.
+    severity: WARNING
+    languages: [typescript]
+
+  # ======================================================
+  # DIGITAL SIGNATURE - ED25519
+  # ======================================================
+
+  # 4. Missing Digital Signature
+  - id: possible-missing-signature-validate
+    paths:
+      include:
+        - app/api/reports/validate/**
+    patterns:
+      - pattern: |
+          export async function $FUNC(...) {
+            ...
+          }
+      - pattern-not: |
+          nacl.sign(...)
+      - pattern-not: |
+          nacl.sign.detached(...)
+    message: >
+      No ED25519 digital signature detected in validate endpoint.
+    severity: WARNING
+    languages: [typescript]
+
+  # 5. Missing Signature Verification
+  - id: missing-signature-verification
+    paths:
+      include:
+        - app/api/reports/verify/**
+    patterns:
+      - pattern: |
+          export async function $FUNC(...) {
+            ...
+          }
+      - pattern-not: |
+          nacl.sign.detached.verify(...)
+    message: >
+      No ED25519 signature verification detected in verify endpoint.
+    severity: WARNING
+    languages: [typescript]
+
+  # 6. Missing Hash Validation
+  - id: missing-hash-validation
+    paths:
+      include:
+        - app/api/reports/verify/**
+    patterns:
+      - pattern: |
+          export async function $FUNC(...) {
+            ...
+          }
+      - pattern-not-inside: |
+          crypto.createHash(...)
+    message: >
+      No hash validation detected before signature verification.
+    severity: INFO
+    languages: [typescript]
