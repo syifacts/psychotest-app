@@ -96,8 +96,11 @@ export async function POST(req: NextRequest) {
         `🛡️ [DB BLOCKED] Payment ID ${paymentId} sudah LUNAS di Database! Replay Attack (TTL Expiry) digagalkan.`,
       );
       return NextResponse.json(
-        { success: true, message: "Payment already processed" },
-        { status: 200 },
+        {
+          success: false,
+          message: "Payment already processed / Replay Attack Blocked",
+        },
+        { status: 409 },
       );
     }
 
