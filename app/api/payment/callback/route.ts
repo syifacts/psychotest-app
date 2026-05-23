@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       await redis.expire(rateLimitKey, 60);
     }
 
-    if (requestCount > 50) {
+    if (requestCount > 90) {
       console.warn(`🚨 [DDoS BLOCKED] Terlalu banyak request dari IP: ${ip}`);
       return NextResponse.json(
         { success: false, message: "Too many requests" },
