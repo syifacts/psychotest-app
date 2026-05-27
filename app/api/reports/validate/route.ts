@@ -11,7 +11,7 @@ import fs from "fs";
 import { logActivity } from "@/lib/logger";
 import path from "path";
 // import puppeteer from "puppeteer";
-const pdfParse = require("pdf-parse/lib/pdf-parse.js");
+import pdf from "pdf-parse";
 
 // async function generatePDF(filePath: string, html: string) {
 //   const browser = await puppeteer.launch();
