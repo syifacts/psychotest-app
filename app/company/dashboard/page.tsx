@@ -724,7 +724,9 @@ const iconColor: Record<string, string> = {
             <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
           ))}
         </Pie>
-        <Tooltip formatter={(value: number) => [`${value}`, "User"]} />
+<Tooltip
+  formatter={(value) => [`${value}`, "User"]}
+/>
       </PieChart>
     </ResponsiveContainer>
   </div>

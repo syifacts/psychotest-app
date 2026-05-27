@@ -2,7 +2,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import pdfParse from "pdf-parse";
+const pdfParse = require("pdf-parse/lib/pdf-parse.js");
 
 import nacl from "tweetnacl";
 import {

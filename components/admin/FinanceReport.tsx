@@ -438,8 +438,9 @@ export default function FinanceReportPage() {
               <XAxis dataKey="date" />
               <YAxis />
               <Tooltip
-                formatter={(value: number) => `Rp ${value.toLocaleString()}`}
-              />
+formatter={(value) =>
+  `Rp ${Number(value).toLocaleString()}`
+}              />
               <Line
                 type="monotone"
                 dataKey="total"
@@ -467,8 +468,9 @@ export default function FinanceReportPage() {
               <XAxis dataKey="name" />
               <YAxis />
               <Tooltip
-                formatter={(value: number) => `Rp ${value.toLocaleString()}`}
-              />
+formatter={(value) =>
+  `Rp ${Number(value).toLocaleString()}`
+}              />
               <Bar dataKey="total" fill="#2563eb" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
