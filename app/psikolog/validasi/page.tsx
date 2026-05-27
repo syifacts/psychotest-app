@@ -17,6 +17,7 @@ interface Report {
   Attempt: { id: number; startedAt: string };
   Company?: { fullName: string } | null;
   validated: boolean;
+  validatedById:number;
   validatedAt?: string;
 }
 
@@ -92,6 +93,7 @@ const [endDate, setEndDate] = useState<string>("");
             status,
             validatedAt: tab === "history" && filterDate ? filterDate : undefined,
             search: searchUser || undefined,
+            
           },
           withCredentials: true,
         });
@@ -127,15 +129,57 @@ const filteredReports = reports.filter((r) => {
     window.open(`/psikolog/report/${report.Attempt.id}`, "_blank");
   };
 
-  const handleValidasi = async (reportId: number) => {
-    if (!userId) return;
-    try {
-      await axios.post("/api/reports/validate", { reportId }, { withCredentials: true });
-      setReports((prev) => prev.map((r) => (r.id === reportId ? { ...r, validated: true } : r)));
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  // const handleValidasi = async (reportId: number) => {
+//   const handleValidasi = async (report: any) => {
+//     if (!userId) return;
+//     try {
+//       // await axios.post("/api/reports/validate", { reportId }, { withCredentials: true });
+//    await axios.post(
+//   "/api/reports/validate",
+//   {
+//     reportId: report.id,
+//     source: report.source,
+//   },
+//   { withCredentials: true }
+// );setReports((prev) =>
+//   prev.map((r) =>
+//     r.id === report.id ? { ...r, validated: true } : r
+//   )
+// );} catch (err) {
+//       console.error(err);
+//     }
+//   };
+const handleValidasi = async (report: any) => {
+  if (!userId) return;
+  try {
+    await axios.post(
+      "/api/reports/validate",
+      {
+        reportId: report.id,
+        source: report.source,
+        layak: report.layak,
+  belumLayak: report.belumLayak,
+  tidakLayak: report.tidakLayak,
+      },
+      { withCredentials: true }
+    );
+
+    // 🔥 ambil ulang data dari backend
+    const status = tab === "pending" ? "pending" : "selesai";
+
+    const res = await axios.get("/api/reports/validate", {
+      params: {
+        status,
+      },
+      withCredentials: true,
+    });
+
+    setReports(res.data);
+
+  } catch (err) {
+    console.error(err);
+  }
+};
 
   return (
         <main className="relative min-h-screen bg-gray-50 overflow-hidden">
@@ -332,11 +376,11 @@ const filteredReports = reports.filter((r) => {
         )}
 
         {/* Kolom Validasi / Edit Validasi */}
-<td className="p-4 text-center">
+{/* <td className="p-4 text-center">
   {tab === "pending" && !report.validated ? (
     <button
       className="px-4 py-2 text-sm font-medium text-white bg-green-500 rounded-lg shadow hover:bg-green-600 transition"
-      onClick={() => handleValidasi(report.id)}
+      onClick={() => handleValidasi(report)}
     >
       Validasi
     </button>
@@ -347,6 +391,30 @@ const filteredReports = reports.filter((r) => {
     >
       Edit Validasi
     </button>
+  ) : null}
+</td> */}
+
+<td className="p-4 text-center">
+  {tab === "pending" && !report.validated ? (
+    <button
+      className="px-4 py-2 text-sm font-medium text-white bg-green-500 rounded-lg shadow hover:bg-green-600 transition"
+      onClick={() => handleValidasi(report)}
+    >
+      Validasi
+    </button>
+  ) : tab === "history" ? (
+    report.validatedById === userId ? (
+      <button
+        className="px-4 py-2 text-sm font-medium text-white bg-yellow-500 rounded-lg shadow hover:bg-yellow-600 transition"
+        onClick={() =>
+          window.open(`/psikolog/report/${report.Attempt.id}`, "_blank")
+        }
+      >
+        Edit Validasi
+      </button>
+    ) : (
+      <span className="text-gray-400 italic">Tidak diizinkan</span>
+    )
   ) : null}
 </td>
 

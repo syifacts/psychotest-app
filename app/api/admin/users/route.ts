@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-
+import nacl from "tweetnacl";
 export async function POST(req: NextRequest) {
   try {
     const {
@@ -70,6 +70,7 @@ const customId = customIdPrefix + number;
     };
 
     if (role === "PSIKOLOG") {
+      
       newUser.lembagalayanan = lembagalayanan || null;
       newUser.phone = phone || null;
       newUser.birthDate = birthDate ? new Date(birthDate) : null;
@@ -77,6 +78,13 @@ const customId = customIdPrefix + number;
       newUser.education = education || null;
        newUser.strNumber = strNumber || null;
   newUser.sippNumber = sippNumber || null;
+  const keyPair = nacl.sign.keyPair();
+
+  const publicKey = Buffer.from(keyPair.publicKey).toString("base64");
+  const privateKey = Buffer.from(keyPair.secretKey).toString("base64");
+
+  newUser.PublicKey = publicKey;
+  newUser.PrivateKey = privateKey;
     } else if (role === "PERUSAHAAN") {
       newUser.address = address || null;
     }

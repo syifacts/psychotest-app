@@ -1,295 +1,543 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-//import crypto from "crypto";
-import { customAlphabet } from "nanoid";
-import bcrypt from "bcryptjs"; // ✅ import bcrypt
+// import { NextResponse } from "next/server";
+// import { prisma } from "@/lib/prisma";
+// import bcrypt from "bcrypt";
+// import { logActivity } from "@/lib/logger";
 
-// Token 16 karakter Base62
-const alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const nanoid = customAlphabet(alphabet, 16);
-
-function generateToken() {
-  return nanoid();
-}
-
-// export async function POST(req: NextRequest) {
+// export async function POST(req: Request) {
 //   try {
-//     const body = await req.json();
-// const { email, paymentId, userId, companyId, testCustomId } = body;
-// if (!paymentId) {
-//   return NextResponse.json({ error: "paymentId (test) wajib diisi" }, { status: 400 });
-// }
+//     const { email, newPassword } = await req.json();
+//     const ipAddress =
+//       req.headers.get("x-forwarded-for") || "unknown";
+//     const userAgent =
+//       req.headers.get("user-agent") || "unknown";
 
-//     if (!email && !userId) {
-//       return NextResponse.json({ error: "Email atau User ID wajib diisi" }, { status: 400 });
+//     if (!email || !newPassword) {
+//        await logActivity({
+//         action: "UPDATE",
+//         resource: "user",
+//         description: "Gagal reset password (input tidak lengkap)",
+//         ipAddress,
+//         userAgent,
+//         endpoint: "/api/reset-password",
+//         method: "POST",
+//         status: "FAILED",
+//         severity: "MEDIUM",
+//         isSuspicious: true,
+//       });
+//       return NextResponse.json({ error: "Email dan password baru wajib diisi." }, { status: 400 });
 //     }
 
-//     // 🔎 Cari user yang sudah ada (tapi JANGAN buat user baru dulu)
-//     let user = email
-//       ? await prisma.user.findUnique({ where: { email } })
-//       : null;
+//     const user = await prisma.user.findUnique({ where: { email } });
+
+//     if (!user) {
+//        await logActivity({
+//         action: "UPDATE",
+//         resource: "user",
+//         description: `Gagal reset password (email tidak ditemukan: ${email})`,
+//         ipAddress,
+//         userAgent,
+//         endpoint: "/api/reset-password",
+//         method: "POST",
+//         status: "FAILED",
+//         severity: "HIGH",
+//         isSuspicious: true,
+//       });
+//       return NextResponse.json({ error: "Email tidak ditemukan." }, { status: 404 });
+//     }
+
+//     const hashed = await bcrypt.hash(newPassword, 10);
+
+//     await prisma.user.update({
+//       where: { email },
+//       data: { password: hashed },
+//     });
+//  // ✅ LOG SUCCESS (TANPA PASSWORD)
+//     await logActivity({
+//       userId: user.id,
+//       role: user.role,
+//       action: "UPDATE",
+//       resource: "user",
+//       resourceId: String(user.id),
+//       description: "User melakukan reset password",
+//       ipAddress,
+//       userAgent,
+//       endpoint: "/api/reset-password",
+//       method: "POST",
+//       status: "SUCCESS",
+//       severity: "LOW",
+//     });
+//     return NextResponse.json({ success: true, message: "Password berhasil direset." });
+//   } catch (e) {
+//     console.error(e);
+//         await logActivity({
+//       action: "UPDATE",
+//       resource: "user",
+//       description: "Error saat reset password",
+//       endpoint: "/api/reset-password",
+//       method: "POST",
+//       status: "FAILED",
+//       severity: "HIGH",
+//       isSuspicious: true,
+//     });
+//     return NextResponse.json({ error: "Server error." }, { status: 500 });
+//   }
+// }
+
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import bcrypt from "bcrypt";
+import { logActivity } from "@/lib/logger";
+
+export async function POST(req: Request) {
+  try {
+    const { email, otp, newPassword } = await req.json();
+
+    const ipAddress =
+      req.headers.get("x-forwarded-for") || "unknown";
+    const userAgent =
+      req.headers.get("user-agent") || "unknown";
+
+    if (!email || !otp || !newPassword) {
+      await logActivity({
+        action: "UPDATE",
+        resource: "user",
+        description: "Gagal reset password (input tidak lengkap)",
+        ipAddress,
+        userAgent,
+        endpoint: "/api/reset-password",
+        method: "POST",
+        status: "FAILED",
+        severity: "MEDIUM",
+        isSuspicious: true,
+      });
+
+      return NextResponse.json(
+        { error: "Email, OTP, dan password wajib diisi." },
+        { status: 400 }
+      );
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      await logActivity({
+        action: "UPDATE",
+        resource: "user",
+        resourceId: email,
+        description: `Gagal reset password (email tidak ditemukan: ${email})`,
+        ipAddress,
+        userAgent,
+        endpoint: "/api/reset-password",
+        method: "POST",
+        status: "FAILED",
+        severity: "HIGH",
+        isSuspicious: true,
+      });
+
+      return NextResponse.json(
+        { error: "Email tidak ditemukan." },
+        { status: 404 }
+      );
+    }
+
+    // 🔥 CEK OTP
+    const record = await prisma.passwordReset.findFirst({
+      where: { email, otp },
+    });
+
+    if (!record) {
+      await logActivity({
+        userId: user.id,
+        action: "UPDATE",
+        resource: "user",
+        role: user.role,
+        resourceId: String(user.id),
+        description: "Gagal reset password (OTP salah)",
+        ipAddress,
+        userAgent,
+        endpoint: "/api/reset-password",
+        method: "POST",
+        status: "FAILED",
+        severity: "HIGH",
+        isSuspicious: true,
+      });
+
+      return NextResponse.json(
+        { error: "OTP salah" },
+        { status: 400 }
+      );
+    }
+
+    // ⏰ CEK EXPIRED
+  if (record.expiresAt < new Date()) {
+  await logActivity({
+    userId: user.id,
+    action: "UPDATE",
+    resource: "user",
+    role: user.role,
+    resourceId: String(user.id),
+    description: "Gagal reset password (OTP expired)",
+    ipAddress,
+    userAgent,
+    endpoint: "/api/reset-password",
+    method: "POST",
+    status: "FAILED",
+    severity: "MEDIUM",
+    isSuspicious: true,
+  });
+
+  return NextResponse.json(
+    { error: "OTP sudah expired" },
+    { status: 400 }
+  );
+}
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { email },
+      data: { password: hashed },
+    });
+
+    // 🧹 HAPUS OTP (biar sekali pakai)
+    await prisma.passwordReset.deleteMany({
+      where: { email },
+    });
+
+    await logActivity({
+      userId: user.id,
+      role: user.role,
+      action: "UPDATE",
+      resource: "user",
+      resourceId: String(user.id),
+      description: "User reset password menggunakan OTP",
+      ipAddress,
+      userAgent,
+      endpoint: "/api/reset-password",
+      method: "POST",
+      status: "SUCCESS",
+      severity: "LOW",
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Password berhasil direset.",
+    });
+
+  } catch (e) {
+    console.error(e);
+
+    await logActivity({
+      action: "UPDATE",
+      resource: "user",
+      description: "Error saat reset password",
+      endpoint: "/api/reset-password",
+      method: "POST",
+      status: "FAILED",
+      severity: "HIGH",
+      isSuspicious: true,
+    });
+
+    return NextResponse.json(
+      { error: "Server error." },
+      { status: 500 }
+    );
+  }
+}
+
+
+// import { NextRequest, NextResponse } from "next/server";
+// import { prisma } from "@/lib/prisma";
+// //import crypto from "crypto";
+// import { customAlphabet } from "nanoid";
+// import bcrypt from "bcryptjs"; // ✅ import bcrypt
+
+// // Token 16 karakter Base62
+// const alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+// const nanoid = customAlphabet(alphabet, 16);
+
+// function generateToken() {
+//   return nanoid();
+// }
+
+// // export async function POST(req: NextRequest) {
+// //   try {
+// //     const body = await req.json();
+// // const { email, paymentId, userId, companyId, testCustomId } = body;
+// // if (!paymentId) {
+// //   return NextResponse.json({ error: "paymentId (test) wajib diisi" }, { status: 400 });
+// // }
+
+// //     if (!email && !userId) {
+// //       return NextResponse.json({ error: "Email atau User ID wajib diisi" }, { status: 400 });
+// //     }
+
+// //     // 🔎 Cari user yang sudah ada (tapi JANGAN buat user baru dulu)
+// //     let user = email
+// //       ? await prisma.user.findUnique({ where: { email } })
+// //       : null;
+
+// //     if (!user && userId) {
+// //       user = await prisma.user.findUnique({ where: { customId: userId } });
+// //     }
+
+// //     // --- PACKAGE ---
+// //     // if (packagePurchaseId) {
+// //     //   const purchase = await prisma.packagePurchase.findUnique({
+// //     //     where: { id: Number(packagePurchaseId) },
+// //     //     include: { userPackages: true },
+// //     //   });
+
+// //     //   if (!purchase) {
+// //     //     return NextResponse.json({ error: "Package purchase not found" }, { status: 404 });
+// //     //   }
+
+// //     //   // ✅ CEK KUOTA DULU sebelum buat user
+// //     //   if (purchase.userPackages.length >= purchase.quantity) {
+// //     //     return NextResponse.json({ error: "Kuota habis" }, { status: 400 });
+// //     //   }
+
+// //     //   // ✅ Baru buat user kalau belum ada DAN kuota masih ada
+// //     //   if (!user) {
+// //     //     if (!companyId) {
+// //     //       return NextResponse.json({ error: "CompanyId wajib untuk user baru" }, { status: 400 });
+// //     //     }
+        
+// //     //     const hashedPassword = await bcrypt.hash(userId, 10);
+// //     //     const count = await prisma.user.count({ where: { companyId: Number(companyId) } });
+// //     //     const fullName = `Karyawan ${count + 1}`;
+
+// //     //     user = await prisma.user.create({
+// //     //       data: {
+// //     //         email: email ?? `${userId}@gmail.com`,
+// //     //         fullName,
+// //     //         password: hashedPassword,
+// //     //         role: "USER",
+// //     //         customId: userId,
+// //     //         companyId: Number(companyId),
+// //     //       },
+// //     //     });
+// //     //   }
+
+// //     //   if (purchase.userPackages.some((u) => u.userId === user!.id)) {
+// //     //     return NextResponse.json({ error: "User sudah terdaftar di paket ini" }, { status: 400 });
+// //     //   }
+
+// //     //   const userPackage = await prisma.userPackage.create({
+// //     //     data: { userId: user!.id, packagePurchaseId: Number(packagePurchaseId) },
+// //     //   });
+
+// //     //   return NextResponse.json({
+// //     //     message: "User berhasil didaftarkan ke package",
+// //     //     userPackage,
+// //     //   });
+// //     // }
+
+// //     // --- TEST SATUAN ---
+// //     if (paymentId) {
+// //       const payment = await prisma.payment.findUnique({
+// //         where: { id: Number(paymentId) },
+// //         include: { attempts: true },
+// //       });
+
+// //       if (!payment) {
+// //         return NextResponse.json({ error: "Payment not found" }, { status: 404 });
+// //       }
+
+// //       if (payment.testTypeId === null) {
+// //         return NextResponse.json({ error: "Payment tidak memiliki testTypeId" }, { status: 400 });
+// //       }
+
+// //       // ✅ CEK KUOTA DULU sebelum buat user
+// //       if (payment.attempts.length >= payment.quantity) {
+// //         return NextResponse.json({ error: "Kuota habis" }, { status: 400 });
+// //       }
+
+// //       // ✅ Baru buat user kalau belum ada DAN kuota masih ada
+// //       if (!user) {
+// //         if (!companyId) {
+// //           return NextResponse.json({ error: "CompanyId wajib untuk user baru" }, { status: 400 });
+// //         }
+
+// //         const hashedPassword = await bcrypt.hash(userId, 10);
+// //         const count = await prisma.user.count({ where: { companyId: Number(companyId) } });
+// //         const fullName = `Karyawan ${count + 1}`;
+
+// //         user = await prisma.user.create({
+// //           data: {
+// //             email: email ?? `${userId}@gmail.com`,
+// //             fullName,
+// //             password: hashedPassword,
+// //             role: "USER",
+// //             customId: userId,
+// //             companyId: Number(companyId),
+// //           },
+// //         });
+// //       }
+
+// //       // Cek user sudah daftar test ini
+// //    if (payment.attempts.some((a) => a.userId === user!.id)) {
+// //     return NextResponse.json(
+// //       { error: "User sudah terdaftar di test ini" },
+// //       { status: 400 }
+// //     );
+// //   }
+
+// //       // ✅ Buat attempt & token
+// //       const attempt = await prisma.testAttempt.create({
+// //         data: {
+// //           userId: user.id,
+// //           testTypeId: payment.testTypeId,
+// //           paymentId: payment.id,
+// //           companyId: user.companyId,
+// //           status: "RESERVED",
+// //         },
+// //       });
+
+// //       const token = await prisma.token.create({
+// //         data: {
+// //           userId: user.id,
+// //           testTypeId: payment.testTypeId,
+// //           testAttempt: { connect: { id: attempt.id } },
+// //           token: generateToken(),
+// //           expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
+// //           companyId: user.companyId,
+// //         },
+// //       });
+
+// //       return NextResponse.json({
+// //         message: "User berhasil didaftarkan ke test satuan",
+// //         attempt,
+// //         token: token.token,
+// //         remainingQuota: payment.quantity - payment.attempts.length - 1,
+// //       });
+// //     }
+
+// //     return NextResponse.json({ error: "Pilih package atau test" }, { status: 400 });
+// //   } catch (error) {
+// //     console.error(error);
+// //     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+// //   }
+// // }
+// export async function POST(req: NextRequest): Promise<Response> {
+//   try {
+//     const body = await req.json();
+//     const { email, paymentId, userId, companyId } = body;
+
+//     if (!paymentId) {
+//       return NextResponse.json(
+//         { error: "paymentId (test) wajib diisi" },
+//         { status: 400 }
+//       );
+//     }
+
+//     if (!email && !userId) {
+//       return NextResponse.json(
+//         { error: "Email atau User ID wajib diisi" },
+//         { status: 400 }
+//       );
+//     }
+
+//     let user =
+//       email != null
+//         ? await prisma.user.findUnique({ where: { email } })
+//         : null;
 
 //     if (!user && userId) {
 //       user = await prisma.user.findUnique({ where: { customId: userId } });
 //     }
 
-//     // --- PACKAGE ---
-//     // if (packagePurchaseId) {
-//     //   const purchase = await prisma.packagePurchase.findUnique({
-//     //     where: { id: Number(packagePurchaseId) },
-//     //     include: { userPackages: true },
-//     //   });
+//     const payment = await prisma.payment.findUnique({
+//       where: { id: Number(paymentId) },
+//       include: { attempts: true },
+//     });
 
-//     //   if (!purchase) {
-//     //     return NextResponse.json({ error: "Package purchase not found" }, { status: 404 });
-//     //   }
+//     if (!payment) {
+//       return NextResponse.json(
+//         { error: "Payment not found" },
+//         { status: 404 }
+//       );
+//     }
 
-//     //   // ✅ CEK KUOTA DULU sebelum buat user
-//     //   if (purchase.userPackages.length >= purchase.quantity) {
-//     //     return NextResponse.json({ error: "Kuota habis" }, { status: 400 });
-//     //   }
+//     if (payment.testTypeId === null) {
+//       return NextResponse.json(
+//         { error: "Payment tidak memiliki testTypeId" },
+//         { status: 400 }
+//       );
+//     }
 
-//     //   // ✅ Baru buat user kalau belum ada DAN kuota masih ada
-//     //   if (!user) {
-//     //     if (!companyId) {
-//     //       return NextResponse.json({ error: "CompanyId wajib untuk user baru" }, { status: 400 });
-//     //     }
-        
-//     //     const hashedPassword = await bcrypt.hash(userId, 10);
-//     //     const count = await prisma.user.count({ where: { companyId: Number(companyId) } });
-//     //     const fullName = `Karyawan ${count + 1}`;
+//     if (payment.attempts.length >= payment.quantity) {
+//       return NextResponse.json(
+//         { error: "Kuota habis" },
+//         { status: 400 }
+//       );
+//     }
 
-//     //     user = await prisma.user.create({
-//     //       data: {
-//     //         email: email ?? `${userId}@gmail.com`,
-//     //         fullName,
-//     //         password: hashedPassword,
-//     //         role: "USER",
-//     //         customId: userId,
-//     //         companyId: Number(companyId),
-//     //       },
-//     //     });
-//     //   }
+//     if (!user) {
+//       if (!companyId) {
+//         return NextResponse.json(
+//           { error: "CompanyId wajib untuk user baru" },
+//           { status: 400 }
+//         );
+//       }
 
-//     //   if (purchase.userPackages.some((u) => u.userId === user!.id)) {
-//     //     return NextResponse.json({ error: "User sudah terdaftar di paket ini" }, { status: 400 });
-//     //   }
-
-//     //   const userPackage = await prisma.userPackage.create({
-//     //     data: { userId: user!.id, packagePurchaseId: Number(packagePurchaseId) },
-//     //   });
-
-//     //   return NextResponse.json({
-//     //     message: "User berhasil didaftarkan ke package",
-//     //     userPackage,
-//     //   });
-//     // }
-
-//     // --- TEST SATUAN ---
-//     if (paymentId) {
-//       const payment = await prisma.payment.findUnique({
-//         where: { id: Number(paymentId) },
-//         include: { attempts: true },
+//       const hashedPassword = await bcrypt.hash(userId, 10);
+//       const count = await prisma.user.count({
+//         where: { companyId: Number(companyId) },
 //       });
+//       const fullName = `Karyawan ${count + 1}`;
 
-//       if (!payment) {
-//         return NextResponse.json({ error: "Payment not found" }, { status: 404 });
-//       }
-
-//       if (payment.testTypeId === null) {
-//         return NextResponse.json({ error: "Payment tidak memiliki testTypeId" }, { status: 400 });
-//       }
-
-//       // ✅ CEK KUOTA DULU sebelum buat user
-//       if (payment.attempts.length >= payment.quantity) {
-//         return NextResponse.json({ error: "Kuota habis" }, { status: 400 });
-//       }
-
-//       // ✅ Baru buat user kalau belum ada DAN kuota masih ada
-//       if (!user) {
-//         if (!companyId) {
-//           return NextResponse.json({ error: "CompanyId wajib untuk user baru" }, { status: 400 });
-//         }
-
-//         const hashedPassword = await bcrypt.hash(userId, 10);
-//         const count = await prisma.user.count({ where: { companyId: Number(companyId) } });
-//         const fullName = `Karyawan ${count + 1}`;
-
-//         user = await prisma.user.create({
-//           data: {
-//             email: email ?? `${userId}@gmail.com`,
-//             fullName,
-//             password: hashedPassword,
-//             role: "USER",
-//             customId: userId,
-//             companyId: Number(companyId),
-//           },
-//         });
-//       }
-
-//       // Cek user sudah daftar test ini
-//    if (payment.attempts.some((a) => a.userId === user!.id)) {
-//     return NextResponse.json(
-//       { error: "User sudah terdaftar di test ini" },
-//       { status: 400 }
-//     );
-//   }
-
-//       // ✅ Buat attempt & token
-//       const attempt = await prisma.testAttempt.create({
+//       user = await prisma.user.create({
 //         data: {
-//           userId: user.id,
-//           testTypeId: payment.testTypeId,
-//           paymentId: payment.id,
-//           companyId: user.companyId,
-//           status: "RESERVED",
+//           email: email ?? `${userId}@gmail.com`,
+//           fullName,
+//           password: hashedPassword,
+//           role: "USER",
+//           customId: userId,
+//           companyId: Number(companyId),
 //         },
-//       });
-
-//       const token = await prisma.token.create({
-//         data: {
-//           userId: user.id,
-//           testTypeId: payment.testTypeId,
-//           testAttempt: { connect: { id: attempt.id } },
-//           token: generateToken(),
-//           expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
-//           companyId: user.companyId,
-//         },
-//       });
-
-//       return NextResponse.json({
-//         message: "User berhasil didaftarkan ke test satuan",
-//         attempt,
-//         token: token.token,
-//         remainingQuota: payment.quantity - payment.attempts.length - 1,
 //       });
 //     }
 
-//     return NextResponse.json({ error: "Pilih package atau test" }, { status: 400 });
+//     if (payment.attempts.some((a: any) => a.userId === user!.id)) {
+//       return NextResponse.json(
+//         { error: "User sudah terdaftar di test ini" },
+//         { status: 400 }
+//       );
+//     }
+
+//     const attempt = await prisma.testAttempt.create({
+//       data: {
+//         userId: user.id,
+//         testTypeId: payment.testTypeId,
+//         paymentId: payment.id,
+//         companyId: user.companyId,
+//         status: "RESERVED",
+//       },
+//     });
+
+//     const token = await prisma.token.create({
+//       data: {
+//         userId: user.id,
+//         testTypeId: payment.testTypeId,
+//         testAttempt: { connect: { id: attempt.id } },
+//         token: generateToken(),
+//         expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
+//         companyId: user.companyId,
+//       },
+//     });
+
+//     return NextResponse.json({
+//       message: "User berhasil didaftarkan ke test satuan",
+//       attempt,
+//       token: token.token,
+//       remainingQuota: payment.quantity - payment.attempts.length - 1,
+//     });
 //   } catch (error) {
 //     console.error(error);
-//     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+//     return NextResponse.json(
+//       { error: "Internal server error" },
+//       { status: 500 }
+//     );
 //   }
 // }
-export async function POST(req: NextRequest): Promise<Response> {
-  try {
-    const body = await req.json();
-    const { email, paymentId, userId, companyId } = body;
-
-    if (!paymentId) {
-      return NextResponse.json(
-        { error: "paymentId (test) wajib diisi" },
-        { status: 400 }
-      );
-    }
-
-    if (!email && !userId) {
-      return NextResponse.json(
-        { error: "Email atau User ID wajib diisi" },
-        { status: 400 }
-      );
-    }
-
-    let user =
-      email != null
-        ? await prisma.user.findUnique({ where: { email } })
-        : null;
-
-    if (!user && userId) {
-      user = await prisma.user.findUnique({ where: { customId: userId } });
-    }
-
-    const payment = await prisma.payment.findUnique({
-      where: { id: Number(paymentId) },
-      include: { attempts: true },
-    });
-
-    if (!payment) {
-      return NextResponse.json(
-        { error: "Payment not found" },
-        { status: 404 }
-      );
-    }
-
-    if (payment.testTypeId === null) {
-      return NextResponse.json(
-        { error: "Payment tidak memiliki testTypeId" },
-        { status: 400 }
-      );
-    }
-
-    if (payment.attempts.length >= payment.quantity) {
-      return NextResponse.json(
-        { error: "Kuota habis" },
-        { status: 400 }
-      );
-    }
-
-    if (!user) {
-      if (!companyId) {
-        return NextResponse.json(
-          { error: "CompanyId wajib untuk user baru" },
-          { status: 400 }
-        );
-      }
-
-      const hashedPassword = await bcrypt.hash(userId, 10);
-      const count = await prisma.user.count({
-        where: { companyId: Number(companyId) },
-      });
-      const fullName = `Karyawan ${count + 1}`;
-
-      user = await prisma.user.create({
-        data: {
-          email: email ?? `${userId}@gmail.com`,
-          fullName,
-          password: hashedPassword,
-          role: "USER",
-          customId: userId,
-          companyId: Number(companyId),
-        },
-      });
-    }
-
-    if (payment.attempts.some((a: any) => a.userId === user!.id)) {
-      return NextResponse.json(
-        { error: "User sudah terdaftar di test ini" },
-        { status: 400 }
-      );
-    }
-
-    const attempt = await prisma.testAttempt.create({
-      data: {
-        userId: user.id,
-        testTypeId: payment.testTypeId,
-        paymentId: payment.id,
-        companyId: user.companyId,
-        status: "RESERVED",
-      },
-    });
-
-    const token = await prisma.token.create({
-      data: {
-        userId: user.id,
-        testTypeId: payment.testTypeId,
-        testAttempt: { connect: { id: attempt.id } },
-        token: generateToken(),
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
-        companyId: user.companyId,
-      },
-    });
-
-    return NextResponse.json({
-      message: "User berhasil didaftarkan ke test satuan",
-      attempt,
-      token: token.token,
-      remainingQuota: payment.quantity - payment.attempts.length - 1,
-    });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
