@@ -23,7 +23,7 @@ async function getLoggedUserId(req: NextRequest) {
 // === GET untuk filter reports (Pending & History) ===
 export async function GET(req: NextRequest) {
   try {
-        const userId = await getLoggedUserId(req);
+    const userId = await getLoggedUserId(req);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -274,7 +274,6 @@ if (validatorUser?.ttdHash) {
   // console.log("✅ Generated barcodettd:", barcodettd.substring(0, 50));
 }
 
-    // Update data sesuai source
     let updated;
     if (source === "personalityResult") {
       updated = await prisma.personalityResult.update({
