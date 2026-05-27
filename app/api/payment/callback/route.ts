@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       await redis.expire(rateLimitKey, 60);
     }
 
-    if (requestCount > 50) {
+    if (requestCount > 90) {
       console.warn(`🚨 [DDoS BLOCKED] Terlalu banyak request dari IP: ${ip}`);
       return NextResponse.json(
         { success: false, message: "Too many requests" },
@@ -96,8 +96,11 @@ export async function POST(req: NextRequest) {
         `🛡️ [DB BLOCKED] Payment ID ${paymentId} sudah LUNAS di Database! Replay Attack (TTL Expiry) digagalkan.`,
       );
       return NextResponse.json(
-        { success: true, message: "Payment already processed" },
-        { status: 200 },
+        {
+          success: false,
+          message: "Payment already processed / Replay Attack Blocked",
+        },
+        { status: 409 },
       );
     }
 
