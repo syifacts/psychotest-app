@@ -66,9 +66,18 @@ const userAgent = req.headers.get("user-agent") || "unknown";
     });
 
     // Buat token JWT
-    const token = jwt.sign(
-      { id: user.id, email: user.email, fullName: user.fullName, role: user.role, birthDate: user.birthDate?.toISOString(),
-    profileImage: user.profileImage },
+const token = jwt.sign(
+  { 
+    id: user.id,
+    email: user.email,
+    fullName: user.fullName,
+    role: user.role,
+    birthDate: user.birthDate?.toISOString(),
+    profileImage: user.profileImage,
+
+    // ✅ tambahkan ini
+    tokenVersion: user.tokenVersion
+  },
       JWT_SECRET,
       { expiresIn: "1d" }
     );

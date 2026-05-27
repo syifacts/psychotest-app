@@ -44,30 +44,43 @@ export async function GET(req: Request) {
 
       // 2️⃣ Cek JWT login
       try {
-        const decoded = jwt.verify(token, JWT_SECRET) as any;
-        if (decoded.id == null) throw new Error("JWT tidak valid");
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
 
-        const userFromDB = await prisma.user.findUnique({
-          where: { id: decoded.id },
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
-            role: true,
-            birthDate: true,
-            profileImage: true,
-            ttdUrl: true,
-            createdAt: true,
-            updatedAt: true,
-            phone: true,
-            education: true, // ✅ tambahkan ini
-            sippNumber: true,
-            strNumber:true,
-            lembagalayanan:true,
+if (decoded.id == null) {
+  throw new Error("JWT tidak valid");
+}
 
-          },
-        });
+const userFromDB = await prisma.user.findUnique({
+  where: { id: decoded.id },
+  select: {
+    id: true,
+    email: true,
+    fullName: true,
+    role: true,
+    birthDate: true,
+    profileImage: true,
+    ttdUrl: true,
+    createdAt: true,
+    updatedAt: true,
+    phone: true,
+    education: true,
+    sippNumber: true,
+    strNumber: true,
+    lembagalayanan: true,
 
+    // ✅ tambahkan ini
+    tokenVersion: true,
+  },
+});
+
+// ✅ validasi token lama
+if (!userFromDB) {
+  throw new Error("User tidak ditemukan");
+}
+
+if (decoded.tokenVersion !== userFromDB.tokenVersion) {
+  throw new Error("Token sudah logout / tidak valid");
+}
         if (userFromDB) return NextResponse.json({ user: userFromDB });
       } catch (err) {
         console.log("JWT invalid:", err);

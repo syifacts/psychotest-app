@@ -54,6 +54,8 @@ model User {
   companyId   Int?
   PublicKey String? @db.Text
   PrivateKey String? @db.Text
+    tokenVersion  Int    @default(0)
+
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
