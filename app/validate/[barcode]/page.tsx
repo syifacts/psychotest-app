@@ -6,6 +6,9 @@ import {
   BlobProvider,
   pdf,
 } from "@react-pdf/renderer";
+import { useToast } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/toaster";
+
 
 
 export default function ValidatePage() {
@@ -14,9 +17,36 @@ export default function ValidatePage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploadResult, setUploadResult] = useState<any>(null);
+  const { toast } = useToast();
   const handleUpload = async (e: any) => {
-  const file = e.target.files[0];
-  if (!file) return;
+const file = e.target.files[0];
+
+if (!file) return;
+
+// VALIDASI PDF
+if (file.type !== "application/pdf") {
+  toast({
+    title: "Upload gagal",
+    description: "File harus berupa PDF",
+    variant: "error",
+    duration: 3000,
+  });
+
+  e.target.value = "";
+  return;
+}
+
+if (file.size > 5 * 1024 * 1024) {
+  toast({
+    title: "Upload gagal",
+    description: "Ukuran file maksimal 5MB",
+    variant: "error",
+    duration: 3000,
+  });
+
+  e.target.value = "";
+  return;
+}
 
   const formData = new FormData();
   formData.append("file", file);
@@ -227,6 +257,9 @@ const fileName = `HPP_${data?.attempt?.User?.fullName || "User"}_${displayTimest
   .replace(/\s+/g, "_")
   .trim();
 return (
+    <>
+    <Toaster />
+
   <div
     style={{
       padding: 24,
@@ -598,6 +631,7 @@ return (
       }}
     </BlobProvider>
   </div>
+    </>
 );
 }
 
