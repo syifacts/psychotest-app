@@ -542,23 +542,31 @@ return (
               }}
             />
 
-            <a
-              href={url}
-             download={fileName}
-              style={{
-                display: "inline-block",
-                padding: "11px 18px",
-                backgroundColor: "#0070f3",
-                color: "#fff",
-                borderRadius: 8,
-                textDecoration: "none",
-                fontWeight: "bold",
-                boxShadow:
-                  "0 2px 6px rgba(0,0,0,0.1)",
-              }}
-            >
-              ⬇ Download PDF
-            </a>
+<button
+  onClick={() => {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }}
+  style={{
+    display: "inline-block",
+    padding: "11px 18px",
+    backgroundColor: "#0070f3",
+    color: "#fff",
+    borderRadius: 8,
+    textDecoration: "none",
+    fontWeight: "bold",
+    boxShadow:
+      "0 2px 6px rgba(0,0,0,0.1)",
+    border: "none",
+    cursor: "pointer",
+  }}
+>
+  ⬇ Download PDF
+</button>
           </div>
         );
       }}
