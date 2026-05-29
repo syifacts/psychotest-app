@@ -469,20 +469,20 @@ if (
 // 🔹 STATUS KELAYAKAN
 // =============================
 
-const compactText =
-  extractedText.replace(/\s+/g, "");
+// // const compactText =
+//   extractedText.replace(/\s+/g, "");
 
 // =============================
 // STATUS LAYAK
 // =============================
 const hasLayak =
-  compactText.includes("layak");
+  /\blayak\b/.test(extractedText);
 
 const hasTidakLayak =
-  compactText.includes("tidaklayak");
+  /tidak\s+layak/.test(extractedText);
 
 const hasBelumLayak =
-  compactText.includes("belumlayak");
+  /belum\s+layak/.test(extractedText);
 
 // DB = LAYAK
 if (result.layak) {
