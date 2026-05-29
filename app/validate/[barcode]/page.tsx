@@ -205,6 +205,23 @@ export default function ValidatePage() {
 //       </BlobProvider>
 //     </div>
 //   );
+const wibDate = new Date(
+  new Date(data.expiresAt || new Date()).toLocaleString("en-US", {
+    timeZone: "Asia/Jakarta",
+  })
+);
+
+const displayTimestamp =
+  `${String(wibDate.getDate()).padStart(2, "0")}` +
+  `${String(wibDate.getMonth() + 1).padStart(2, "0")}` +
+  `${wibDate.getFullYear()}_` +
+  `${String(wibDate.getHours()).padStart(2, "0")}` +
+  `${String(wibDate.getMinutes()).padStart(2, "0")}` +
+  `${String(wibDate.getSeconds()).padStart(2, "0")}`;
+
+const fileName = `HPP_${data?.attempt?.User?.fullName || "User"}_${displayTimestamp}.pdf`
+  .replace(/\s+/g, "_")
+  .trim();
 return (
   <div
     style={{
@@ -527,10 +544,7 @@ return (
 
             <a
               href={url}
-              download={`HPP_${(
-                data?.attempt?.User
-                  ?.fullName || "User"
-              )}.pdf`}
+             download={fileName}
               style={{
                 display: "inline-block",
                 padding: "11px 18px",
