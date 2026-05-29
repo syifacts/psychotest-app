@@ -526,9 +526,9 @@ export async function POST(req: NextRequest) {
 
     const safeName = sanitizeFileName(result.User.fullName);
 
-    const fileName = `HPP_${safeName}_validated_${timestamp}.pdf`;
+    // const fileName = `HPP_${safeName}_validated_${timestamp}.pdf`;
 
-    const filePath = path.join(process.cwd(), "public", "reports", fileName);
+    // const filePath = path.join(process.cwd(), "public", "reports", fileName);
 
     // pastikan folder ada
     // const dirPath = path.join(process.cwd(), "public", "reports");
@@ -550,18 +550,18 @@ export async function POST(req: NextRequest) {
     //     await generatePDF(filePath, html);
     //   }
     // hapus PDF lama jika ada
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
+    // if (fs.existsSync(filePath)) {
+    //   fs.unlinkSync(filePath);
+    // }
 
     console.log("📄 Generating PDF...");
 
-    const html = `
-  <h1>Laporan Psikotes</h1>
-  <p>Nama: ${result.User?.fullName || "-"}</p>
-  <p>Pendidikan: ${result.User?.education || "-"}</p>
-  <p>Kesimpulan: ${kesimpulan ?? result.kesimpulan ?? "-"}</p>
-`;
+//     const html = `
+//   <h1>Laporan Psikotes</h1>
+//   <p>Nama: ${result.User?.fullName || "-"}</p>
+//   <p>Pendidikan: ${result.User?.education || "-"}</p>
+//   <p>Kesimpulan: ${kesimpulan ?? result.kesimpulan ?? "-"}</p>
+// `;
 
     // await generatePDF(filePath, html);
     // pastikan folder ada
@@ -580,11 +580,12 @@ export async function POST(req: NextRequest) {
     //   await generatePDF(filePath, html);
     // }
 
-    const pdfBuffer = fs.readFileSync(filePath);
+    // const pdfBuffer = fs.readFileSync(filePath);
 
-    const pdfHash = crypto.createHash("sha512").update(pdfBuffer).digest("hex");
+    // const pdfHash = crypto.createHash("sha512").update(pdfBuffer).digest("hex");
 
-    console.log("PDF HASH (SAVE):", pdfHash);
+    // console.log("PDF HASH (SAVE):", pdfHash);
+    const pdfHash = null;
 
     // 🔐 DATA HASH (untuk deteksi perubahan DB)
     // const dataForHash = {

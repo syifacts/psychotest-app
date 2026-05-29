@@ -196,6 +196,8 @@ export async function POST(req: NextRequest) {
     const data = await pdfParse(buffer);
 
     const extractedText = normalizeText(data.text);
+    console.log("========== PDF TEXT ==========");
+console.log(extractedText);
 
   //   const generatedHash = crypto
   // .createHash("sha512")
@@ -475,38 +477,54 @@ if (
 // =============================
 // STATUS LAYAK
 // =============================
-const hasLayak =
-  /\blayak\b/.test(extractedText);
 
-const hasTidakLayak =
-  /tidak\s+layak/.test(extractedText);
+const hasXLayak =
+  /x\s*layak/i.test(extractedText);
 
-const hasBelumLayak =
-  /belum\s+layak/.test(extractedText);
+const hasXBelumLayak =
+  /x\s*belum\s*layak/i.test(
+    extractedText
+  );
+
+const hasXTidakLayak =
+  /x\s*tidak\s*layak/i.test(
+    extractedText
+  );
 
 // DB = LAYAK
 if (result.layak) {
-  if (!hasLayak || hasTidakLayak) {
+  if (!hasXLayak) {
     differences.layak =
       "Status layak berubah";
   }
 }
 
+// DB = BELUM LAYAK
+if (result.belumLayak) {
+  if (!hasXBelumLayak) {
+    differences.belumLayak =
+      "Status belum layak berubah";
+  }
+}
+
 // DB = TIDAK LAYAK
 if (result.tidakLayak) {
-  if (!hasTidakLayak) {
+  if (!hasXTidakLayak) {
     differences.tidakLayak =
       "Status tidak layak berubah";
   }
 }
 
-// DB = BELUM LAYAK
-if (result.belumLayak) {
-  if (!hasBelumLayak) {
-    differences.belumLayak =
-      "Status belum layak berubah";
-  }
-}
+console.log("X LAYAK:", hasXLayak);
+console.log(
+  "X BELUM LAYAK:",
+  hasXBelumLayak
+);
+console.log(
+  "X TIDAK LAYAK:",
+  hasXTidakLayak
+);
+
     // =============================
     // GENERATE HASH PDF
     // =============================
