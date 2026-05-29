@@ -92,6 +92,40 @@ if (!authToken) {
    let decoded: any;
  try {
   decoded = jwt.verify(authToken, JWT_SECRET);
+  const userFromDB = await prisma.user.findUnique({
+  where: { id: decoded.id },
+  select: {
+    tokenVersion: true,
+  },
+});
+
+if (!userFromDB) {
+  return NextResponse.json(
+    { error: "User tidak ditemukan" },
+    { status: 401 }
+  );
+}
+
+if (decoded.tokenVersion !== userFromDB.tokenVersion) {
+  await logActivity({
+    action: "READ",
+    resource: "result",
+    resourceId: attemptId.toString(),
+    endpoint: `/api/attempts/${attemptId}`,
+    method: "GET",
+    ipAddress: ip,
+    userAgent,
+    status: "FAILED",
+    severity: "HIGH",
+    isSuspicious: true,
+    description: "Expired/reused token detected",
+  });
+
+  return NextResponse.json(
+    { error: "Token sudah tidak valid" },
+    { status: 401 }
+  );
+}
 
  } catch {
   await logActivity({
