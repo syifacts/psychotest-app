@@ -91,7 +91,11 @@ async function getLoggedUserId(req: NextRequest) {
     if (!token) return null;
 
     const payload: any = jwt.verify(token, JWT_SECRET);
-    return payload.id;
+
+    return {
+      id: payload.id,
+      role: payload.role,
+    };
   } catch (err) {
     console.error("JWT error:", err);
     return null;
@@ -341,27 +345,24 @@ export async function POST(req: NextRequest) {
   const userAgent = req.headers.get("user-agent") || "unknown";
   try {
     const { reportId, kesimpulan, source } = await req.json();
-    const userId = await getLoggedUserId(req);
-    if (!reportId || !userId) {
-      await logActivity({
-        role: "PSIKOLOG",
-        action: "VALIDATE",
-        resource: "report",
-        resourceId: reportId?.toString(),
-        endpoint: "/api/reports/validate",
-        method: "POST",
-        ipAddress: ip,
-        userAgent,
-        status: "FAILED",
-        severity: "HIGH",
-        isSuspicious: true,
-        description: "Unauthorized validation attempt (no user)",
-      });
-      return NextResponse.json(
-        { error: "Data tidak lengkap" },
-        { status: 400 },
-      );
-    }
+const authUser = await getLoggedUserId(req);
+
+if (!reportId || !authUser) {
+  return NextResponse.json(
+    { error: "Data tidak lengkap" },
+    { status: 400 },
+  );
+}
+
+if (authUser.role !== "PSIKOLOG") {
+  return NextResponse.json(
+    { error: "Forbidden" },
+    { status: 403 }
+  );
+}
+
+const userId = authUser.id;
+
     const validatorUser = await prisma.user.findUnique({
       where: { id: userId },
       select: {
