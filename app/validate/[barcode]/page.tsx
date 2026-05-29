@@ -474,103 +474,101 @@ return (
     {/* PDF VIEWER */}
     {/* ========================= */}
 
-    <BlobProvider
-      document={
-        <ReportCPMIDocument
-          attempt={data.attempt}
-          result={data.result}
-          kesimpulan={data.kesimpulan}
-          kesimpulanSikap={
-            data.kesimpulanSikap
-          }
-          kesimpulanKepribadian={
-            data.kesimpulanKepribadian
-          }
-          kesimpulanBelajar={
-            data.kesimpulanBelajar
-          }
-          kesimpulanumum={
-            data.kesimpulanUmum
-          }
-          saranpengembangan={
-            data.saranPengembangan
-          }
-          ttd={data.ttd}
-          barcode={data.barcode}
-          expiresAt={data.expiresAt}
-          validationNotes={
-            data.validationNotes
-          }
-        />
-      }
-    >
-      {({ url, loading, error }) => {
-        if (loading)
-          return (
-            <p>Mempersiapkan PDF...</p>
-          );
-
-        if (error)
-          return (
-            <p>Error membuat PDF</p>
-          );
-
-        if (!url)
-          return (
-            <p>PDF tidak tersedia</p>
-          );
-
-        return (
-          <div
-            style={{
-              marginTop: 20,
-              padding: 18,
-              borderRadius: 12,
-              border: "1px solid #ddd",
-              boxShadow:
-                "0 2px 6px rgba(0,0,0,0.05)",
-            }}
-          >
-            <iframe
-              src={url}
-              width="100%"
-              height="700px"
-              style={{
-                borderRadius: 10,
-                border: "1px solid #ccc",
-                marginBottom: 14,
-              }}
-            />
-
-<button
-  onClick={() => {
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }}
-  style={{
-    display: "inline-block",
-    padding: "11px 18px",
-    backgroundColor: "#0070f3",
-    color: "#fff",
-    borderRadius: 8,
-    textDecoration: "none",
-    fontWeight: "bold",
-    boxShadow:
-      "0 2px 6px rgba(0,0,0,0.1)",
-    border: "none",
-    cursor: "pointer",
-  }}
+<BlobProvider
+  document={
+    <ReportCPMIDocument
+      attempt={data.attempt}
+      result={data.result}
+      kesimpulan={data.kesimpulan}
+      kesimpulanSikap={data.kesimpulanSikap}
+      kesimpulanKepribadian={data.kesimpulanKepribadian}
+      kesimpulanBelajar={data.kesimpulanBelajar}
+      kesimpulanumum={data.kesimpulanUmum}
+      saranpengembangan={data.saranPengembangan}
+      ttd={data.ttd}
+      barcode={data.barcode}
+      expiresAt={data.expiresAt}
+      validationNotes={data.validationNotes}
+    />
+  }
 >
-  ⬇ Download PDF
-</button>
-          </div>
-        );
-      }}
-    </BlobProvider>
+  {({ url, blob, loading, error }) => {
+    if (loading)
+      return <p>Mempersiapkan PDF...</p>;
+
+    if (error)
+      return <p>Error membuat PDF</p>;
+
+    if (!url || !blob)
+      return <p>PDF tidak tersedia</p>;
+
+    return (
+      <div
+        style={{
+          marginTop: 20,
+          padding: 18,
+          borderRadius: 12,
+          border: "1px solid #ddd",
+          boxShadow:
+            "0 2px 6px rgba(0,0,0,0.05)",
+        }}
+      >
+        <iframe
+          src={url}
+          width="100%"
+          height="700px"
+          style={{
+            borderRadius: 10,
+            border: "1px solid #ccc",
+            marginBottom: 14,
+          }}
+        />
+
+        <button
+          onClick={() => {
+            const pdfFile = new File(
+              [blob],
+              fileName,
+              {
+                type: "application/pdf",
+              }
+            );
+
+            const downloadUrl =
+              URL.createObjectURL(pdfFile);
+
+            const link =
+              document.createElement("a");
+
+            link.href = downloadUrl;
+            link.download = fileName;
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            URL.revokeObjectURL(downloadUrl);
+          }}
+          style={{
+            display: "inline-block",
+            padding: "11px 18px",
+            backgroundColor: "#0070f3",
+            color: "#fff",
+            borderRadius: 8,
+            textDecoration: "none",
+            fontWeight: "bold",
+            boxShadow:
+              "0 2px 6px rgba(0,0,0,0.1)",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          ⬇ Download PDF
+        </button>
+      </div>
+    );
+  }}
+</BlobProvider>
   </div>
 );
 }
