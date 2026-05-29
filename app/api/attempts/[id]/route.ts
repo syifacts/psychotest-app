@@ -150,23 +150,44 @@ if (decoded.tokenVersion !== userFromDB.tokenVersion) {
 
     const userId = decoded.id;
     const userRole = decoded.role;
+    
 
     const attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
-      include: {
-        User: true,
-        TestType: true,
+    include: {
+  User: {
+    select: {
+      id: true,
+      fullName: true,
+      education: true,
+      birthDate: true,
+      tujuan: true,
+      ttdUrl: true,
+    },
+  },
+  TestType: true,
         subtestResults: { include: { SubTest: true } },
         results: {
           include: { 
             summaryTemplate: true,
-            ValidatedBy: true,
+            ValidatedBy: {
+  select: {
+    fullName: true,
+    lembagalayanan: true,
+    strNumber: true,
+    sippNumber: true,
+  },
+},
           },
           orderBy: { id: "desc" },
         },
-        answers: true,
+        // answers: true,
       },
     });
+const age = attempt?.User?.birthDate
+  ? new Date().getFullYear() -
+    new Date(attempt.User.birthDate).getFullYear()
+  : null;
 
     if (!attempt) {
   await logActivity({
@@ -237,7 +258,7 @@ if (decoded.tokenVersion !== userFromDB.tokenVersion) {
             ?? "-",
           // 🔹 pakai TTD asli dari User
           ttdUrl: attempt.User?.ttdUrl || null,
-          ttdHash: attempt.User?.ttdHash || null,
+          // ttdHash: attempt.User?.ttdHash || null,
           ValidatedBy: istResultRaw.ValidatedBy 
             ? {
                 fullName: istResultRaw.ValidatedBy.fullName,
@@ -398,9 +419,9 @@ saranpengembangan: saranPengembangan,
   tidakLayak:cpmiResultRaw.tidakLayak ?? false,
 
     ttdUrl: attempt.User?.ttdUrl || null,
-    ttdHash: attempt.User?.ttdHash || null,
+    // ttdHash: attempt.User?.ttdHash || null,
     barcode: cpmiResultRaw.barcode ?? null,
-    barcodettd: cpmiResultRaw.barcodettd ?? null,
+    // barcodettd: cpmiResultRaw.barcodettd ?? null,
     expiresAt: cpmiResultRaw.expiresAt ?? null,
     dominantAspek,
     
@@ -460,14 +481,14 @@ url: msdtResultRaw.url ?? null,
           }
         : null,
       ttdUrl: attempt.User?.ttdUrl || null,
-      ttdHash: attempt.User?.ttdHash || null,
+      // ttdHash: attempt.User?.ttdHash || null,
     }
   : null;
 
-    const psikologTTD = attempt.results?.[0]?.ValidatedBy
-      ? attempt.results[0].ValidatedBy.ttdUrl
-      : attempt.User?.ttdUrl || null;
-
+    // const psikologTTD = attempt.results?.[0]?.ValidatedBy
+    //   ? attempt.results[0].ValidatedBy.ttdUrl
+    //   : attempt.User?.ttdUrl || null;
+const psikologTTD = attempt.User?.ttdUrl ?? null;
     const testTypeData = {
       id: attempt.TestType?.id,
       name: attempt.TestType?.name || `TEST_${attempt.TestType?.id}`,
@@ -489,7 +510,20 @@ url: msdtResultRaw.url ?? null,
   description: "Authorized access to result",
 });
     return NextResponse.json({
-      attempt: { ...attempt, TestType: testTypeData },
+      attempt: {
+  id: attempt.id,
+  status: attempt.status,
+  startedAt: attempt.startedAt,
+  finishedAt: attempt.finishedAt,
+  TestType: testTypeData,
+User: {
+  id: attempt.User?.id,
+  fullName: attempt.User?.fullName,
+  education: attempt.User?.education,
+  tujuan: attempt.User?.tujuan,
+  ttdUrl: attempt.User?.ttdUrl,
+  age,
+},},
       subtestResults,
       result: totalResult,
       cpmiResult,
