@@ -34,7 +34,23 @@ export async function middleware(req: NextRequest) {
   // 1️⃣ Jika ada JWT login
   if (authToken) {
     try {
-      const decoded = jwt.verify(authToken, JWT_SECRET) as { role: string };
+    const decoded = jwt.verify(authToken, JWT_SECRET) as {
+  id: number;
+  role: string;
+  tokenVersion: number;
+};
+      const user = await prisma.user.findUnique({
+  where: { id: decoded.id },
+  select: {
+    tokenVersion: true,
+    role: true,
+  },
+});
+
+if (!user || user.tokenVersion !== decoded.tokenVersion) {
+  url.pathname = "/login";
+  return NextResponse.redirect(url);
+}
 
       // Redirect user yang sudah login jika buka login/register
       if (path === "/login" || path === "/register") {
