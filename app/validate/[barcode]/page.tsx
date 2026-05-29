@@ -1,8 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { BlobProvider } from "@react-pdf/renderer";
 import ReportCPMIDocument from "@/components/report/reportDocumentCPMI";
+import {
+  BlobProvider,
+  pdf,
+} from "@react-pdf/renderer";
+
 
 export default function ValidatePage() {
   const params = useParams<{ barcode: string }>();
@@ -474,101 +478,125 @@ return (
     {/* PDF VIEWER */}
     {/* ========================= */}
 
-<BlobProvider
-  document={
-    <ReportCPMIDocument
-      attempt={data.attempt}
-      result={data.result}
-      kesimpulan={data.kesimpulan}
-      kesimpulanSikap={data.kesimpulanSikap}
-      kesimpulanKepribadian={data.kesimpulanKepribadian}
-      kesimpulanBelajar={data.kesimpulanBelajar}
-      kesimpulanumum={data.kesimpulanUmum}
-      saranpengembangan={data.saranPengembangan}
-      ttd={data.ttd}
-      barcode={data.barcode}
-      expiresAt={data.expiresAt}
-      validationNotes={data.validationNotes}
-    />
-  }
->
-  {({ url, blob, loading, error }) => {
-    if (loading)
-      return <p>Mempersiapkan PDF...</p>;
-
-    if (error)
-      return <p>Error membuat PDF</p>;
-
-    if (!url || !blob)
-      return <p>PDF tidak tersedia</p>;
-
-    return (
-      <div
-        style={{
-          marginTop: 20,
-          padding: 18,
-          borderRadius: 12,
-          border: "1px solid #ddd",
-          boxShadow:
-            "0 2px 6px rgba(0,0,0,0.05)",
-        }}
-      >
-        <iframe
-          src={url}
-          width="100%"
-          height="700px"
-          style={{
-            borderRadius: 10,
-            border: "1px solid #ccc",
-            marginBottom: 14,
-          }}
+    <BlobProvider
+      document={
+        <ReportCPMIDocument
+          attempt={data.attempt}
+          result={data.result}
+          kesimpulan={data.kesimpulan}
+          kesimpulanSikap={
+            data.kesimpulanSikap
+          }
+          kesimpulanKepribadian={
+            data.kesimpulanKepribadian
+          }
+          kesimpulanBelajar={
+            data.kesimpulanBelajar
+          }
+          kesimpulanumum={
+            data.kesimpulanUmum
+          }
+          saranpengembangan={
+            data.saranPengembangan
+          }
+          ttd={data.ttd}
+          barcode={data.barcode}
+          expiresAt={data.expiresAt}
+          validationNotes={
+            data.validationNotes
+          }
         />
+      }
+    >
+      {({ url, loading, error }) => {
+        if (loading)
+          return (
+            <p>Mempersiapkan PDF...</p>
+          );
 
-        <button
-          onClick={() => {
-            const pdfFile = new File(
-              [blob],
-              fileName,
-              {
-                type: "application/pdf",
-              }
-            );
+        if (error)
+          return (
+            <p>Error membuat PDF</p>
+          );
 
-            const downloadUrl =
-              URL.createObjectURL(pdfFile);
+        if (!url)
+          return (
+            <p>PDF tidak tersedia</p>
+          );
 
-            const link =
-              document.createElement("a");
+        return (
+          <div
+            style={{
+              marginTop: 20,
+              padding: 18,
+              borderRadius: 12,
+              border: "1px solid #ddd",
+              boxShadow:
+                "0 2px 6px rgba(0,0,0,0.05)",
+            }}
+          >
+            <iframe
+              src={url}
+              width="100%"
+              height="700px"
+              style={{
+                borderRadius: 10,
+                border: "1px solid #ccc",
+                marginBottom: 14,
+              }}
+            />
 
-            link.href = downloadUrl;
-            link.download = fileName;
+<button
+  onClick={async () => {
+    const blob = await pdf(
+      <ReportCPMIDocument
+        attempt={data.attempt}
+        result={data.result}
+        kesimpulan={data.kesimpulan}
+        kesimpulanSikap={data.kesimpulanSikap}
+        kesimpulanKepribadian={data.kesimpulanKepribadian}
+        kesimpulanBelajar={data.kesimpulanBelajar}
+        kesimpulanumum={data.kesimpulanUmum}
+        saranpengembangan={data.saranPengembangan}
+        ttd={data.ttd}
+        barcode={data.barcode}
+        expiresAt={data.expiresAt}
+        validationNotes={data.validationNotes}
+      />
+    ).toBlob();
 
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+    const blobUrl = URL.createObjectURL(blob);
 
-            URL.revokeObjectURL(downloadUrl);
-          }}
-          style={{
-            display: "inline-block",
-            padding: "11px 18px",
-            backgroundColor: "#0070f3",
-            color: "#fff",
-            borderRadius: 8,
-            textDecoration: "none",
-            fontWeight: "bold",
-            boxShadow:
-              "0 2px 6px rgba(0,0,0,0.1)",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          ⬇ Download PDF
-        </button>
-      </div>
-    );
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = fileName;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(blobUrl);
   }}
-</BlobProvider>
+  style={{
+    display: "inline-block",
+    padding: "11px 18px",
+    backgroundColor: "#0070f3",
+    color: "#fff",
+    borderRadius: 8,
+    textDecoration: "none",
+    fontWeight: "bold",
+    boxShadow:
+      "0 2px 6px rgba(0,0,0,0.1)",
+    border: "none",
+    cursor: "pointer",
+  }}
+>
+  ⬇ Download PDF
+</button>
+          </div>
+        );
+      }}
+    </BlobProvider>
   </div>
 );
 }
