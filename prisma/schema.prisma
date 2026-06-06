@@ -314,6 +314,7 @@ jumlahkor5  Int?
 jumlahkor6  Int?
 jumlahkor7  Int?
 jumlahkor8  Int?
+//  version Int @default(1)
 
   // hasil per subskala
   Ds            Int?

@@ -18,31 +18,45 @@ export async function GET(req: NextRequest) {
       orderBy: { startedAt: "desc" },
     });
 
-    const mappedAttempts = attempts.map((a:any) => {
-      const result = a.results?.[0];
-      const personalityResult = a.personalityResults?.[0];
-     
-      // --- Tentukan status ---
-      let status: string;
-      if (personalityResult) {
-        status = personalityResult.validated
-          ? "Selesai"
-          : "Sedang diverifikasi psikolog";
-      } else if (result) {
-        status = result.validated
-          ? "Selesai"
-          : "Sedang diverifikasi psikolog";
-      } else {
-        status = a.isCompleted ? "Belum divalidasi" : "Belum selesai";
-      }
+    const mappedAttempts = attempts.map((a: any) => {
+  const result = a.results?.[0];
+  const personalityResult =
+    a.personalityResults?.[0];
 
-      return {
-        id: a.id,
-        testType: { name: a.TestType.name },
-        completedAt: a.finishedAt || a.startedAt,
-        status,
-      };
-    });
+  let status: string;
+
+  if (personalityResult) {
+    status = personalityResult.validated
+      ? "Selesai"
+      : "Sedang diverifikasi psikolog";
+  } else if (result) {
+    status = result.validated
+      ? "Selesai"
+      : "Sedang diverifikasi psikolog";
+  } else {
+    status = a.isCompleted
+      ? "Belum divalidasi"
+      : "Belum selesai";
+  }
+
+  return {
+    id: a.id,
+
+    testType: {
+      name: a.TestType.name,
+    },
+
+    completedAt:
+      a.finishedAt || a.startedAt,
+
+    testAttempt: {
+      startedAt: a.startedAt,
+      completedAt: a.finishedAt,
+    },
+
+    status,
+  };
+});
 
     return NextResponse.json({ attempts: mappedAttempts });
   } catch (err) {

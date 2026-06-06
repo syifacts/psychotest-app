@@ -150,17 +150,19 @@ belumLayak: kesimpulan.belumLayak,
 tidakLayak: kesimpulan.tidakLayak,
 rekomendasi: kesimpulan.rekomendasi,
 
+
       }),
     });
 
     const data = await res.json();
 if (data.success) {
-  toast({
-    title: "Berhasil disimpan!",
-    description: "Data berhasil disimpan ke sistem.",
-    variant: "success",
-    duration: 2000,
-  });
+toast({
+  title: "Perubahan disimpan",
+  description:
+    "Validasi sebelumnya dibatalkan. Silakan lakukan validasi ulang dokumen.",
+  variant: "success",
+  duration: 4000,
+});
 
 
 
@@ -229,38 +231,72 @@ setKesimpulan({
     const res = await fetch('/api/reports/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        reportId, 
-        kesimpulan: kesimpulan,
-        kesimpulanSikap: kesimpulan.kesimpulanSikap,
-        kesimpulanKepribadian: kesimpulan.kesimpulanKepribadian,
-        kesimpulanBelajar: kesimpulan.kesimpulanBelajar,
-        kesimpulanumum: kesimpulan.kesimpulanumum,
-saranpengembangan: kesimpulan.saranpengembangan,
-        ttd 
-      }),
+body: JSON.stringify({
+  reportId,
+
+  kesimpulan: kesimpulan.kesimpulan,
+  kesimpulanSikap: kesimpulan.kesimpulanSikap,
+  kesimpulanKepribadian: kesimpulan.kesimpulanKepribadian,
+  kesimpulanBelajar: kesimpulan.kesimpulanBelajar,
+  kesimpulanumum: kesimpulan.kesimpulanumum,
+  saranpengembangan: kesimpulan.saranpengembangan,
+  rekomendasi: kesimpulan.rekomendasi,
+
+  layak: kesimpulan.layak,
+  belumLayak: kesimpulan.belumLayak,
+  tidakLayak: kesimpulan.tidakLayak,
+
+  ttd,
+}),
     });
     const data = await res.json();
 
     if (data.success) {
-      alert('Berhasil validasi!');
-      // re-fetch report untuk update PDF
-      const updated = await fetch(`/api/attempts/${id}`);
-      const updatedData = await updated.json();
-      if (testType === 'CPMI') {
-        setCpmiResult(updatedData.cpmiResult);
-      } else if (testType === 'MSDT') {
-        setResult(updatedData.result);
-      }
-      setTtd(updatedData.ttd);
-    } else {
-      alert('Validasi gagal!');
-    }
-  } catch (err) {
-    console.error(err);
-    alert('Terjadi kesalahan!');
+  toast({
+    title: "Validasi berhasil",
+    description:
+      "Dokumen berhasil divalidasi dan barcode telah dibuat.",
+    variant: "success",
+    duration: 4000,
+  });
+
+  const updated = await fetch(`/api/attempts/${id}`);
+  const updatedData = await updated.json();
+
+  setResult(updatedData.result || null);
+  setCpmiResult(updatedData.cpmiResult || null);
+  setmsdtResult(updatedData.msdtResult || null);
+
+  if (testType === 'CPMI') {
+    setCpmiResult(updatedData.cpmiResult);
+  } else if (testType === 'MSDT') {
+    setResult(updatedData.result);
   }
+
+  setTtd(updatedData.ttd);
+} else {
+  toast({
+    title: "Validasi gagal",
+    description: data.error || "Terjadi kesalahan saat validasi.",
+    variant: "error",
+    duration: 5000,
+  });
+}
+} catch (err) {
+  console.error(err);
+
+  toast({
+    title: "Terjadi kesalahan",
+    description:
+      err instanceof Error
+        ? err.message
+        : "Gagal melakukan validasi.",
+    variant: "error",
+    duration: 5000,
+  });
+}
 };
+
 
 
   // Key unik untuk re-render PDF saat kesimpulan berubah
@@ -413,7 +449,7 @@ const pdfKey = JSON.stringify({
       >
         💾 Simpan
       </button> */}
-      <PDFDownloadLink
+      {/* <PDFDownloadLink
       key={pdfKey}
         document={<PDFTemplate {...pdfProps} />}
         fileName={fileName}
@@ -423,9 +459,15 @@ const pdfKey = JSON.stringify({
             {loading ? 'Menyiapkan...' : '⬇️ Unduh PDF'}
           </button>
         )}
-      </PDFDownloadLink>
+      </PDFDownloadLink> */}
     </div>
   </div>
+
+{result && !result.validated && (
+  <div className="p-3 rounded bg-yellow-100 border border-yellow-300">
+    Dokumen telah diubah dan harus divalidasi ulang sebelum dapat diverifikasi.
+  </div>
+)}
 
   {/* Content */}
   <div className="flex flex-grow gap-4 p-4">
@@ -575,9 +617,14 @@ const pdfKey = JSON.stringify({
             💾 Simpan
           </button>
           </div>
+          <button
+  onClick={handleValidate}
+   className="w-full py-2 bg-green-500 text-white rounded-lg shadow hover:bg-blue-600 transition"
+>
+  🔐 Validasi Ulang
+</button>
       </div>
     </div>
-
 
     {/* PDF Preview */}
     <div className="flex-grow bg-white rounded-lg shadow p-2">

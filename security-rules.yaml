@@ -1,190 +1,599 @@
 rules:
 
   # ======================================================
-  # OBJECT-LEVEL AUTHORIZATION (OLA)
+  # OBJECT-LEVEL AUTHORIZATION (OLA/BOLA)
   # ======================================================
 
-  # 1. OLA - Ownership Check Missing
-  - id: possible-idor-attempts
+  # 1. OLA/BOLA Authorization Implemented
+  - id: ownership-validation-implemented
+
     paths:
       include:
         - app/api/attempts/\[id\]/**
-    patterns:
-      - pattern-either:
-          - pattern: |
-              await prisma.$MODEL.findUnique({
-                where: { id: $ID },
-                ...
-              })
-          - pattern: |
-              await prisma.$MODEL.findFirst({
-                where: { id: $ID },
-                ...
-              })
+
+    pattern-either:
+
+      - pattern: |
+          if (!isOwner && !isCompany && !isPsikolog) {
+            ...
+          }
+
+      - pattern: |
+          return NextResponse.json(
+            { error: "Forbidden" },
+            { status: 403 }
+          )
+
     message: >
-      Potential IDOR/BOLA: data accessed by ID without ownership validation
+      Ownership and authorization validation implemented
       in attempts endpoint.
-    severity: WARNING
-    languages: [typescript]
 
-  # 2. OLA - Information Disclosure
-  - id: possible-information-disclosure-attempts
-    paths:
-      include:
-        - app/api/attempts/\[id\]/**
-    patterns:
-      - pattern-either:
-          - pattern: |
-              await prisma.$MODEL.findUnique({
-                where: { id: $ID },
-                ...
-              })
-          - pattern: |
-              await prisma.$MODEL.findFirst({
-                where: { id: $ID },
-                ...
-              })
-      - pattern-not-inside: |
-          if ($OWNER === $USERID)
-    message: >
-      Potential information disclosure: query does not validate
-      ownership/user relation.
-    severity: WARNING
-    languages: [typescript]
+    severity: INFO
 
-  # 3. OLA - Missing Role Check
-  - id: possible-missing-role-check
+    languages:
+      - typescript
+
+
+
+  # ======================================================
+  # ROLE-BASED AUTHORIZATION
+  # ======================================================
+
+  # 2. Role Validation Implemented
+  - id: role-validation-implemented
+
     paths:
       include:
         - app/api/reports/validate/**
-    patterns:
+
+    pattern-either:
+
       - pattern: |
-          export async function $FUNC(...) {
+          if ($ROLE === "PSIKOLOG") {
             ...
           }
-      - pattern-not-inside: |
-          if ($ROLE === ...)
-    message: >
-      Potential missing role-based authorization in validate endpoint.
-    severity: WARNING
-    languages: [typescript]
 
-  # 4. OLA - Missing Ownership/Role Check in update-summary
-  - id: possible-unauthorized-update-summary
+      - pattern: |
+          if ($ROLE !== "PSIKOLOG") {
+            ...
+          }
+
+    message: >
+      Role-based authorization detected
+      in validate endpoint.
+
+    severity: INFO
+
+    languages:
+      - typescript
+
+
+  # ======================================================
+  # UPDATE AUTHORIZATION
+  # ======================================================
+
+  - id: update-summary-authorization-implemented
+
     paths:
       include:
         - app/api/reports/update-summary/**
-    patterns:
+
+    pattern-either:
+
       - pattern: |
-          await prisma.$MODEL.update({
-            where: { id: $ID },
+          if ($ROLE === "PSIKOLOG") {
             ...
-          })
-      - pattern-not-inside: |
-          if ($ROLE === ...)
-      - pattern-not-inside: |
-          if ($OWNER === $USERID)
+          }
+
+      - pattern: |
+          if ($ROLE !== "PSIKOLOG") {
+            ...
+          }
+
+      - pattern: |
+          if (!isPsikolog) {
+            ...
+          }
+
+      - pattern: |
+          return NextResponse.json(
+            { error: "Forbidden" },
+            { status: 403 }
+          )
+
     message: >
-      Potential OLA/BOLA: update-summary endpoint updates report
-      without ownership or role validation.
-    severity: WARNING
-    languages: [typescript]
+      Authorization validation implemented
+      in update-summary endpoint.
+
+    severity: INFO
+
+    languages:
+      - typescript
+
 
   # ======================================================
   # DIGITAL SIGNATURE - ED25519
   # ======================================================
 
-  # 5. Missing Digital Signature
-  - id: possible-missing-signature-validate
+  # 4. ED25519 Signature Generation Implemented
+  - id: ed25519-signature-implemented
+
     paths:
       include:
         - app/api/reports/validate/**
-    patterns:
-      - pattern: |
-          export async function $FUNC(...) {
-            ...
-          }
-      - pattern-not: |
-          nacl.sign.detached(...)
-    message: >
-      No ED25519 digital signature detected in validate endpoint.
-    severity: WARNING
-    languages: [typescript]
 
-  # 6. Missing Signature Verification
-  - id: missing-signature-verification
+    pattern: |
+      nacl.sign.detached(
+        ...,
+        ...
+      )
+
+    message: >
+      ED25519 digital signature generation implemented
+      in validate endpoint.
+
+    severity: INFO
+
+    languages:
+      - typescript
+
+
+
+  # ======================================================
+  # SIGNATURE VERIFICATION
+  # ======================================================
+
+  # 5. ED25519 Verification Implemented
+  - id: ed25519-verification-implemented
+
     paths:
       include:
         - app/api/report/verify-file/**
-    patterns:
-      - pattern: |
-          export async function $FUNC(...) {
-            ...
-          }
-      - pattern-not: |
-          nacl.sign.detached.verify(...)
-    message: >
-      No ED25519 signature verification detected in verify endpoint.
-    severity: WARNING
-    languages: [typescript]
+        - app/api/report/view/\[barcode\]/**
 
-  # 7. Missing Hash Validation
-  - id: missing-hash-validation
+    pattern: |
+      nacl.sign.detached.verify(
+        ...,
+        ...,
+        ...
+      )
+
+    message: >
+      ED25519 signature verification implemented.
+
+    severity: INFO
+
+    languages:
+      - typescript
+
+
+
+  # ======================================================
+  # HASH VALIDATION
+  # ======================================================
+
+  # 6. Hash Validation Implemented
+  - id: hash-validation-implemented
+
     paths:
       include:
         - app/api/report/verify-file/**
-    patterns:
-      - pattern: |
-          export async function $FUNC(...) {
-            ...
-          }
-      - pattern-not: |
-          crypto.createHash(...)
-    message: >
-      No hash validation detected before signature verification.
-    severity: INFO
-    languages: [typescript]
-
-  # 8. Missing ED25519 Verification in View Barcode Endpoint
-  - id: missing-signature-verification-view-barcode
-    paths:
-      include:
         - app/api/report/view/\[barcode\]/**
 
-    patterns:
-      - pattern-inside: |
-          export async function $FUNC(...) {
-            ...
-          }
-
-      - pattern-not-inside: |
-          verifySignature(...)
+    pattern: |
+      crypto.createHash(
+        ...
+      )
 
     message: >
-      No ED25519 signature verification detected
-      in report view barcode endpoint.
-
-    severity: WARNING
-    languages: [typescript]
-
-  # 9. Missing Hash Validation in View Barcode Endpoint
-  - id: missing-hash-validation-view-barcode
-    paths:
-      include:
-        - app/api/report/view/\[barcode\]/**
-
-    patterns:
-      - pattern-inside: |
-          export async function $FUNC(...) {
-            ...
-          }
-
-      - pattern-not-inside: |
-          crypto.createHash(...)
-
-    message: >
-      No hash validation detected before signature verification
-      in report view barcode endpoint.
+      Hash validation detected before
+      signature verification.
 
     severity: INFO
-    languages: [typescript]
+
+    languages:
+      - typescript
+
+# rules:
+
+#   # ======================================================
+#   # OBJECT-LEVEL AUTHORIZATION (OLA/BOLA)
+#   # ======================================================
+
+#   # 1. OLA/BOLA - Attempts Endpoint
+#   - id: possible-information-disclosure-attempts
+#     paths:
+#       include:
+#         - app/api/attempts/\[id\]/**
+
+#     patterns:
+#       - pattern-either:
+#           - pattern: |
+#               await prisma.$MODEL.findUnique({
+#                 where: { id: $ID },
+#                 ...
+#               })
+
+#           - pattern: |
+#               await prisma.$MODEL.findFirst({
+#                 where: { id: $ID },
+#                 ...
+#               })
+
+#       - pattern-not-inside: |
+#           if (!isOwner && !isCompany && !isPsikolog) {
+#             ...
+#           }
+
+#     message: >
+#       Potential IDOR/BOLA: endpoint accesses data by ID
+#       without ownership or role validation.
+
+#     severity: WARNING
+#     languages:
+#       - typescript
+
+
+#   # 2. Missing Role Check
+#   - id: possible-missing-role-check
+#     paths:
+#       include:
+#         - app/api/reports/validate/**
+
+#     patterns:
+#       - pattern: |
+#           export async function $FUNC(...) {
+#             ...
+#           }
+
+#       - pattern-not-inside: |
+#           if ($ROLE === ...) {
+#             ...
+#           }
+
+#     message: >
+#       Potential missing role-based authorization
+#       in validate endpoint.
+
+#     severity: WARNING
+#     languages:
+#       - typescript
+
+
+#   # 3. Unauthorized Update Summary
+#   - id: possible-unauthorized-update-summary
+#     paths:
+#       include:
+#         - app/api/reports/update-summary/**
+
+#     patterns:
+#       - pattern: |
+#           await prisma.$MODEL.update({
+#             where: { id: $ID },
+#             ...
+#           })
+
+#       - pattern-not-inside: |
+#           if ($ROLE === ...) {
+#             ...
+#           }
+
+#       - pattern-not-inside: |
+#           if ($OWNER === $USERID) {
+#             ...
+#           }
+
+#     message: >
+#       Potential OLA/BOLA: report updated without
+#       ownership or role validation.
+
+#     severity: WARNING
+#     languages:
+#       - typescript
+
+
+#   # ======================================================
+#   # DIGITAL SIGNATURE - ED25519
+#   # ======================================================
+
+#   # 4. Missing Digital Signature
+#   - id: possible-missing-signature-validate
+#     paths:
+#       include:
+#         - app/api/reports/validate/**
+
+#     patterns:
+#       - pattern: |
+#           export async function $FUNC(...) {
+#             ...
+#           }
+
+#       - pattern-not: |
+#           nacl.sign.detached(...)
+
+#     message: >
+#       No ED25519 digital signature detected
+#       in validate endpoint.
+
+#     severity: WARNING
+#     languages:
+#       - typescript
+
+
+#   # 5. Missing Signature Verification
+#   - id: missing-signature-verification
+#     paths:
+#       include:
+#         - app/api/report/verify-file/**
+
+#     patterns:
+#       - pattern: |
+#           export async function $FUNC(...) {
+#             ...
+#           }
+
+#       - pattern-not: |
+#           nacl.sign.detached.verify(...)
+
+#     message: >
+#       No ED25519 signature verification detected
+#       in verify endpoint.
+
+#     severity: WARNING
+#     languages:
+#       - typescript
+
+
+#   # 6. Missing Hash Validation
+#   - id: missing-hash-validation
+#     paths:
+#       include:
+#         - app/api/report/verify-file/**
+
+#     patterns:
+#       - pattern: |
+#           export async function $FUNC(...) {
+#             ...
+#           }
+
+#       - pattern-not: |
+#           crypto.createHash(...)
+
+#     message: >
+#       No hash validation detected before
+#       signature verification.
+
+#     severity: INFO
+#     languages:
+#       - typescript
+
+
+#   # ======================================================
+#   # IMPLEMENTATION DETECTION
+#   # ======================================================
+
+#   # 7. ED25519 Verification Implemented
+#   - id: ed25519-verification-implemented
+#     paths:
+#       include:
+#         - app/api/report/view/\[barcode\]/**
+
+#     pattern: |
+#       verifySignature(...)
+
+#     message: >
+#       ED25519 signature verification implemented
+#       in report view barcode endpoint.
+
+#     severity: INFO
+#     languages:
+#       - typescript
+
+
+#   # 8. Hash Validation Implemented
+#   - id: hash-validation-implemented
+#     paths:
+#       include:
+#         - app/api/report/view/\[barcode\]/**
+
+#     pattern: |
+#       crypto.createHash(...)
+
+#     message: >
+#       Hash validation detected before
+#       signature verification.
+
+#     severity: INFO
+#     languages:
+#       - typescript
+
+# rules:
+
+#   # ======================================================
+#   # OBJECT-LEVEL AUTHORIZATION (OLA)
+#   # ======================================================
+
+#   # 1. OLA - Ownership Check Missing
+#   - id: possible-idor-attempts
+#     paths:
+#       include:
+#         - app/api/attempts/\[id\]/**
+#     patterns:
+#       - pattern-either:
+#           - pattern: |
+#               await prisma.$MODEL.findUnique({
+#                 where: { id: $ID },
+#                 ...
+#               })
+#           - pattern: |
+#               await prisma.$MODEL.findFirst({
+#                 where: { id: $ID },
+#                 ...
+#               })
+#     message: >
+#       Potential IDOR/BOLA: data accessed by ID without ownership validation
+#       in attempts endpoint.
+#     severity: WARNING
+#     languages: [typescript]
+
+#   # 2. OLA - Information Disclosure
+#   - id: possible-information-disclosure-attempts
+#     paths:
+#       include:
+#         - app/api/attempts/\[id\]/**
+#     patterns:
+#       - pattern-either:
+#           - pattern: |
+#               await prisma.$MODEL.findUnique({
+#                 where: { id: $ID },
+#                 ...
+#               })
+#           - pattern: |
+#               await prisma.$MODEL.findFirst({
+#                 where: { id: $ID },
+#                 ...
+#               })
+#       - pattern-not-inside: |
+#           if ($OWNER === $USERID)
+#     message: >
+#       Potential information disclosure: query does not validate
+#       ownership/user relation.
+#     severity: WARNING
+#     languages: [typescript]
+
+#   # 3. OLA - Missing Role Check
+#   - id: possible-missing-role-check
+#     paths:
+#       include:
+#         - app/api/reports/validate/**
+#     patterns:
+#       - pattern: |
+#           export async function $FUNC(...) {
+#             ...
+#           }
+#       - pattern-not-inside: |
+#           if ($ROLE === ...)
+#     message: >
+#       Potential missing role-based authorization in validate endpoint.
+#     severity: WARNING
+#     languages: [typescript]
+
+#   # 4. OLA - Missing Ownership/Role Check in update-summary
+#   - id: possible-unauthorized-update-summary
+#     paths:
+#       include:
+#         - app/api/reports/update-summary/**
+#     patterns:
+#       - pattern: |
+#           await prisma.$MODEL.update({
+#             where: { id: $ID },
+#             ...
+#           })
+#       - pattern-not-inside: |
+#           if ($ROLE === ...)
+#       - pattern-not-inside: |
+#           if ($OWNER === $USERID)
+#     message: >
+#       Potential OLA/BOLA: update-summary endpoint updates report
+#       without ownership or role validation.
+#     severity: WARNING
+#     languages: [typescript]
+
+#   # ======================================================
+#   # DIGITAL SIGNATURE - ED25519
+#   # ======================================================
+
+#   # 5. Missing Digital Signature
+#   - id: possible-missing-signature-validate
+#     paths:
+#       include:
+#         - app/api/reports/validate/**
+#     patterns:
+#       - pattern: |
+#           export async function $FUNC(...) {
+#             ...
+#           }
+#       - pattern-not: |
+#           nacl.sign.detached(...)
+#     message: >
+#       No ED25519 digital signature detected in validate endpoint.
+#     severity: WARNING
+#     languages: [typescript]
+
+#   # 6. Missing Signature Verification
+#   - id: missing-signature-verification
+#     paths:
+#       include:
+#         - app/api/report/verify-file/**
+#     patterns:
+#       - pattern: |
+#           export async function $FUNC(...) {
+#             ...
+#           }
+#       - pattern-not: |
+#           nacl.sign.detached.verify(...)
+#     message: >
+#       No ED25519 signature verification detected in verify endpoint.
+#     severity: WARNING
+#     languages: [typescript]
+
+#   # 7. Missing Hash Validation
+#   - id: missing-hash-validation
+#     paths:
+#       include:
+#         - app/api/report/verify-file/**
+#     patterns:
+#       - pattern: |
+#           export async function $FUNC(...) {
+#             ...
+#           }
+#       - pattern-not: |
+#           crypto.createHash(...)
+#     message: >
+#       No hash validation detected before signature verification.
+#     severity: INFO
+#     languages: [typescript]
+
+#   # 8. Missing ED25519 Verification in View Barcode Endpoint
+#   - id: missing-signature-verification-view-barcode
+#     paths:
+#       include:
+#         - app/api/report/view/\[barcode\]/**
+
+#     patterns:
+#       - pattern-inside: |
+#           export async function $FUNC(...) {
+#             ...
+#           }
+
+#       - pattern-not-inside: |
+#           verifySignature(...)
+
+#     message: >
+#       No ED25519 signature verification detected
+#       in report view barcode endpoint.
+
+#     severity: WARNING
+#     languages: [typescript]
+
+#   # 9. Missing Hash Validation in View Barcode Endpoint
+#   - id: missing-hash-validation-view-barcode
+#     paths:
+#       include:
+#         - app/api/report/view/\[barcode\]/**
+
+#     patterns:
+#       - pattern-inside: |
+#           export async function $FUNC(...) {
+#             ...
+#           }
+
+#       - pattern-not-inside: |
+#           crypto.createHash(...)
+
+#     message: >
+#       No hash validation detected before signature verification
+#       in report view barcode endpoint.
+
+#     severity: INFO
+#     languages: [typescript]

@@ -71,6 +71,7 @@ if (role !== "PSIKOLOG") {
       layak,
       belumLayak,
       tidakLayak,
+       scoreiq,
     } = body;
 
     // ❌ VALIDASI INPUT
@@ -158,29 +159,43 @@ if (
 
 
     // ✅ UPDATE
-    const updated = await prisma.result.update({
-      where: { id: result.id },
-      data: {
-        validatedById:
-      result.validatedById ?? userId,
-        kesimpulan: kesimpulan ?? result.kesimpulan,
-        kesimpulanSikap: kesimpulanSikap ?? result.kesimpulanSikap,
-        kesimpulanKepribadian:
-          kesimpulanKepribadian ?? result.kesimpulanKepribadian,
-        kesimpulanBelajar:
-          kesimpulanBelajar ?? result.kesimpulanBelajar,
-        ttd: ttd ?? result.ttd,
-        saranpengembangan:
-          body.saranpengembangan ?? result.saranpengembangan,
-        kesimpulanumum:
-          body.kesimpulanumum ?? result.kesimpulanumum,
-        rekomendasi: rekomendasi ?? result.rekomendasi,
-        layak: layak ?? result.layak,
-        belumLayak: belumLayak ?? result.belumLayak,
-        tidakLayak: tidakLayak ?? result.tidakLayak,
-      },
-    });
+const updated = await prisma.result.update({
+  where: { id: result.id },
+  data: {
+    validatedById: result.validatedById ?? userId,
 
+    kesimpulan: kesimpulan ?? result.kesimpulan,
+    kesimpulanSikap: kesimpulanSikap ?? result.kesimpulanSikap,
+    kesimpulanKepribadian:
+      kesimpulanKepribadian ?? result.kesimpulanKepribadian,
+    kesimpulanBelajar:
+      kesimpulanBelajar ?? result.kesimpulanBelajar,
+    ttd: ttd ?? result.ttd,
+    saranpengembangan:
+      body.saranpengembangan ?? result.saranpengembangan,
+    kesimpulanumum:
+      body.kesimpulanumum ?? result.kesimpulanumum,
+    rekomendasi: rekomendasi ?? result.rekomendasi,
+    layak: layak ?? result.layak,
+    belumLayak: belumLayak ?? result.belumLayak,
+    tidakLayak: tidakLayak ?? result.tidakLayak,
+    scoreiq: scoreiq ?? result.scoreiq,
+
+    // RESET VALIDASI
+    validated: false,
+    validatedAt: null,
+
+    Signature: null,
+    dataHash: null,
+    signedHash: null,
+
+    barcode: null,
+    barcodettd: null,
+    expiresAt: null,
+
+    url: null,
+  },
+});
     // ✅ LOG SUCCESS
     await logActivity({
       userId: session.id,
@@ -199,7 +214,8 @@ if (
 
     return NextResponse.json({
       success: true,
-      message: "Revisi kesimpulan & TTD berhasil disimpan",
+      message:
+  "Data berhasil diperbarui. Laporan harus divalidasi ulang.",
       updated,
     });
 
