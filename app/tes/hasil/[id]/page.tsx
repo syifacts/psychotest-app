@@ -171,7 +171,7 @@ useEffect(() => {
     if (currentBarcode) {
       const qr =
         await QRCode.toDataURL(
-          `https://psiko.deltaindonesialab.com/validate/${currentBarcode}`
+          `https://f321-2400-9800-309-3e03-e9e2-a232-78d9-2e4a.ngrok-free.app/validate/${currentBarcode}`
         );
 
       setQrCodeBase64(qr);
@@ -321,6 +321,15 @@ const displayTimestamp =
   `${String(wibDate.getHours()).padStart(2, "0")}` +
   `${String(wibDate.getMinutes()).padStart(2, "0")}` +
   `${String(wibDate.getSeconds()).padStart(2, "0")}`;
+  const originalUrl =
+  cpmiResult?.url ||
+  result?.url ||
+  msdtResult?.url ||
+  "";
+
+const filename = originalUrl.split("/").pop() || "";
+
+const downloadUrl = `/api/reports/${filename}`;
   return (
     
     <div className="h-screen flex flex-col">
@@ -347,12 +356,8 @@ const displayTimestamp =
             </button>
           )}
         </PDFDownloadLink> */}
-        <a
- href={
-  cpmiResult?.url ||
-  result?.url ||
-  msdtResult?.url
-}
+<a
+  href={downloadUrl}
   download
   className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg"
 >

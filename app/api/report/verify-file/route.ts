@@ -82,12 +82,16 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
 
     const file = formData.get("file") as File;
-    const barcode = formData.get("barcode") as string;
+    // const barcode = formData.get("barcode") as string;
 
-    // =============================
-    // VALIDASI INPUT
-    // =============================
-    if (!file || !barcode) {
+    // // =============================
+    // // VALIDASI INPUT
+    // // =============================
+    // if (!file || !barcode) {
+    const barcode =
+  formData.get("barcode")?.toString();
+
+if (!file) {
       await logActivity({
         action: "VERIFY",
         resource: "report",
@@ -155,8 +159,35 @@ export async function POST(req: NextRequest) {
     // =============================
     // AMBIL DATA REPORT
     // =============================
-    const result = await prisma.result.findUnique({
+    // const result = await prisma.result.findUnique({
+    //   where: { barcode },
+    //   include: {
+    //     User: true,
+    //     ValidatedBy: true,
+    //   },
+    // });
+       const buffer = Buffer.from(await file.arrayBuffer());
+    const generatedHash = crypto
+  .createHash("sha512")
+  .update(buffer)
+  .digest("hex");
+
+console.log(
+  "VERIFY PDF HASH:",
+  generatedHash
+);
+    const result = barcode
+  ? await prisma.result.findUnique({
       where: { barcode },
+      include: {
+        User: true,
+        ValidatedBy: true,
+      },
+    })
+  : await prisma.result.findFirst({
+      where: {
+        dataHash: generatedHash,
+      },
       include: {
         User: true,
         ValidatedBy: true,
@@ -217,7 +248,7 @@ export async function POST(req: NextRequest) {
     // =============================
     // CONVERT FILE PDF
     // =============================
-    const buffer = Buffer.from(await file.arrayBuffer());
+ 
 
     // =============================
     // EXTRACT TEXT PDF
@@ -240,15 +271,7 @@ export async function POST(req: NextRequest) {
 //   .createHash("sha512")
 //   .update(extractedText)
 //   .digest("hex");
-const generatedHash = crypto
-  .createHash("sha512")
-  .update(buffer)
-  .digest("hex");
 
-console.log(
-  "VERIFY PDF HASH:",
-  generatedHash
-);
   console.log("VERIFY HASH:", generatedHash);
 console.log("DB HASH:", result.dataHash);
 console.log("UPLOADED HASH:", generatedHash);
@@ -257,6 +280,7 @@ console.log(
   "HASH MATCH:",
   generatedHash === result.dataHash
 );
+
     //   const generatedHash = crypto
     // .createHash("sha512")
     // .update(extractedText)
@@ -753,7 +777,7 @@ function checkKeywords(
 
     console.log("SIGNATURE LENGTH:", signatureUint8.length);
 
-    console.log("SIGNED HASH:", result.signedHash);
+    // console.log("SIGNED HASH:", result.signedHash);
     // const isSignatureValid =
     //   nacl.sign.detached.verify(
     //     decodeUTF8(generatedHash),

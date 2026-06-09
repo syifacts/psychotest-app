@@ -123,7 +123,7 @@ function DashboardInner() {
             return { ...test, originalName: "CPMI", name: "WPT" };
           }
 
-          const activeTests = ["WPT", "MSDT"];
+          const activeTests = ["WPT"];
           if (!activeTests.includes(test.name)) {
             return { ...test, comingSoon: true };
           }

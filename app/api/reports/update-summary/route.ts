@@ -155,7 +155,15 @@ if (
     { status: 403 }
   );
 }
-
+if (result.barcode) {
+  await prisma.archivedBarcode.create({
+    data: {
+      barcode: result.barcode,
+      source: "RESULT",
+      recordId: result.id,
+    },
+  });
+}
 
 
     // ✅ UPDATE
@@ -187,7 +195,7 @@ const updated = await prisma.result.update({
 
     Signature: null,
     dataHash: null,
-    signedHash: null,
+    // signedHash: null,
 
     barcode: null,
     barcodettd: null,
@@ -196,6 +204,7 @@ const updated = await prisma.result.update({
     url: null,
   },
 });
+
     // ✅ LOG SUCCESS
     await logActivity({
       userId: session.id,

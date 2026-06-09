@@ -13,8 +13,9 @@ export default function ValidatePage() {
   const [loading, setLoading] = useState(true);
   const [showPdf, setShowPdf] = useState(false);
   const [uploadResult, setUploadResult] = useState<any>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
-const handleUpload = async (e: any) => {
+const handleFileChange = (e: any) => {
   const file = e.target.files[0];
   if (!file) return;
 
@@ -51,8 +52,50 @@ const handleUpload = async (e: any) => {
     return;
   }
 
+  // const formData = new FormData();
+  // formData.append("file", file);
+  // formData.append("barcode", barcode!);
+
+  // const res = await fetch("/api/report/verify-file", {
+  //   method: "POST",
+  //   body: formData,
+  // });
+
+//   const result = await res.json();
+
+//   if (!res.ok) {
+//     toast({
+//       title: "Upload gagal",
+//       description: result.error || "Terjadi kesalahan",
+//       variant: "error",
+//       duration: 3000,
+//       position: "top",
+//     });
+
+//     setUploadResult(null);
+//     return;
+//   }
+
+//   setUploadResult(result);
+// };
+setSelectedFile(file);
+setUploadResult(null);
+
+};
+const handleVerify = async () => {
+  if (!selectedFile) {
+    toast({
+      title: "Pilih file terlebih dahulu",
+      variant: "error",
+      duration: 3000,
+      position: "top",
+    });
+
+    return;
+  }
+
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", selectedFile);
   formData.append("barcode", barcode!);
 
   const res = await fetch("/api/report/verify-file", {
@@ -64,21 +107,16 @@ const handleUpload = async (e: any) => {
 
   if (!res.ok) {
     toast({
-      title: "Upload gagal",
+      title: "Verifikasi gagal",
       description: result.error || "Terjadi kesalahan",
       variant: "error",
-      duration: 3000,
-      position: "top",
     });
 
-    setUploadResult(null);
     return;
   }
 
   setUploadResult(result);
 };
-
-
   useEffect(() => {
     if (!barcode) return;
     fetch(`/api/report/view/${barcode}`)
@@ -89,6 +127,46 @@ const handleUpload = async (e: any) => {
 
   if (loading) return <div>Loading...</div>;
   if (!data || data.error) return <div>{data?.error || "Report tidak ditemukan"}</div>;
+  if (data?.status === "REVISED") {
+  return (
+    <div
+      style={{
+        padding: 24,
+        maxWidth: 800,
+        margin: "0 auto",
+      }}
+    >
+      <div
+        style={{
+          padding: 20,
+          borderRadius: 12,
+          backgroundColor: "#fffbeb",
+          border: "1px solid #fcd34d",
+        }}
+      >
+        <h2>
+          ⚠️ Dokumen Telah Direvisi
+        </h2>
+
+        <p>
+          Dokumen yang Anda miliki berasal
+          dari versi laporan yang sudah
+          tidak berlaku.
+        </p>
+
+        <p>
+          Laporan telah direvisi dan
+          divalidasi ulang oleh psikolog.
+        </p>
+
+        <p>
+          Silakan gunakan dokumen versi
+          terbaru.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 //   return (
 //     <div>
@@ -257,6 +335,10 @@ const handleUpload = async (e: any) => {
 //       </BlobProvider>
 //     </div>
 //   );
+const filename =
+  data?.result?.url?.split("/").pop() || "";
+
+const pdfUrl = `/api/reports/${filename}`;
 return (
   <>
     <Toaster />
@@ -437,19 +519,38 @@ boxShadow:
         diterbitkan oleh sistem.
       </div>
 
-      <input
-        type="file"
-        accept="application/pdf"
-        onChange={handleUpload}
-        style={{
-          padding: 10,
-          border: "1px solid #ccc",
-          borderRadius: 8,
-          width: "100%",
-          backgroundColor: "#fff",
-        }}
-      />
+<input
+  type="file"
+  accept="application/pdf"
+  onChange={handleFileChange}
+/>
     </div>
+    {selectedFile && (
+  <div
+    style={{
+      marginTop: 10,
+      marginBottom: 10,
+      fontSize: 14,
+    }}
+  >
+    File dipilih: <b>{selectedFile.name}</b>
+  </div>
+)}
+
+<button
+  onClick={handleVerify}
+  disabled={!selectedFile}
+  style={{
+    padding: "10px 16px",
+    borderRadius: 8,
+    border: "none",
+    backgroundColor: "#2563eb",
+    color: "#fff",
+    cursor: "pointer",
+  }}
+>
+  🔍 Verifikasi Dokumen
+</button>
 {uploadResult && (
   <div
     style={{
@@ -676,8 +777,8 @@ boxShadow:
         "0 2px 6px rgba(0,0,0,0.05)",
     }}
   >
-    <iframe
-      src={data.result.url}
+<iframe
+  src={pdfUrl}
       width="100%"
       height="700px"
       style={{
@@ -688,7 +789,7 @@ boxShadow:
     />
 
     <a
-      href={data.result.url}
+       href={pdfUrl}
       download
       style={{
         display: "inline-block",
@@ -710,6 +811,7 @@ boxShadow:
   </>
 );
 }
+
 
 // "use client";
 // import { useEffect, useState } from "react";

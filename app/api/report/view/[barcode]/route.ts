@@ -230,14 +230,26 @@ export async function GET(
         ValidatedBy: true,
       },
     });
+if (!result) {
+  const archived =
+    await prisma.archivedBarcode.findUnique({
+      where: {
+        barcode,
+      },
+    });
 
-    if (!result) {
-      return NextResponse.json(
-        { error: "Report tidak ditemukan" },
-        { status: 404 }
-      );
-    }
+  if (archived) {
+    return NextResponse.json({
+      status: "REVISED",
+      message:
+        "Dokumen ini telah direvisi dan tidak lagi berlaku. Silakan gunakan dokumen terbaru yang telah divalidasi ulang.",
+    });
+  }
 
+  return NextResponse.json({
+    error: "Report tidak ditemukan",
+  });
+}
     // =============================
     // 🔐 1. VERIFY SIGNATURE
     // =============================

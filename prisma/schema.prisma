@@ -340,9 +340,9 @@ jumlahkor8  Int?
 
 hasilAkhir      String?
 Signature String? @db.Text
-signedHash       String? @db.Text
 dataHash  String? @db.Text
-pdfHash   String? @db.Text
+// signedHash       String? @db.Text
+// pdfHash   String? @db.Text
 
   // Validasi psikolog
   barcode       String? @unique @db.VarChar(30)
@@ -358,6 +358,8 @@ pdfHash   String? @db.Text
   TestType      TestType @relation(fields: [testTypeId], references: [id])
   ValidatedBy   User?    @relation("ValidatedResults", fields: [validatedById], references: [id])
   summaryTemplate   SummaryTemplate? @relation(fields: [summaryTemplateId], references: [id])
+    // ArchivedBarcodes ArchivedBarcode[]
+
 
   @@unique([attemptId, testTypeId])
 }
@@ -507,9 +509,10 @@ model PersonalityResult {
   isCompleted Boolean  @default(false)
   createdAt  DateTime @default(now())
 Signature String? @db.Text
-signedHash       String? @db.Text
+// signedHash       String? @db.Text
 dataHash  String? @db.Text
-pdfHash   String? @db.Text
+// pdfHash   String? @db.Text
+  // ArchivedBarcodes ArchivedBarcode[]
 
 
   User         User        @relation(fields: [userId], references: [id])
@@ -563,6 +566,16 @@ model UserPackage {
   @@unique([userId, packagePurchaseId])
 }
 
+
+model ArchivedBarcode {
+  id        Int      @id @default(autoincrement())
+  barcode   String   @unique
+
+  source    String   // RESULT | PERSONALITY
+  recordId  Int
+
+  createdAt DateTime @default(now())
+}
 // ------------------
 // DESKRIPSI HASIL PERSONALITY
 // ------------------

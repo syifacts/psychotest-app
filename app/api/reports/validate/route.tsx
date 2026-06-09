@@ -737,6 +737,7 @@ for await (const chunk of pdfStream as any) {
 
 const pdfBuffer = Buffer.concat(chunks);
 fs.writeFileSync(filePath, pdfBuffer);
+
 //     await generatePDF(filePath, html);
     // pastikan folder ada
 
@@ -907,13 +908,14 @@ console.log("SIGN PDF HASH:", dataHash);
     const signatureUint8 = nacl.sign.detached(hashBytes, privateKeyUint8);
 
     const signature = encodeBase64(signatureUint8);
+    
     if (source === "personalityResult") {
   await prisma.personalityResult.update({
     where: { id: reportId },
     data: {
       Signature: signature,
       dataHash: dataHash,
-      signedHash: dataHash,
+      // signedHash: dataHash,
     },
   });
 } else {
@@ -922,7 +924,7 @@ console.log("SIGN PDF HASH:", dataHash);
     data: {
       Signature: signature,
       dataHash: dataHash,
-      signedHash: dataHash,
+      // signedHash: dataHash,
       url: `/reports/${fileName}`,
     },
   });
