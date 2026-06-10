@@ -4,6 +4,8 @@ import HeroSection from "../section/herosection";
 import BenefitSection from '@/section/benefitsection';
 import TestSection from '@/section/testsection';
 import Footer from '@/components/layout/footer';
+import FloatingVerifyButton from "@/components/common/FloatingVerifyButton";
+
 
 export default function Page() {
   return (
@@ -13,6 +15,7 @@ export default function Page() {
       <AboutSection />
       <BenefitSection />
       <TestSection />
+      <FloatingVerifyButton />
        <Footer /> 
       {/* Konten landing page lainnya */}
     </div>

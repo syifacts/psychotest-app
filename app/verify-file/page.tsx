@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Toast, ToastTitle, ToastDescription } from "@/components/ui/toast";
+import Navbar from "@/components/layout/navbar";
+import Footer from "@/components/layout/footer";
 
 
 export default function VerifyFilePage() {
@@ -48,7 +50,9 @@ const showToast = (
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4">
+    <>
+    <Navbar />
+   <div className="min-h-screen bg-slate-50 pt-24 pb-10 px-4">
       <div className="max-w-3xl mx-auto">
 
         {/* HEADER */}
@@ -241,14 +245,17 @@ const showToast = (
 )}
 
       </div>
-      {toast && (
-  <Toast variant={toast.variant}>
-    <ToastTitle>Upload Gagal</ToastTitle>
-    <ToastDescription>
-      {toast.message}
-    </ToastDescription>
-  </Toast>
-)}
+           {toast && (
+        <Toast variant={toast.variant}>
+          <ToastTitle>Upload Gagal</ToastTitle>
+          <ToastDescription>
+            {toast.message}
+          </ToastDescription>
+        </Toast>
+      )}
     </div>
-  );
+
+    <Footer />
+  </>
+);
 }

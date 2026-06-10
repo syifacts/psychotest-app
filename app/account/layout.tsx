@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import Navbar from '@/components/layout/navbar';
 import Footer from '@/components/layout/footer';
+import FloatingVerifyButton from "@/components/common/FloatingVerifyButton";
 
 interface AccountLayoutProps {
   children: ReactNode;
@@ -15,7 +16,7 @@ export default function AccountLayout({ children }: AccountLayoutProps) {
       <main className="flex-grow">
         {children}
       </main>
-
+      <FloatingVerifyButton />
       <Footer />
     </div>
   );

@@ -1,5 +1,6 @@
 import Navbar from '../../components/layout/navbar';
 import Footer from '@/components/layout/footer';
+import FloatingVerifyButton from "@/components/common/FloatingVerifyButton";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     // Jika children belum siap, jangan render layout penuh
@@ -11,6 +12,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div>
       <Navbar />
       <main>{children}</main> 
+            <FloatingVerifyButton />
       <Footer />
     </div>
   );

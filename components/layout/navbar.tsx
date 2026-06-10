@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Search } from "lucide-react";
 
-
 const Navbar = () => {
   const router = useRouter();
   const pathname = usePathname();
@@ -14,7 +13,6 @@ const Navbar = () => {
   const [role, setRole] = useState<string>("GUEST");
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -46,7 +44,21 @@ const Navbar = () => {
   const handleLogin = () => router.push("/login");
   const handleSignup = () => router.push("/register");
 
-  const hideSearch = ["/","/login", "/register", "/account", "/admin/master-data", "/psikolog/validasi", "/company/dashboard", "/admin/dashboard", "/admin/activity-log", "/about", "/privacy-policy", "/terms"].some(path => pathname === path || pathname.startsWith("/tes/"));
+  const hideSearch = [
+    "/",
+    "/login",
+    "/register",
+    "/account",
+    "/admin/master-data",
+    "/psikolog/validasi",
+    "/company/dashboard",
+    "/admin/dashboard",
+    "/admin/activity-log",
+    "/about",
+    "/privacy-policy",
+    "/terms",
+    "/verify-file",
+  ].some((path) => pathname === path || pathname.startsWith("/tes/"));
 
   // Config menu per role
   const menuConfig: Record<string, { href: string; label: string }[]> = {
@@ -76,7 +88,7 @@ const Navbar = () => {
       { href: "/", label: "Beranda" },
       { href: "/company/dashboard", label: "Dashboard" },
       { href: "/dashboard", label: "Layanan Tes" },
-  //    { href: "/company/packages", label: "Bundle Paket" },
+      //    { href: "/company/packages", label: "Bundle Paket" },
       { href: "/account", label: "Akun" },
     ],
   };
@@ -87,33 +99,38 @@ const Navbar = () => {
     <header className="header">
       <div className="left">
         <div className="logo">
-          <Image src="/logoklinik21.png" alt="Logo Klinik" width={160} height={90} />
-    <h1>
-  <span>psikodeltaindonesialab</span>
-  <span>Klinik Yuliarpan Medika</span>
-</h1>
+          <Image
+            src="/logoklinik21.png"
+            alt="Logo Klinik"
+            width={160}
+            height={90}
+          />
+          <h1>
+            <span>psikodeltaindonesialab</span>
+            <span>Klinik Yuliarpan Medika</span>
+          </h1>
         </div>
         {!hideSearch && role !== "PSIKOLOG" && (
           <div className="search">
- <div className="search">
-  <Search className="absolute left-3 top-1/2 -translate-y-1/2 
-    text-gray-400 w-5 h-5 pointer-events-none" />
-  <input
-    type="text"
-    placeholder="Cari tes..."
-    value={searchQuery}
-    onChange={(e) => {
-      setSearchQuery(e.target.value);
-      const query = e.target.value ? `?search=${encodeURIComponent(e.target.value)}` : "";
-      router.push(`${pathname}${query}`);
-    }}
-  />
-</div>
-
-
-
-</div>
-
+            <div className="search">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 
+    text-gray-400 w-5 h-5 pointer-events-none"
+              />
+              <input
+                type="text"
+                placeholder="Cari tes..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  const query = e.target.value
+                    ? `?search=${encodeURIComponent(e.target.value)}`
+                    : "";
+                  router.push(`${pathname}${query}`);
+                }}
+              />
+            </div>
+          </div>
         )}
       </div>
 
@@ -122,7 +139,9 @@ const Navbar = () => {
           {!loading &&
             currentMenu?.map((item) => (
               <Link key={item.href} href={item.href} legacyBehavior>
-                <a className={pathname === item.href ? "active" : ""}>{item.label}</a>
+                <a className={pathname === item.href ? "active" : ""}>
+                  {item.label}
+                </a>
               </Link>
             ))}
 
@@ -140,9 +159,9 @@ const Navbar = () => {
       </div>
 
       <style jsx>{`
-      h1 span {
-  display: block;
-}
+        h1 span {
+          display: block;
+        }
         .header {
           display: flex;
           justify-content: space-between;
@@ -154,17 +173,15 @@ const Navbar = () => {
           flex-wrap: wrap;
           gap: 10px;
           height: 130px;
-            z-index: 1000; /* pastikan di atas semua elemen lain */
-
+          z-index: 1000; /* pastikan di atas semua elemen lain */
         }
 
-.left {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex: 1;              
-}
-
+        .left {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          flex: 1;
+        }
 
         .right {
           display: flex;
@@ -184,30 +201,30 @@ const Navbar = () => {
           font-weight: bold;
           font-family: "Poppins", sans-serif;
         }
-.search {
-  flex: 1;               /* ambil semua sisa ruang di kiri */
-  position: relative;    /* supaya icon absolute ngikut */
-  display: flex;
-  align-items: center;
-}
+        .search {
+          flex: 1; /* ambil semua sisa ruang di kiri */
+          position: relative; /* supaya icon absolute ngikut */
+          display: flex;
+          align-items: center;
+        }
 
-.search input {
-  width: 100%;           /* isi penuh parent */
-  border: 1px solid #e5e7eb;
-  border-radius: 9999px; /* full rounded */
-  padding: 10px 16px;
-  padding-left: 45px;    /* space untuk icon */
-  font-size: 14px;
-  background: #f9fafb;
-  transition: all 0.3s ease;
-}
+        .search input {
+          width: 100%; /* isi penuh parent */
+          border: 1px solid #e5e7eb;
+          border-radius: 9999px; /* full rounded */
+          padding: 10px 16px;
+          padding-left: 45px; /* space untuk icon */
+          font-size: 14px;
+          background: #f9fafb;
+          transition: all 0.3s ease;
+        }
 
-.search input:focus {
-  border-color: #0070f3;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(0,112,243,0.2);
-  outline: none;
-}
+        .search input:focus {
+          border-color: #0070f3;
+          background: #fff;
+          box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.2);
+          outline: none;
+        }
 
         .nav-links {
           display: flex;

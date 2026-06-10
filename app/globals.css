@@ -307,3 +307,31 @@
     width: 100%;
   }
 }
+.verify-floating-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 14px 18px;
+
+  background: #2563eb;
+  color: white;
+
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
+
+  box-shadow: 0 8px 25px rgba(37, 99, 235, 0.35);
+
+  transition: all 0.3s ease;
+}
+
+.verify-floating-btn:hover {
+  background: #1d4ed8;
+  transform: translateY(-3px);
+}

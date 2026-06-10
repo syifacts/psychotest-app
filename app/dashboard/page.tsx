@@ -243,7 +243,8 @@ function DashboardInner() {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.6, type: "spring", stiffness: 200 }}
             >
-              🎯 {tests.length} Tes tersedia
+              {/* 🎯 {tests.length} Tes tersedia */}
+                🎯 {filteredTests.length} Tes tersedia
             </motion.span>
 
             <motion.blockquote
